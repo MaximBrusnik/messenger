@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мессенджер</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Иконки -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <!-- Экран загрузки -->
+    <div v-if="loading" class="loading-screen">
+        <div class="spinner"></div>
+        <p>Загрузка...</p>
+    </div>
+
+    <!-- Экран авторизации -->
+    <div v-else-if="!isAuthenticated" class="auth-screen">
+        <div class="auth-container">
+            <div class="logo">
+                <i class="fas fa-comments"></i>
+                <h1>Мессенджер</h1>
+            </div>
+
+            <!-- Форма входа -->
+            <div v-if="authView === 'login'" class="auth-form">
+                <h2>Вход</h2>
+                <form @submit.prevent="handleLogin">
+                    <input v-model="loginForm.username" placeholder="Логин" required>
+                    <input v-model="loginForm.password" type="password" placeholder="Пароль" required>
+                    <button type="submit" :disabled="authLoading">
+                        <i class="fas fa-sign-in-alt"></i> Войти
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Нет аккаунта? <a @click="authView = 'register'">Зарегистрироваться</a>
+                </p>
+            </div>
+
+            <!-- Форма регистрации -->
+            <div v-else class="auth-form">
+                <h2>Регистрация</h2>
+                <form @submit.prevent="handleRegister">
+                    <input v-model="registerForm.username" placeholder="Логин" required>
+                    <input v-model="registerForm.email" type="email" placeholder="Email" required>
+                    <input v-model="registerForm.password" type="password" placeholder="Пароль" required>
+                    <input v-model="registerForm.confirmPassword" type="password" placeholder="Подтвердите пароль" required>
+                    <button type="submit" :disabled="authLoading">
+                        <i class="fas fa-user-plus"></i> Зарегистрироваться
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Есть аккаунт? <a @click="authView = 'login'">Войти</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс мессенджера -->
+    <div v-else class="messenger">
+        <!-- Боковая панель -->
+        <div class="sidebar">
+            <!-- Заголовок -->
+            <div class="sidebar-header">
+                <button v-if="isMobile" class="btn-menu" @click="toggleSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <div class="user-info">
+                    <div class="avatar" @click="currentView = 'profile'">
+                        {{ getInitials(currentUser.username) }}
+                    </div>
+                    <div>
+                        <h3>{{ currentUser.username }}</h3>
+                        <p class="status online">online</p>
+                    </div>
+                </div>
+                <button class="btn-icon" @click="newChat = true" title="Новый чат">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+
+            <!-- Поиск -->
+            <div class="search">
+                <i class="fas fa-search"></i>
+                <input v-model="searchQuery" placeholder="Поиск...">
+            </div>
+
+            <!-- Меню -->
+            <div class="menu">
+                <button @click="currentView = 'chats'" :class="{ active: currentView === 'chats' }">
+                    <i class="fas fa-comments"></i> Чаты
+                    <span class="badge" v-if="unreadCount > 0">{{ unreadCount }}</span>
+                </button>
+                <button @click="currentView = 'contacts'" :class="{ active: currentView === 'contacts' }">
+                    <i class="fas fa-users"></i> Контакты
+                </button>
+                <button @click="currentView = 'profile'" :class="{ active: currentView === 'profile' }">
+                    <i class="fas fa-user"></i> Профиль
+                </button>
+            </div>
+
+            <!-- Список чатов -->
+            <div v-if="currentView === 'chats'" class="chat-list">
+                <div v-for="chat in filteredChats" :key="chat.id"
+                     class="chat-item"
+                     :class="{ active: activeChat && activeChat.id === chat.id }"
+                     @click="openChat(chat)">
+                    <div class="chat-avatar">
+                        {{ getInitials(chat.name) }}
+                    </div>
+                    <div class="chat-info">
+                        <div class="chat-header">
+                            <strong>{{ chat.name }}</strong>
+                            <span class="time">{{ formatTime(chat.lastMessage?.created_at) }}</span>
+                        </div>
+                        <p class="last-message">{{ chat.lastMessage?.text || 'Нет сообщений' }}</p>
+                        <span v-if="chat.unread > 0" class="unread">{{ chat.unread }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список контактов -->
+            <div v-if="currentView === 'contacts'" class="contact-list">
+                <div v-for="contact in filteredContacts" :key="contact.id" class="contact-item">
+                    <div class="contact-avatar">
+                        {{ getInitials(contact.username) }}
+                    </div>
+                    <div class="contact-info">
+                        <strong>{{ contact.username }}</strong>
+                        <p>{{ contact.email }}</p>
+                    </div>
+                    <div class="contact-actions">
+                        <button class="btn-icon" @click="startChat(contact)" title="Написать">
+                            <i class="fas fa-comment"></i>
+                        </button>
+                        <button class="btn-icon btn-danger" @click="removeContact(contact.id)" title="Удалить контакт">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- Закрываем .sidebar здесь! -->
+
+        <!-- Основное содержимое - должно быть здесь, рядом с .sidebar -->
+        <div class="main-content">
+            <!-- Чат -->
+            <div v-if="currentView === 'chat' && activeChat" class="chat-window">
+                <!-- Заголовок чата -->
+                <div class="chat-header">
+                    <button class="btn-back" @click="backToChats">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+
+                    <!-- Добавьте кнопку меню на мобильных -->
+                    <button v-if="isMobile && !sidebarVisible" class="btn-menu" @click="toggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="chat-title">
+                        <div class="avatar-small">{{ getInitials(activeChat.name) }}</div>
+                        <div>
+                            <h3>{{ activeChat.name }}</h3>
+                            <p class="status">в сети</p>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn-icon" title="Информация о чате">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Сообщения -->
+                <div class="messages" ref="messagesContainer">
+                    <div v-for="message in activeChat.messages" :key="message.id"
+                         class="message" :class="{ outgoing: message.sender_id === currentUser.id }">
+                        <div class="message-content">
+                            <p>{{ message.text }}</p>
+                            <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ввод сообщения -->
+                <div class="message-input">
+                    <button class="btn-icon" title="Прикрепить файл">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input v-model="newMessage"
+                           @keyup.enter="sendMessage"
+                           placeholder="Введите сообщение...">
+                    <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Профиль -->
+            <div v-else-if="currentView === 'profile'" class="profile-content">
+                <div class="profile-header">
+                    <h2><i class="fas fa-user"></i> Мой профиль</h2>
+                </div>
+
+                <div class="profile-info">
+                    <div class="avatar-large" @click="uploadAvatar">
+                        {{ getInitials(currentUser.username) }}
+                        <div class="avatar-overlay">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                    </div>
+
+                    <div class="profile-details">
+                        <div class="detail-item">
+                            <label><i class="fas fa-user"></i> Логин:</label>
+                            <input v-model="profileForm.username">
+                        </div>
+                        <div class="detail-item">
+                            <label><i class="fas fa-envelope"></i> Email:</label>
+                            <input v-model="profileForm.email" type="email">
+                        </div>
+                        <div class="detail-item">
+                            <label><i class="fas fa-calendar"></i> Дата регистрации:</label>
+                            <span>{{ formatDate(currentUser.created_at) }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label><i class="fas fa-sign-in-alt"></i> Последний вход:</label>
+                            <span>{{ formatDate(currentUser.last_login) || 'Никогда' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="profile-actions">
+                        <button @click="updateProfile" class="btn-primary">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                        <button @click="changePasswordModal = true" class="btn-secondary">
+                            <i class="fas fa-key"></i> Сменить пароль
+                        </button>
+                        <button @click="logout" class="btn-danger">
+                            <i class="fas fa-sign-out-alt"></i> Выйти
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Экран приветствия -->
+            <div v-else class="welcome-screen">
+                <div class="welcome-content">
+                    <i class="fas fa-comments welcome-icon"></i>
+                    <h2>Добро пожаловать в мессенджер!</h2>
+                    <p>Выберите чат из списка слева или начните новый разговор</p>
+                    <button @click="newChat = true" class="btn-primary">
+                        <i class="fas fa-plus"></i> Новый чат
+                    </button>
+                </div>
+            </div>
+        </div> <!-- Закрываем .main-content -->
+    </div> <!-- Закрываем .messenger -->
+
+    <!-- Модальные окна -->
+
+    <!-- Новый чат -->
+    <div v-if="newChat" class="modal-overlay">
+        <div class="modal">
+            <h3><i class="fas fa-comment-medical"></i> Новый чат</h3>
+            <input v-model="newChatSearch" placeholder="Найти пользователя...">
+            <div class="user-list">
+                <div v-for="user in searchUsers" :key="user.id" class="user-item">
+                    <div class="user-avatar">{{ getInitials(user.username) }}</div>
+                    <div class="user-info">
+                        <strong>{{ user.username }}</strong>
+                        <p>{{ user.email }}</p>
+                    </div>
+                    <div class="user-actions">
+                        <button @click="createChat(user)" class="btn-small">
+                            <i class="fas fa-comment"></i> Чат
+                        </button>
+                        <!-- Кнопка добавления в контакты -->
+                        <button v-if="!isCurrentUser(user.id) && !isContact(user.id)"
+                                @click="addContact(user.id)"
+                                class="btn-small btn-success">
+                            <i class="fas fa-user-plus"></i> Добавить
+                        </button>
+                        <!-- Кнопка удаления из контактов -->
+                        <button v-if="isContact(user.id)"
+                                @click="removeContact(user.id)"
+                                class="btn-small btn-danger">
+                            <i class="fas fa-user-minus"></i> Удалить
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button @click="newChat = false" class="btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена пароля -->
+    <div v-if="changePasswordModal" class="modal-overlay">
+        <div class="modal">
+            <h3><i class="fas fa-key"></i> Смена пароля</h3>
+            <input v-model="passwordForm.oldPassword" type="password" placeholder="Старый пароль">
+            <input v-model="passwordForm.newPassword" type="password" placeholder="Новый пароль">
+            <input v-model="passwordForm.confirmPassword" type="password" placeholder="Подтвердите пароль">
+            <div class="modal-actions">
+                <button @click="changePassword" class="btn-primary">Изменить</button>
+                <button @click="changePasswordModal = false" class="btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div v-if="notification.show" :class="['notification', notification.type]">
+        <i :class="notification.icon"></i>
+        <span>{{ notification.message }}</span>
+        <button @click="notification.show = false" class="close-notification">×</button>
+    </div>
+</div>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
