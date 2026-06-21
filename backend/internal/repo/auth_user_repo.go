@@ -11,6 +11,7 @@ type UserRepository interface {
 	FindByID(id uint) (*entity.User, error)
 	FindByUsername(username string) (*entity.User, error)
 	FindByEmail(email string) (*entity.User, error)
+	FindByVerificationToken(token string) (*entity.User, error)
 	Update(user *entity.User) error
 
 	// Новые методы для мессенджера
@@ -59,6 +60,12 @@ func (r *userRepository) FindByEmail(email string) (*entity.User, error) {
 	return &user, err
 }
 
+func (r *userRepository) FindByVerificationToken(token string) (*entity.User, error) {
+	var user entity.User
+	err := r.db.Where("verification_token = ?", token).First(&user).Error
+	return &user, err
+}
+
 func (r *userRepository) Update(user *entity.User) error {
 	return r.db.Save(user).Error
 }
@@ -66,7 +73,7 @@ func (r *userRepository) Update(user *entity.User) error {
 func (r *userRepository) FindAll(excludeID uint) ([]entity.User, error) {
 	var users []entity.User
 	err := r.db.Where("id != ?", excludeID).
-		Select("id, username, email, created_at, last_login").
+		Select("id, username, email, created_at, last_login, avatar, status").
 		Find(&users).Error
 	return users, err
 }
@@ -77,7 +84,7 @@ func (r *userRepository) Search(query string, excludeID uint) ([]entity.User, er
 		excludeID,
 		"%"+query+"%",
 		"%"+query+"%").
-		Select("id, username, email, created_at, last_login").
+		Select("id, username, email, created_at, last_login, avatar, status").
 		Find(&users).Error
 	return users, err
 }
@@ -114,8 +121,8 @@ func (r *userRepository) RemoveContact(userID, contactID uint) error {
 func (r *userRepository) GetContacts(userID uint) ([]entity.User, error) {
 	var contacts []entity.User
 	err := r.db.Raw(`
-        SELECT u.id, u.username, u.email, u.created_at, u.last_login 
-        FROM users u
+		SELECT u.id, u.username, u.email, u.created_at, u.last_login, u.avatar, u.status 
+		FROM users u
         JOIN user_contacts uc ON u.id = uc.contact_id
         WHERE uc.user_id = ?
         ORDER BY u.username

@@ -16,6 +16,7 @@ type ChatRepository interface {
 	UpdateLastRead(chatID, userID uint) error
 	GetUnreadCount(chatID, userID uint) (int, error)
 	FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error)
+	GetParticipantIDs(chatID uint) ([]uint, error)
 }
 
 type chatRepository struct {
@@ -105,6 +106,14 @@ func (r *chatRepository) GetUnreadCount(chatID, userID uint) (int, error) {
     `, chatID, userID, chatID, userID).Count(&count).Error
 
 	return int(count), err
+}
+
+func (r *chatRepository) GetParticipantIDs(chatID uint) ([]uint, error) {
+	var ids []uint
+	err := r.db.Table("chat_users").
+		Where("chat_id = ?", chatID).
+		Pluck("user_id", &ids).Error
+	return ids, err
 }
 
 func (r *chatRepository) FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error) {

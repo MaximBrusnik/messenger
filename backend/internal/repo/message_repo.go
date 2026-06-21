@@ -3,6 +3,7 @@ package repo
 import (
 	"MessangerMax/internal/entity"
 	"gorm.io/gorm"
+	"time"
 )
 
 type MessageRepository interface {
@@ -12,6 +13,7 @@ type MessageRepository interface {
 	MarkAsRead(messageID uint) error
 	MarkChatAsRead(chatID, userID uint) error
 	GetLastMessage(chatID uint) (*entity.Message, error)
+	UpdateText(messageID uint, text string) error
 }
 
 type messageRepository struct {
@@ -28,7 +30,9 @@ func (r *messageRepository) Create(message *entity.Message) error {
 
 func (r *messageRepository) FindByID(id uint) (*entity.Message, error) {
 	var message entity.Message
-	err := r.db.Preload("Sender").First(&message, id).Error
+	err := r.db.Preload("Sender").
+		Preload("Reactions").
+		First(&message, id).Error
 	return &message, err
 }
 
@@ -37,6 +41,7 @@ func (r *messageRepository) FindByChatID(chatID uint, limit, offset int) ([]enti
 
 	query := r.db.Where("chat_id = ?", chatID).
 		Preload("Sender").
+		Preload("Reactions").
 		Order("created_at DESC")
 
 	if limit > 0 {
@@ -71,6 +76,17 @@ func (r *messageRepository) MarkChatAsRead(chatID, userID uint) error {
         AND m.sender_id != ?
         AND m.is_read = false
     `, chatID, userID).Error
+}
+
+func (r *messageRepository) UpdateText(messageID uint, text string) error {
+	now := time.Now()
+	return r.db.Model(&entity.Message{}).
+		Where("id = ?", messageID).
+		Updates(map[string]interface{}{
+			"text":      text,
+			"edited":    true,
+			"edited_at": now,
+		}).Error
 }
 
 func (r *messageRepository) GetLastMessage(chatID uint) (*entity.Message, error) {

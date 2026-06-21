@@ -2,31 +2,23 @@ package handlers
 
 import (
 	"MessangerMax/internal/entity"
-	"MessangerMax/internal/logic"
+	logic2 "MessangerMax/internal/logic"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
 type UserHandler struct {
-	userService logic.UserService
-	authService logic.AuthService
+	userService logic2.UserService
+	authService logic2.AuthService
 }
 
-func NewUserHandler(userService logic.UserService, authService logic.AuthService) *UserHandler {
+func NewUserHandler(userService logic2.UserService, authService logic2.AuthService) *UserHandler {
 	return &UserHandler{
 		userService: userService,
 		authService: authService,
 	}
 }
 
-// @Summary Получить всех пользователей
-// @Description Получение списка всех пользователей (кроме себя)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Router /api/v1/users [get]
 func (h *UserHandler) GetAllUsers(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	users, err := h.userService.GetAllUsers(userID)
@@ -40,16 +32,6 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 	})
 }
 
-// @Summary Поиск пользователей
-// @Description Поиск пользователей по имени или email
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param q query string true "Поисковый запрос"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Router /api/v1/users/search [get]
 func (h *UserHandler) SearchUsers(c *gin.Context) {
 	var req entity.SearchUsersRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -69,14 +51,6 @@ func (h *UserHandler) SearchUsers(c *gin.Context) {
 	})
 }
 
-// @Summary Получить контакты
-// @Description Получение списка контактов пользователя
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Router /api/v1/contacts [get]
 func (h *UserHandler) GetContacts(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	contacts, err := h.userService.GetContacts(userID)
@@ -90,16 +64,6 @@ func (h *UserHandler) GetContacts(c *gin.Context) {
 	})
 }
 
-// @Summary Добавить контакт
-// @Description Добавление пользователя в контакты
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body models.AddContactRequest true "ID пользователя"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Router /api/v1/contacts [post]
 func (h *UserHandler) AddContact(c *gin.Context) {
 	var req entity.AddContactRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -118,16 +82,6 @@ func (h *UserHandler) AddContact(c *gin.Context) {
 	})
 }
 
-// @Summary Обновить профиль
-// @Description Обновление данных профиля пользователя
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body models.UpdateProfileRequest true "Данные профиля"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Router /api/v1/auth/profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	var req entity.UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -148,16 +102,6 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	})
 }
 
-// @Summary Сменить пароль
-// @Description Изменение пароля пользователя
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body models.ChangePasswordRequest true "Пароли"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Router /api/v1/auth/change-password [post]
 func (h *UserHandler) ChangePassword(c *gin.Context) {
 	var req entity.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -173,5 +117,36 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Пароль успешно изменен",
+	})
+}
+
+func (h *UserHandler) GetSettings(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	settings, err := h.userService.GetSettings(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": settings,
+	})
+}
+
+func (h *UserHandler) UpdateSettings(c *gin.Context) {
+	var req entity.UpdateSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	if err := h.userService.UpdateSettings(userID, req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Настройки обновлены",
 	})
 }

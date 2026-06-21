@@ -15,6 +15,8 @@ type UserService interface {
 	GetContacts(userID uint) ([]entity.UserResponse, error)
 	UpdateProfile(userID uint, req entity.UpdateProfileRequest) (*entity.UserResponse, error)
 	ChangePassword(userID uint, req entity.ChangePasswordRequest) error
+	GetSettings(userID uint) (*entity.UserSettingsResponse, error)
+	UpdateSettings(userID uint, req entity.UpdateSettingsRequest) error
 }
 
 type userService struct {
@@ -54,7 +56,6 @@ func (s *userService) SearchUsers(query string, excludeID uint) ([]entity.UserRe
 }
 
 func (s *userService) AddContact(userID, contactID uint) error {
-	// Проверяем, существует ли пользователь
 	contact, err := s.userRepo.FindByID(contactID)
 	if err != nil || contact == nil {
 		return errors.New("пользователь не найден")
@@ -87,7 +88,6 @@ func (s *userService) UpdateProfile(userID uint, req entity.UpdateProfileRequest
 		return nil, errors.New("пользователь не найден")
 	}
 
-	// Проверяем уникальность username если он меняется
 	if req.Username != "" && req.Username != user.Username {
 		existingUser, _ := s.userRepo.FindByUsername(req.Username)
 		if existingUser != nil {
@@ -96,13 +96,16 @@ func (s *userService) UpdateProfile(userID uint, req entity.UpdateProfileRequest
 		user.Username = req.Username
 	}
 
-	// Проверяем уникальность email если он меняется
 	if req.Email != "" && req.Email != user.Email {
 		existingUser, _ := s.userRepo.FindByEmail(req.Email)
 		if existingUser != nil {
 			return nil, errors.New("пользователь с таким email уже существует")
 		}
 		user.Email = req.Email
+	}
+
+	if req.Avatar != "" {
+		user.Avatar = req.Avatar
 	}
 
 	if err := s.userRepo.Update(user); err != nil {
@@ -119,15 +122,40 @@ func (s *userService) ChangePassword(userID uint, req entity.ChangePasswordReque
 		return errors.New("пользователь не найден")
 	}
 
-	// Проверяем старый пароль
 	if err := user.CheckPassword(req.OldPassword); err != nil {
 		return errors.New("неверный старый пароль")
 	}
 
-	// Хэшируем новый пароль
 	if err := user.HashPassword(req.NewPassword); err != nil {
 		return errors.New("ошибка при обработке пароля")
 	}
 
 	return s.userRepo.UpdatePassword(userID, user.Password)
+}
+
+func (s *userService) GetSettings(userID uint) (*entity.UserSettingsResponse, error) {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("пользователь не найден")
+	}
+	return &entity.UserSettingsResponse{
+		ShowOnlineStatus: user.ShowOnlineStatus,
+		LastSeenPrivacy:  user.LastSeenPrivacy,
+	}, nil
+}
+
+func (s *userService) UpdateSettings(userID uint, req entity.UpdateSettingsRequest) error {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return errors.New("пользователь не найден")
+	}
+
+	if req.ShowOnlineStatus != nil {
+		user.ShowOnlineStatus = *req.ShowOnlineStatus
+	}
+	if req.LastSeenPrivacy != "" {
+		user.LastSeenPrivacy = req.LastSeenPrivacy
+	}
+
+	return s.userRepo.Update(user)
 }

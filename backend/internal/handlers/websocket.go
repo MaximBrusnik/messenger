@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"MessangerMax/internal/entity"
+	"MessangerMax/internal/repo"
 	"MessangerMax/utils"
 	"log"
 	"net/http"
@@ -13,7 +15,7 @@ import (
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			return true // В продакшене нужно ограничить
+			return true
 		},
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -32,21 +34,18 @@ func NewWSHandler(jwtUtils utils.JWTUtils) *WSHandler {
 }
 
 func (h *WSHandler) HandleWebSocket(c *gin.Context) {
-	// Получаем токен из query параметра
 	token := c.Query("token")
 	if token == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Токен не предоставлен"})
 		return
 	}
 
-	// Валидируем токен
 	userID, err := h.jwtUtils.ValidateToken(token)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверный токен"})
 		return
 	}
 
-	// Обновляем до WebSocket соединения
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
@@ -54,11 +53,9 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	// Регистрируем клиента
 	registerClient(userID, conn)
 	defer unregisterClient(userID)
 
-	// Отправляем приветственное сообщение
 	conn.WriteJSON(map[string]interface{}{
 		"type": "CONNECTED",
 		"payload": map[string]interface{}{
@@ -67,7 +64,6 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 		},
 	})
 
-	// Обрабатываем сообщения
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
@@ -77,17 +73,14 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 
 		if messageType == websocket.TextMessage {
 			log.Printf("Received: %s", p)
-			// Можно обрабатывать входящие сообщения от клиента
 		}
 	}
 }
 
-// Регистрация клиента
 func registerClient(userID uint, conn *websocket.Conn) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
 
-	// Закрываем старое соединение если есть
 	if oldConn, exists := clients[userID]; exists {
 		oldConn.Close()
 	}
@@ -96,7 +89,6 @@ func registerClient(userID uint, conn *websocket.Conn) {
 	log.Printf("Client registered: user_id=%d, total_clients=%d", userID, len(clients))
 }
 
-// Удаление клиента
 func unregisterClient(userID uint) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -105,27 +97,24 @@ func unregisterClient(userID uint) {
 	log.Printf("Client unregistered: user_id=%d, total_clients=%d", userID, len(clients))
 }
 
-// Отправка сообщения пользователю
 func SendToUser(userID uint, message interface{}) error {
 	clientsMu.RLock()
 	conn, exists := clients[userID]
 	clientsMu.RUnlock()
 
 	if !exists {
-		return nil // Пользователь не подключен
+		return nil
 	}
 
 	return conn.WriteJSON(message)
 }
 
-// Отправка сообщения нескольким пользователям
 func SendToUsers(userIDs []uint, message interface{}) {
 	for _, userID := range userIDs {
 		go SendToUser(userID, message)
 	}
 }
 
-// Broadcast сообщения всем подключенным пользователям
 func Broadcast(message interface{}) {
 	clientsMu.RLock()
 	defer clientsMu.RUnlock()
@@ -137,4 +126,83 @@ func Broadcast(message interface{}) {
 			}
 		}(userID, conn)
 	}
+}
+
+// WSNotifier — реализация logic.Notifier для рассылки через WebSocket
+type WSNotifier struct {
+	chatRepo repo.ChatRepository
+}
+
+func NewWSNotifier(chatRepo repo.ChatRepository) *WSNotifier {
+	return &WSNotifier{chatRepo: chatRepo}
+}
+
+func (n *WSNotifier) SendNewMessage(chatID uint, message *entity.MessageResponse) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "NEW_MESSAGE",
+		"payload": map[string]interface{}{
+			"message": message,
+		},
+	}
+
+	SendToUsers(participants, payload)
+}
+
+func (n *WSNotifier) SendMessageEdited(chatID uint, message *entity.MessageResponse) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "MESSAGE_EDITED",
+		"payload": map[string]interface{}{
+			"message": message,
+		},
+	}
+
+	SendToUsers(participants, payload)
+}
+
+func (n *WSNotifier) SendReactionAdded(chatID uint, messageID uint, reaction *entity.ReactionResponse) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "REACTION_ADDED",
+		"payload": map[string]interface{}{
+			"reaction": reaction,
+		},
+	}
+
+	SendToUsers(participants, payload)
+}
+
+func (n *WSNotifier) SendReactionRemoved(chatID uint, messageID uint, userID uint, reaction string) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "REACTION_REMOVED",
+		"payload": map[string]interface{}{
+			"message_id": messageID,
+			"user_id":    userID,
+			"reaction":   reaction,
+		},
+	}
+
+	SendToUsers(participants, payload)
 }

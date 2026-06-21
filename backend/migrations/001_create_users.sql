@@ -1,19 +1,18 @@
 -- Создание таблицы пользователей
 CREATE TABLE IF NOT EXISTS users (
-                                     id SERIAL PRIMARY KEY,
-                                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                                     deleted_at TIMESTAMP WITH TIME ZONE,
-
-                                     username VARCHAR(100) UNIQUE NOT NULL,
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     last_login TIMESTAMP WITH TIME ZONE,
-                             is_active BOOLEAN DEFAULT TRUE,
-                             avatar VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    avatar VARCHAR(500),
     status VARCHAR(50) DEFAULT 'offline',
     last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                             );
+);
 
 -- Индексы для пользователей
 CREATE INDEX idx_users_username ON users(username);

@@ -12,22 +12,32 @@ type User struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Username  string    `gorm:"uniqueIndex;size:100;not null" json:"username"`
-	Email     string    `gorm:"uniqueIndex;size:255;not null" json:"email"`
-	Password  string    `gorm:"size:255;not null" json:"-"`
-	LastLogin time.Time `json:"last_login,omitempty"`
-	IsActive  bool      `gorm:"default:true" json:"is_active"`
+	Username          string    `gorm:"uniqueIndex;size:100;not null" json:"username"`
+	Email             string    `gorm:"uniqueIndex;size:255;not null" json:"email"`
+	Password          string    `gorm:"size:255;not null" json:"-"`
+	LastLogin         time.Time `json:"last_login,omitempty"`
+	IsActive          bool      `gorm:"default:true" json:"is_active"`
+	Avatar            string    `gorm:"size:500" json:"avatar,omitempty"`
+	Status            string    `gorm:"size:50;default:'offline'" json:"status"`
+	ShowOnlineStatus  bool      `gorm:"default:true" json:"show_online_status"`
+	LastSeenPrivacy   string    `gorm:"size:20;default:'everyone'" json:"last_seen_privacy"`
+	EmailVerified     bool      `gorm:"default:false" json:"email_verified"`
+	VerificationToken string    `gorm:"size:255" json:"-"`
 
-	// Добавляем отношения
 	Chats    []Chat    `gorm:"many2many:chat_users;" json:"-"`
 	Messages []Message `gorm:"foreignKey:SenderID" json:"-"`
 	Contacts []User    `gorm:"many2many:user_contacts;joinForeignKey:user_id;joinReferences:contact_id" json:"-"`
 }
 
-// Дополнительные DTO
 type UpdateProfileRequest struct {
 	Username string `json:"username" binding:"omitempty,min=3,max=100"`
 	Email    string `json:"email" binding:"omitempty,email"`
+	Avatar   string `json:"avatar,omitempty"`
+}
+
+type UpdateSettingsRequest struct {
+	ShowOnlineStatus *bool  `json:"show_online_status,omitempty"`
+	LastSeenPrivacy  string `json:"last_seen_privacy,omitempty" binding:"omitempty,oneof=everyone contacts nobody"`
 }
 
 type ChangePasswordRequest struct {
@@ -68,11 +78,19 @@ type LoginRequest struct {
 }
 
 type UserResponse struct {
-	ID        uint      `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
-	LastLogin time.Time `json:"last_login,omitempty"`
+	ID            uint      `json:"id"`
+	Username      string    `json:"username"`
+	Email         string    `json:"email"`
+	CreatedAt     time.Time `json:"created_at"`
+	LastLogin     time.Time `json:"last_login,omitempty"`
+	Avatar        string    `json:"avatar,omitempty"`
+	Status        string    `json:"status,omitempty"`
+	EmailVerified bool      `json:"email_verified"`
+}
+
+type UserSettingsResponse struct {
+	ShowOnlineStatus bool   `json:"show_online_status"`
+	LastSeenPrivacy  string `json:"last_seen_privacy"`
 }
 
 // Хэширование пароля
@@ -93,10 +111,26 @@ func (u *User) CheckPassword(password string) error {
 // Преобразование в DTO
 func (u *User) ToResponse() UserResponse {
 	return UserResponse{
-		ID:        u.ID,
-		Username:  u.Username,
-		Email:     u.Email,
-		CreatedAt: u.CreatedAt,
-		LastLogin: u.LastLogin,
+		ID:            u.ID,
+		Username:      u.Username,
+		Email:         u.Email,
+		CreatedAt:     u.CreatedAt,
+		LastLogin:     u.LastLogin,
+		Avatar:        u.Avatar,
+		Status:        u.Status,
+		EmailVerified: u.EmailVerified,
+	}
+}
+
+func CanSeeLastSeen(viewer *User, target *User) bool {
+	switch target.LastSeenPrivacy {
+	case "everyone":
+		return true
+	case "contacts":
+		return target.ShowOnlineStatus
+	case "nobody":
+		return false
+	default:
+		return true
 	}
 }

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"MessangerMax/internal/entity"
+	entity2 "MessangerMax/internal/entity"
 	"MessangerMax/internal/logic"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -27,7 +27,7 @@ func NewChatHandler(chatService logic.ChatService) *ChatHandler {
 // @Failure 400 {object} map[string]interface{}
 // @Router /api/v1/chats [post]
 func (h *ChatHandler) CreateChat(c *gin.Context) {
-	var req entity.CreateChatRequest
+	var req entity2.CreateChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
 		return
@@ -60,6 +60,9 @@ func (h *ChatHandler) GetChats(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка получения чатов"})
 		return
+	}
+	if chats == nil {
+		chats = []entity2.ChatResponse{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -114,9 +117,14 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	var req entity.SendMessageRequest
+	var req entity2.SendMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
+		return
+	}
+
+	if req.Content == "" && req.AttachmentURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Текст сообщения или вложение обязательно"})
 		return
 	}
 
@@ -192,5 +200,43 @@ func (h *ChatHandler) MarkAsRead(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Сообщения отмечены как прочитанные",
+	})
+}
+
+// @Summary Редактировать сообщение
+// @Description Редактирование текста сообщения
+// @Tags chats
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID чата"
+// @Param msgId path int true "ID сообщения"
+// @Param request body entity.EditMessageRequest true "Новый текст"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /api/v1/chats/{id}/messages/{msgId} [put]
+func (h *ChatHandler) EditMessage(c *gin.Context) {
+	messageID, err := strconv.ParseUint(c.Param("msgId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID сообщения"})
+		return
+	}
+
+	var req entity2.EditMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	message, err := h.chatService.EditMessage(userID, uint(messageID), req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Сообщение отредактировано",
+		"data":    message,
 	})
 }
