@@ -214,7 +214,21 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
 
   function handleOpenContextMenu(msgId: number, e: React.MouseEvent) {
     const rect = e.currentTarget.getBoundingClientRect();
-    setCtxPos({ x: rect.left, y: rect.bottom + 4 });
+    const menuWidth = 220;
+    const menuHeight = 280;
+    let left = rect.left;
+    let top = rect.bottom + 4;
+
+    if (left + menuWidth > window.innerWidth) {
+      left = window.innerWidth - menuWidth - 8;
+    }
+    if (top + menuHeight > window.innerHeight) {
+      top = rect.top - menuHeight - 4;
+    }
+    if (left < 8) left = 8;
+    if (top < 8) top = 8;
+
+    setCtxPos({ x: left, y: top });
     setCtxMsgId(msgId);
   }
 
