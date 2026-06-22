@@ -917,16 +917,21 @@ body {
   }
 
   .app {
+    max-width: none;
+    margin: 0;
+    width: 100vw;
     overflow: hidden;
-    position: relative;
   }
 
-  .sidebar,
-  .chat {
+  .sidebar {
     width: 100%;
     min-width: 0;
-    flex-shrink: 0;
-    transition: opacity .2s;
+    flex: none;
+  }
+
+  .chat {
+    width: 100%;
+    flex: none;
   }
 
   .app.mobile-view .sidebar {
@@ -934,10 +939,6 @@ body {
   }
   .app.mobile-view.show-chat .sidebar {
     display: none;
-  }
-
-  .app.mobile-view .chat {
-    display: flex;
   }
 
   .back-btn {
