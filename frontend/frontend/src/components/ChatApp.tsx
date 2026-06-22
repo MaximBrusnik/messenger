@@ -80,11 +80,6 @@ export default function ChatApp() {
     }
   }, [user, setUser]);
 
-  function logout() {
-    localStorage.removeItem("token");
-    setUser(null);
-  }
-
   const mobileClass = isMobile
     ? `mobile-view${mobileChat ? " show-chat" : ""}`
     : "";

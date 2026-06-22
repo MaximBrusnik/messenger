@@ -62,8 +62,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
-  const [reactionMsgId, setReactionMsgId] = useState<number | null>(null);
-  const [pickerTop, setPickerTop] = useState(0);
+
   const [error, setError] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [ctxMsgId, setCtxMsgId] = useState<number | null>(null);
@@ -224,8 +223,8 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
 
   function handleOpenContextMenu(msgId: number, e: React.MouseEvent) {
     const rect = e.currentTarget.getBoundingClientRect();
-    const menuWidth = 220;
-    const menuHeight = 280;
+    const menuWidth = 240;
+    const menuHeight = 340;
     let left = rect.left;
     let top = rect.bottom + 4;
 
@@ -288,16 +287,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
               key={m.id}
               className={`msg ${isMine ? "mine" : ""}`}
               onClick={(e) => handleOpenContextMenu(m.id, e)}
-              onMouseEnter={(e) => {
-                if (ctxMsgId === null) {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setPickerTop(rect.top - 8);
-                  setReactionMsgId(m.id);
-                }
-              }}
-              onMouseLeave={() => {
-                setReactionMsgId(null);
-              }}
+
             >
               {!isMine && <div className="msg-sender">{m.sender?.username}</div>}
 
@@ -363,7 +353,8 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                     <span
                       key={`${r.reaction}-${r.user_id}`}
                       className={`reaction${r.user_id === user?.id ? " mine" : ""}`}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (r.user_id === user?.id) removeReaction(m.id, r.reaction);
                       }}
                       title={r.username}
@@ -374,15 +365,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                 </div>
               )}
 
-              {reactionMsgId === m.id && editingId !== m.id && (
-                <div className="reaction-picker" style={{ position: "fixed", top: pickerTop, left: "50%", transform: "translateX(-50%)" }} onMouseLeave={() => setReactionMsgId(null)}>
-                  {emojis.map((e) => (
-                    <span key={e} onClick={() => { handleReaction(m.id, e); setReactionMsgId(null); }}>
-                      {e}
-                    </span>
-                  ))}
-                </div>
-              )}
+
             </div>
           );
         })}
@@ -395,6 +378,14 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           className="msg-context-menu"
           style={{ position: "fixed", top: ctxPos.y, left: ctxPos.x }}
         >
+          <div className="ctx-reactions">
+            {emojis.slice(0, 7).map((e) => (
+              <span key={e} onClick={() => { handleReaction(ctxMsgId, e); setCtxMsgId(null); }}>
+                {e}
+              </span>
+            ))}
+          </div>
+          <div className="ctx-message-text">{ctxMessage.text}</div>
           {ctxMessage.sender_id === user?.id && (
             <button onClick={() => { setEditingId(ctxMsgId); setEditText(ctxMessage.text); setCtxMsgId(null); }}>
               ✏️ Редактировать

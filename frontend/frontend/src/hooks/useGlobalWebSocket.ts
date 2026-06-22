@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import type { Message, WSMessage } from "../types";
 
 type Handlers = {
