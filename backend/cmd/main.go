@@ -78,7 +78,7 @@ func main() {
 	})
 
 	// Статика для фронтенда
-	router.Static("/assets", "./frontend/dist/assets")
+	router.Static("/assets", "./dist/assets")
 
 	v1 := router.Group("/api/v1")
 	{
@@ -126,7 +126,7 @@ func main() {
 
 	// SPA fallback
 	router.NoRoute(func(c *gin.Context) {
-		c.File("./frontend/dist/index.html")
+		c.File("./dist/index.html")
 	})
 
 	port := ":" + cfg.ServerPort

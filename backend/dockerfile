@@ -9,6 +9,6 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/.env .
-COPY frontend/frontend/dist ./frontend/dist
+COPY frontend/frontend/dist ./dist
 EXPOSE 8080
 CMD ["./main"]
