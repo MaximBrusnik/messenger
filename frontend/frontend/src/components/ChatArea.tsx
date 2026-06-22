@@ -27,6 +27,7 @@ function formatTime(iso?: string): string {
 function lastSeenLabel(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);
@@ -162,7 +163,7 @@ export default function ChatArea({ chat, onBack, onMessage }: Props) {
           ) : partner ? partner.username.charAt(0).toUpperCase() : "#"}
         </div>
         <div className="chat-header-info">
-          <div className="chat-header-name">{chat.name}</div>
+          <div className="chat-header-name">{partner?.username ?? chat.name}</div>
           <div className="chat-header-status">{lastSeenLabel(partner?.last_login)}</div>
         </div>
       </div>
@@ -257,7 +258,7 @@ export default function ChatArea({ chat, onBack, onMessage }: Props) {
                 </div>
               )}
 
-              {reactionMsgId === m.id && isMine && editingId !== m.id && (
+              {reactionMsgId === m.id && editingId !== m.id && (
                 <ReactionPicker
                   onSelect={(emoji) => handleReaction(m.id, emoji)}
                   onClose={() => setReactionMsgId(null)}

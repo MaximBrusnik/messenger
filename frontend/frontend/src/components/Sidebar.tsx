@@ -14,6 +14,7 @@ interface Props {
 function formatTime(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);
@@ -58,7 +59,13 @@ export default function Sidebar({ user, chats, activeChat, onSelectChat, onLogou
           <div className="sidebar-user-name">{user.username}</div>
           <div className="sidebar-user-status">{statusLabel}</div>
         </div>
-        <button className="logout-btn" onClick={onLogout} title="Выйти">🚪</button>
+        <button className="logout-btn" onClick={onLogout} title="Выйти">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+</button>
       </div>
 
       <UserSearch onChatCreated={onChatCreated} />
