@@ -30,6 +30,14 @@ export async function getUserProfile(id: number) {
   return apiRequest<{ data: User }>(`/users/${id}`);
 }
 
+export async function deleteChat(chatId: number) {
+  return apiRequest(`/chats/${chatId}`, "DELETE");
+}
+
+export async function deleteMessage(chatId: number, msgId: number) {
+  return apiRequest(`/chats/${chatId}/messages/${msgId}`, "DELETE");
+}
+
 export async function uploadFile(file: File) {
   const token = localStorage.getItem("token");
   const form = new FormData();

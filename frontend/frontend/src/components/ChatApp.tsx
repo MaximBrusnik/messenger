@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { apiRequest } from "../api/client";
+import { apiRequest, deleteChat } from "../api/client";
 import type { Chat } from "../types";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "./Sidebar";
@@ -50,6 +50,13 @@ export default function ChatApp() {
     setMobileChat(false);
   }
 
+  async function handleDeleteChat(chatId: number) {
+    if (!confirm("Удалить чат?")) return;
+    await deleteChat(chatId);
+    setChats((prev) => prev.filter((c) => c.id !== chatId));
+    if (activeChat?.id === chatId) setActiveChat(null);
+  }
+
   function handleOpenUserProfile(userId: number) {
     setProfileUserId(userId);
   }
@@ -84,11 +91,12 @@ export default function ChatApp() {
         onSelectChat={openChat}
         onOpenUserProfile={handleOpenUserProfile}
         onOpenProfile={() => setShowProfile(true)}
+        onDeleteChat={handleDeleteChat}
       />
 
       <div className="chat">
         {activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon">💬</div>

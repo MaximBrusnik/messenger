@@ -77,6 +77,17 @@ export default function ProfileModal({ onClose }: Props) {
     }
   }
 
+  async function handleDeleteAvatar() {
+    try {
+      const res = await apiRequest<{ data: User }>("/auth/profile", "PUT", { avatar: "" });
+      setUser(res.data);
+      setSuccess("Аватар удалён");
+      setTimeout(() => setSuccess(null), 2000);
+    } catch {
+      alert("Ошибка");
+    }
+  }
+
   async function saveSettings() {
     setSaving(true);
     try {
@@ -153,6 +164,14 @@ export default function ProfileModal({ onClose }: Props) {
                   <div className="avatar-overlay">Сменить</div>
                   <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarUpload} />
                 </div>
+                {user?.avatar && (
+                  <button
+                    onClick={handleDeleteAvatar}
+                    style={{ background: "none", border: "none", color: "#e53935", cursor: "pointer", fontSize: 13 }}
+                  >
+                    Удалить аватар
+                  </button>
+                )}
               </div>
 
               {success && <div className="success-msg">{success}</div>}

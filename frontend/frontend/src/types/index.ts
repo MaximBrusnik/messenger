@@ -29,6 +29,7 @@ export interface Message {
   sender_id: number;
   text: string;
   is_read: boolean;
+  read_at?: string;
   created_at: string;
   edited?: boolean;
   edited_at?: string;
@@ -55,6 +56,6 @@ export interface UserSettings {
 }
 
 export interface WSMessage {
-  type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_STATUS" | "CONNECTED";
+  type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_STATUS" | "CONNECTED" | "MESSAGE_DELETED" | "CHAT_DELETED" | "MESSAGES_READ";
   payload: Record<string, unknown>;
 }

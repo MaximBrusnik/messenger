@@ -18,6 +18,7 @@ type ChatRepository interface {
 	FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error)
 	GetParticipantIDs(chatID uint) ([]uint, error)
 	GetCommonChatIDs(userID1, userID2 uint) ([]uint, error)
+	Delete(chatID uint) error
 }
 
 type chatRepository struct {
@@ -127,6 +128,10 @@ func (r *chatRepository) GetCommonChatIDs(userID1, userID2 uint) ([]uint, error)
 		AND c.deleted_at IS NULL
 	`, userID1, userID2).Pluck("chat_id", &ids).Error
 	return ids, err
+}
+
+func (r *chatRepository) Delete(chatID uint) error {
+	return r.db.Delete(&entity.Chat{}, chatID).Error
 }
 
 func (r *chatRepository) FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error) {

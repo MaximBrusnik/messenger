@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { apiRequest } from "../api/client";
+import { apiRequest, deleteMessage } from "../api/client";
 import type { Chat, Message, Reaction } from "../types";
 import { useAuth } from "../context/AuthContext";
 import MessageInput from "./MessageInput";
@@ -17,6 +17,7 @@ interface Props {
   onMessage?: () => void;
   onUserStatus?: (userId: number, status: string) => void;
   onOpenUserProfile?: (userId: number) => void;
+  onDeleteChat?: (chatId: number) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -55,7 +56,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile, onDeleteChat }: Props) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -63,8 +64,13 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
   const [reactionMsgId, setReactionMsgId] = useState<number | null>(null);
   const [pickerTop, setPickerTop] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [ctxMsgId, setCtxMsgId] = useState<number | null>(null);
+  const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
   const bottomRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
+  const ctxRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -93,7 +99,26 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     loadMessages();
   }, [loadMessages]);
 
-  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage, onUserStatus);
+  const onMessageDeleted = useCallback((msgId: number) => {
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+  }, []);
+
+  const onChatDeleted = useCallback((deletedChatId: number) => {
+    if (deletedChatId === chat.id) {
+      onDeleteChat?.(deletedChatId);
+    }
+  }, [chat.id, onDeleteChat]);
+
+  const onMessagesRead = useCallback((chatId: number, messageIds: number[]) => {
+    if (chatId !== chat.id) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        messageIds.includes(m.id) ? { ...m, is_read: true, read_at: new Date().toISOString() } : m
+      )
+    );
+  }, [chat.id]);
+
+  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage, onUserStatus, onMessageDeleted, onChatDeleted, onMessagesRead);
 
   useEffect(() => {
     loadMessages();
@@ -108,6 +133,21 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
       editRef.current.focus();
     }
   }, [editingId]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ctxRef.current && !ctxRef.current.contains(e.target as Node)) {
+        setCtxMsgId(null);
+      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    if (ctxMsgId !== null || showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [ctxMsgId, showMenu]);
 
   async function handleSend(text: string, attachment?: { url: string; name: string; size: number; type: string }) {
     try {
@@ -159,7 +199,27 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     } catch { /* ignore */ }
   }
 
+  async function handleDeleteMessage(msgId: number) {
+    try {
+      await deleteMessage(chat.id, msgId);
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      setCtxMsgId(null);
+    } catch { /* ignore */ }
+  }
+
+  function handleCopyText(text: string) {
+    navigator.clipboard.writeText(text);
+    setCtxMsgId(null);
+  }
+
+  function handleOpenContextMenu(msgId: number, e: React.MouseEvent) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCtxPos({ x: rect.left, y: rect.bottom + 4 });
+    setCtxMsgId(msgId);
+  }
+
   const partner = chat.participants?.find((p) => p.id !== user?.id);
+  const ctxMessage = ctxMsgId !== null ? messages.find((m) => m.id === ctxMsgId) : null;
 
   return (
     <>
@@ -173,6 +233,14 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
         <div className="chat-header-info" style={{ cursor: partner ? "pointer" : "default" }} onClick={() => partner && onOpenUserProfile?.(partner.id)}>
           <div className="chat-header-name">{partner?.username ?? chat.name}</div>
           <div className="chat-header-status">{lastSeenLabel(partner?.last_login)}</div>
+        </div>
+        <div className="chat-menu-container" ref={menuRef}>
+          <button className="chat-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+          {showMenu && (
+            <div className="chat-menu-dropdown">
+              <button onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>Удалить чат</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -195,12 +263,17 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
             <div
               key={m.id}
               className={`msg ${isMine ? "mine" : ""}`}
+              onClick={(e) => handleOpenContextMenu(m.id, e)}
               onMouseEnter={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setPickerTop(rect.top - 8);
-                setReactionMsgId(m.id);
+                if (ctxMsgId === null) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setPickerTop(rect.top - 8);
+                  setReactionMsgId(m.id);
+                }
               }}
-              onMouseLeave={() => setReactionMsgId(null)}
+              onMouseLeave={() => {
+                setReactionMsgId(null);
+              }}
             >
               {!isMine && <div className="msg-sender">{m.sender?.username}</div>}
 
@@ -249,7 +322,14 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                     </div>
                   )}
 
-                  <div className="msg-time">{formatTime(m.created_at)}</div>
+                  <div className="msg-footer">
+                    <span className="msg-time">{formatTime(m.created_at)}</span>
+                    {isMine && (
+                      <span className={`msg-check ${m.is_read ? "read" : ""}`}>
+                        {m.is_read ? "✓✓" : "✓"}
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -279,23 +359,45 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                   ))}
                 </div>
               )}
-
-              {isMine && editingId !== m.id && (
-                <span
-                  className="edit-btn"
-                  onClick={() => {
-                    setEditingId(m.id);
-                    setEditText(m.text);
-                  }}
-                >
-                  ✏️
-                </span>
-              )}
             </div>
           );
         })}
         <div ref={bottomRef} />
       </div>
+
+      {ctxMsgId !== null && ctxMessage && (
+        <div
+          ref={ctxRef}
+          className="msg-context-menu"
+          style={{ position: "fixed", top: ctxPos.y, left: ctxPos.x }}
+        >
+          {ctxMessage.sender_id === user?.id && (
+            <button onClick={() => { setEditingId(ctxMsgId); setEditText(ctxMessage.text); setCtxMsgId(null); }}>
+              ✏️ Редактировать
+            </button>
+          )}
+          <button onClick={() => handleCopyText(ctxMessage.text)}>
+            📋 Копировать
+          </button>
+          <button onClick={() => { alert("Пересылка будет позже"); setCtxMsgId(null); }}>
+            📤 Переслать
+          </button>
+          <button onClick={() => { alert("Закрепление будет позже"); setCtxMsgId(null); }}>
+            📌 Закрепить
+          </button>
+          {ctxMessage.sender_id === user?.id && (
+            <button className="danger" onClick={() => handleDeleteMessage(ctxMsgId)}>
+              🗑️ Удалить
+            </button>
+          )}
+          <div className="ctx-divider" />
+          <div className="ctx-read-info">
+            {ctxMessage.is_read && ctxMessage.read_at
+              ? `Прочитано: ${formatTime(ctxMessage.read_at)}`
+              : "Не прочитано"}
+          </div>
+        </div>
+      )}
 
       <MessageInput onSend={handleSend} />
     </>

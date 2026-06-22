@@ -11,9 +11,10 @@ type MessageRepository interface {
 	FindByID(id uint) (*entity.Message, error)
 	FindByChatID(chatID uint, limit, offset int) ([]entity.Message, error)
 	MarkAsRead(messageID uint) error
-	MarkChatAsRead(chatID, userID uint) error
+	MarkChatAsRead(chatID, userID uint) ([]uint, error)
 	GetLastMessage(chatID uint) (*entity.Message, error)
 	UpdateText(messageID uint, text string) error
+	Delete(messageID uint) error
 }
 
 type messageRepository struct {
@@ -68,14 +69,27 @@ func (r *messageRepository) MarkAsRead(messageID uint) error {
 		Update("is_read", true).Error
 }
 
-func (r *messageRepository) MarkChatAsRead(chatID, userID uint) error {
-	return r.db.Exec(`
+func (r *messageRepository) MarkChatAsRead(chatID, userID uint) ([]uint, error) {
+	// Находим непрочитанные сообщения от других пользователей
+	var msgIDs []uint
+	r.db.Model(&entity.Message{}).
+		Where("chat_id = ? AND sender_id != ? AND is_read = false", chatID, userID).
+		Pluck("id", &msgIDs)
+
+	if len(msgIDs) == 0 {
+		return nil, nil
+	}
+
+	// Помечаем как прочитанные
+	err := r.db.Exec(`
         UPDATE messages m
-        SET is_read = true
+        SET is_read = true, read_at = NOW()
         WHERE m.chat_id = ? 
         AND m.sender_id != ?
         AND m.is_read = false
     `, chatID, userID).Error
+
+	return msgIDs, err
 }
 
 func (r *messageRepository) UpdateText(messageID uint, text string) error {
@@ -87,6 +101,10 @@ func (r *messageRepository) UpdateText(messageID uint, text string) error {
 			"edited":    true,
 			"edited_at": now,
 		}).Error
+}
+
+func (r *messageRepository) Delete(messageID uint) error {
+	return r.db.Delete(&entity.Message{}, messageID).Error
 }
 
 func (r *messageRepository) GetLastMessage(chatID uint) (*entity.Message, error) {

@@ -11,10 +11,11 @@ type Message struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	ChatID   uint   `gorm:"index;not null" json:"chat_id"`
-	SenderID uint   `gorm:"index;not null" json:"sender_id"`
-	Text     string `gorm:"type:text;not null" json:"text"`
-	IsRead   bool   `gorm:"default:false" json:"is_read"`
+	ChatID   uint       `gorm:"index;not null" json:"chat_id"`
+	SenderID uint       `gorm:"index;not null" json:"sender_id"`
+	Text     string     `gorm:"type:text;not null" json:"text"`
+	IsRead   bool       `gorm:"default:false" json:"is_read"`
+	ReadAt   *time.Time `json:"read_at,omitempty"`
 
 	// Редактирование
 	Edited   bool       `gorm:"default:false" json:"edited"`
@@ -50,6 +51,7 @@ type MessageResponse struct {
 	SenderID       uint               `json:"sender_id"`
 	Text           string             `json:"text"`
 	IsRead         bool               `json:"is_read"`
+	ReadAt         *time.Time         `json:"read_at,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"`
 	Edited         bool               `json:"edited"`
 	EditedAt       *time.Time         `json:"edited_at,omitempty"`

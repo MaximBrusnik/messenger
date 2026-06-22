@@ -8,6 +8,9 @@ export function useWebSocket(
   onReactionChange: () => void,
   onAnyMessage?: () => void,
   onUserStatus?: (userId: number, status: string) => void,
+  onMessageDeleted?: (msgId: number) => void,
+  onChatDeleted?: (chatId: number) => void,
+  onMessagesRead?: (chatId: number, messageIds: number[]) => void,
 ) {
   const chatIdRef = useRef(chatId);
   chatIdRef.current = chatId;
@@ -26,6 +29,15 @@ export function useWebSocket(
 
   const onUserStatusRef = useRef(onUserStatus);
   onUserStatusRef.current = onUserStatus;
+
+  const onMessageDeletedRef = useRef(onMessageDeleted);
+  onMessageDeletedRef.current = onMessageDeleted;
+
+  const onChatDeletedRef = useRef(onChatDeleted);
+  onChatDeletedRef.current = onChatDeleted;
+
+  const onMessagesReadRef = useRef(onMessagesRead);
+  onMessagesReadRef.current = onMessagesRead;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -70,6 +82,21 @@ export function useWebSocket(
             case "USER_STATUS": {
               const { user_id, status } = data.payload as { user_id: number; status: string };
               onUserStatusRef.current?.(user_id, status);
+              break;
+            }
+            case "MESSAGE_DELETED": {
+              const { message_id } = data.payload as { message_id: number };
+              onMessageDeletedRef.current?.(message_id);
+              break;
+            }
+            case "CHAT_DELETED": {
+              const { chat_id } = data.payload as { chat_id: number };
+              onChatDeletedRef.current?.(chat_id);
+              break;
+            }
+            case "MESSAGES_READ": {
+              const { chat_id, message_ids } = data.payload as { chat_id: number; message_ids: number[] };
+              onMessagesReadRef.current?.(chat_id, message_ids);
               break;
             }
           }

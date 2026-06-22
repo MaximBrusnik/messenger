@@ -240,3 +240,39 @@ func (h *ChatHandler) EditMessage(c *gin.Context) {
 		"data":    message,
 	})
 }
+
+func (h *ChatHandler) DeleteChat(c *gin.Context) {
+	chatID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID чата"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	if err := h.chatService.DeleteChat(uint(chatID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Чат удалён",
+	})
+}
+
+func (h *ChatHandler) DeleteMessage(c *gin.Context) {
+	messageID, err := strconv.ParseUint(c.Param("msgId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID сообщения"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	if err := h.chatService.DeleteMessage(uint(messageID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Сообщение удалено",
+	})
+}

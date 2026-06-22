@@ -17,6 +17,8 @@ type ChatService interface {
 	MarkAsRead(chatID, userID uint) error
 	AddUserToChat(chatID, userID, targetUserID uint) error
 	RemoveUserFromChat(chatID, userID, targetUserID uint) error
+	DeleteChat(chatID, userID uint) error
+	DeleteMessage(messageID, userID uint) error
 }
 
 type chatService struct {
@@ -159,7 +161,7 @@ func (s *chatService) SendMessage(userID, chatID uint, req entity2.SendMessageRe
 	message.Sender = *sender
 
 	// Уведомляем участников чата через WebSocket
-	response := s.convertToMessageResponse(message)
+	response := s.convertToMessageResponse(message, userID)
 	s.notifier.SendNewMessage(chatID, response)
 
 	return response, nil
@@ -184,7 +186,7 @@ func (s *chatService) EditMessage(userID, messageID uint, req entity2.EditMessag
 	now := time.Now()
 	message.EditedAt = &now
 
-	response := s.convertToMessageResponse(message)
+	response := s.convertToMessageResponse(message, userID)
 	s.notifier.SendMessageEdited(message.ChatID, response)
 
 	return response, nil
@@ -204,7 +206,7 @@ func (s *chatService) GetChatMessages(chatID, userID uint, limit, offset int) ([
 
 	var responses []entity2.MessageResponse
 	for _, message := range messages {
-		responses = append(responses, *s.convertToMessageResponse(&message))
+		responses = append(responses, *s.convertToMessageResponse(&message, userID))
 	}
 
 	return responses, nil
@@ -222,8 +224,18 @@ func (s *chatService) MarkAsRead(chatID, userID uint) error {
 		return err
 	}
 
-	// Помечаем сообщения как прочитанные
-	return s.messageRepo.MarkChatAsRead(chatID, userID)
+	// Помечаем сообщения как прочитанные и получаем их ID
+	msgIDs, err := s.messageRepo.MarkChatAsRead(chatID, userID)
+	if err != nil {
+		return err
+	}
+
+	// Уведомляем участников о прочтении (если есть что отмечать)
+	if len(msgIDs) > 0 {
+		s.notifier.SendMessagesRead(chatID, msgIDs, userID)
+	}
+
+	return nil
 }
 
 func (s *chatService) AddUserToChat(chatID, userID, targetUserID uint) error {
@@ -244,6 +256,49 @@ func (s *chatService) RemoveUserFromChat(chatID, userID, targetUserID uint) erro
 	}
 
 	return s.chatRepo.RemoveUserFromChat(chatID, targetUserID)
+}
+
+func (s *chatService) DeleteChat(chatID, userID uint) error {
+	chat, err := s.chatRepo.FindByID(chatID)
+	if err != nil {
+		return errors.New("чат не найден")
+	}
+
+	isParticipant := false
+	for _, p := range chat.Participants {
+		if p.ID == userID {
+			isParticipant = true
+			break
+		}
+	}
+	if !isParticipant {
+		return errors.New("доступ запрещен")
+	}
+
+	if err := s.chatRepo.Delete(chatID); err != nil {
+		return err
+	}
+
+	s.notifier.SendChatDeleted(chatID)
+	return nil
+}
+
+func (s *chatService) DeleteMessage(messageID, userID uint) error {
+	message, err := s.messageRepo.FindByID(messageID)
+	if err != nil {
+		return errors.New("сообщение не найдено")
+	}
+
+	if message.SenderID != userID {
+		return errors.New("нельзя удалить чужое сообщение")
+	}
+
+	if err := s.messageRepo.Delete(messageID); err != nil {
+		return err
+	}
+
+	s.notifier.SendMessageDeleted(message.ChatID, messageID)
+	return nil
 }
 
 // Вспомогательные методы
@@ -267,11 +322,21 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 	// Добавляем участников (без текущего пользователя)
 	for _, participant := range chat.Participants {
 		if participant.ID != currentUserID {
+			avatar := participant.Avatar
+			if participant.AvatarPrivacy == "nobody" {
+				avatar = ""
+			} else if participant.AvatarPrivacy == "contacts" {
+				isContact, _ := s.userRepo.IsContact(currentUserID, participant.ID)
+				if !isContact {
+					avatar = ""
+				}
+			}
+
 			response.Participants = append(response.Participants, entity2.UserResponse{
 				ID:        participant.ID,
 				Username:  participant.Username,
 				Email:     participant.Email,
-				Avatar:    participant.Avatar,
+				Avatar:    avatar,
 				Status:    participant.Status,
 				LastLogin: participant.LastLogin,
 				CreatedAt: participant.CreatedAt,
@@ -287,6 +352,7 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 			SenderID:  lastMessage.SenderID,
 			Text:      lastMessage.Text,
 			IsRead:    lastMessage.IsRead,
+			ReadAt:    lastMessage.ReadAt,
 			CreatedAt: lastMessage.CreatedAt,
 		}
 	}
@@ -294,13 +360,14 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 	return response, nil
 }
 
-func (s *chatService) convertToMessageResponse(message *entity2.Message) *entity2.MessageResponse {
+func (s *chatService) convertToMessageResponse(message *entity2.Message, viewerID uint) *entity2.MessageResponse {
 	response := &entity2.MessageResponse{
 		ID:             message.ID,
 		ChatID:         message.ChatID,
 		SenderID:       message.SenderID,
 		Text:           message.Text,
 		IsRead:         message.IsRead,
+		ReadAt:         message.ReadAt,
 		CreatedAt:      message.CreatedAt,
 		Edited:         message.Edited,
 		EditedAt:       message.EditedAt,
@@ -311,11 +378,23 @@ func (s *chatService) convertToMessageResponse(message *entity2.Message) *entity
 	}
 
 	if message.Sender.ID != 0 {
+		avatar := message.Sender.Avatar
+		if viewerID != message.Sender.ID {
+			if message.Sender.AvatarPrivacy == "nobody" {
+				avatar = ""
+			} else if message.Sender.AvatarPrivacy == "contacts" {
+				isContact, _ := s.userRepo.IsContact(viewerID, message.Sender.ID)
+				if !isContact {
+					avatar = ""
+				}
+			}
+		}
+
 		response.Sender = &entity2.UserResponse{
 			ID:        message.Sender.ID,
 			Username:  message.Sender.Username,
 			Email:     message.Sender.Email,
-			Avatar:    message.Sender.Avatar,
+			Avatar:    avatar,
 			Status:    message.Sender.Status,
 			LastLogin: message.Sender.LastLogin,
 			CreatedAt: message.Sender.CreatedAt,

@@ -259,3 +259,49 @@ func (n *WSNotifier) SendReactionRemoved(chatID uint, messageID uint, userID uin
 
 	SendToUsers(participants, payload)
 }
+
+func (n *WSNotifier) SendMessageDeleted(chatID uint, messageID uint) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "MESSAGE_DELETED",
+		"payload": map[string]interface{}{
+			"message_id": messageID,
+			"chat_id":    chatID,
+		},
+	}
+
+	SendToUsers(participants, payload)
+}
+
+func (n *WSNotifier) SendChatDeleted(chatID uint) {
+	Broadcast(map[string]interface{}{
+		"type": "CHAT_DELETED",
+		"payload": map[string]interface{}{
+			"chat_id": chatID,
+		},
+	})
+}
+
+func (n *WSNotifier) SendMessagesRead(chatID uint, messageIDs []uint, readByUserID uint) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "MESSAGES_READ",
+		"payload": map[string]interface{}{
+			"chat_id":     chatID,
+			"message_ids": messageIDs,
+			"read_by":     readByUserID,
+		},
+	}
+
+	SendToUsers(participants, payload)
+}

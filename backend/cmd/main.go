@@ -107,7 +107,9 @@ func main() {
 			protected.GET("/chats/:id/messages", chatHandler.GetMessages)
 			protected.POST("/chats/:id/messages", chatHandler.SendMessage)
 			protected.PUT("/chats/:id/messages/:msgId", chatHandler.EditMessage)
+			protected.DELETE("/chats/:id/messages/:msgId", chatHandler.DeleteMessage)
 			protected.POST("/chats/:id/read", chatHandler.MarkAsRead)
+			protected.DELETE("/chats/:id", chatHandler.DeleteChat)
 
 			protected.GET("/users", userHandler.GetAllUsers)
 			protected.GET("/users/search", userHandler.SearchUsers)

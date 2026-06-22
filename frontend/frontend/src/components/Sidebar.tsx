@@ -8,6 +8,7 @@ interface Props {
   onSelectChat: (chat: Chat) => void;
   onOpenUserProfile: (userId: number) => void;
   onOpenProfile: () => void;
+  onDeleteChat: (chatId: number) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -41,7 +42,7 @@ function chatTime(iso?: string): string {
 
 const initial = (name: string) => name.charAt(0).toUpperCase();
 
-export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenUserProfile, onOpenProfile }: Props) {
+export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat }: Props) {
   const statusLabel = user.status === "online" ? "В сети" : `Был(а) ${formatTime(user.last_login)}`;
 
   return (
@@ -84,6 +85,13 @@ export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenU
               <div className="chat-item-time">{chatTime(c.last_message?.created_at)}</div>
               {c.unread ? <div className="chat-item-unread">{c.unread}</div> : null}
             </div>
+            <button
+              className="chat-item-delete"
+              onClick={(e) => { e.stopPropagation(); onDeleteChat(c.id); }}
+              title="Удалить чат"
+            >
+              🗑️
+            </button>
           </div>
         ))}
       </div>

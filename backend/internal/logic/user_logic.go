@@ -107,11 +107,11 @@ func (s *userService) UpdateProfile(userID uint, req entity.UpdateProfileRequest
 		user.Email = req.Email
 	}
 
-	if req.Avatar != "" {
-		user.Avatar = req.Avatar
+	if req.Avatar != nil {
+		user.Avatar = *req.Avatar
 	}
 
-	if req.Bio != "" || req.Bio == "" && user.Bio != "" {
+	if req.Bio != "" || (req.Bio == "" && user.Bio != "") {
 		user.Bio = req.Bio
 	}
 

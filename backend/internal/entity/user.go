@@ -33,11 +33,11 @@ type User struct {
 }
 
 type UpdateProfileRequest struct {
-	Username    string `json:"username" binding:"omitempty,min=3,max=100"`
-	Email       string `json:"email" binding:"omitempty,email"`
-	Avatar      string `json:"avatar,omitempty"`
-	Bio         string `json:"bio,omitempty"`
-	DateOfBirth string `json:"date_of_birth,omitempty"`
+	Username    string  `json:"username" binding:"omitempty,min=3,max=100"`
+	Email       string  `json:"email" binding:"omitempty,email"`
+	Avatar      *string `json:"avatar,omitempty"`
+	Bio         string  `json:"bio,omitempty"`
+	DateOfBirth string  `json:"date_of_birth,omitempty"`
 }
 
 type UpdateSettingsRequest struct {
