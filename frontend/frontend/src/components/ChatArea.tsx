@@ -9,6 +9,7 @@ import { useWebSocket } from "../hooks/useWebSocket";
 interface Props {
   chat: Chat;
   onBack?: () => void;
+  onMessage?: () => void;
 }
 
 function formatTime(iso?: string): string {
@@ -46,7 +47,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack }: Props) {
+export default function ChatArea({ chat, onBack, onMessage }: Props) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -83,7 +84,7 @@ export default function ChatArea({ chat, onBack }: Props) {
     loadMessages();
   }, [loadMessages]);
 
-  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange);
+  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage);
 
   useEffect(() => {
     loadMessages();

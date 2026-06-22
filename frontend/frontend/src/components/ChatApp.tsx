@@ -71,7 +71,7 @@ export default function ChatApp() {
 
       <div className="chat">
         {activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon">💬</div>
