@@ -918,40 +918,34 @@ body {
 
   .app {
     overflow: hidden;
+    position: relative;
   }
 
-  /* Mobile: sidebar full width when visible */
-  .sidebar {
+  .sidebar,
+  .chat {
     width: 100%;
     min-width: 0;
     flex-shrink: 0;
+    transition: opacity .2s;
   }
 
-  /* Chat also full width */
-  .chat {
-    width: 100%;
-    flex-shrink: 0;
+  .app.mobile-view .sidebar {
+    display: flex;
+  }
+  .app.mobile-view.show-chat .sidebar {
+    display: none;
   }
 
-  /* Both occupy 100% and are side by side in a 200vw container
-     Only one visible based on transform */
-  .app.mobile-view {
-    width: 200vw;
-    transition: transform .3s ease;
+  .app.mobile-view .chat {
+    display: flex;
   }
 
-  .app.mobile-view.show-chat {
-    transform: translateX(-100vw);
-  }
-
-  /* Show back button on mobile */
   .back-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
 
-  /* Messages: less padding on small screens */
   .messages {
     padding: 8px 12px;
   }
@@ -960,7 +954,6 @@ body {
     max-width: 85%;
   }
 
-  /* Modal: fullscreen on mobile */
   .modal-content {
     width: 100%;
     max-width: 100%;

@@ -10,7 +10,7 @@ import (
 )
 
 type AuthService interface {
-	Register(req entity.RegisterRequest) (*entity.UserResponse, error)
+	Register(req entity.RegisterRequest) (string, *entity.UserResponse, error)
 	Login(req entity.LoginRequest) (string, *entity.UserResponse, error)
 	GetUserProfile(userID uint) (*entity.UserResponse, error)
 	VerifyEmail(token string) error
@@ -31,13 +31,13 @@ func NewAuthService(userRepo repo.UserRepository, jwtUtils utils.JWTUtils, email
 	}
 }
 
-func (s *authService) Register(req entity.RegisterRequest) (*entity.UserResponse, error) {
+func (s *authService) Register(req entity.RegisterRequest) (string, *entity.UserResponse, error) {
 	if existingUser, _ := s.userRepo.FindByUsername(req.Username); existingUser != nil {
-		return nil, errors.New("пользователь с таким именем уже существует")
+		return "", nil, errors.New("пользователь с таким именем уже существует")
 	}
 
 	if existingUser, _ := s.userRepo.FindByEmail(req.Email); existingUser != nil {
-		return nil, errors.New("пользователь с таким email уже существует")
+		return "", nil, errors.New("пользователь с таким email уже существует")
 	}
 
 	user := &entity.User{
@@ -48,19 +48,24 @@ func (s *authService) Register(req entity.RegisterRequest) (*entity.UserResponse
 	}
 
 	if err := user.HashPassword(req.Password); err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	if err := s.emailService.SendVerificationEmail(user.Email, user.VerificationToken); err != nil {
 		log.Printf("Warning: failed to send verification email: %v", err)
 	}
 
+	token, err := s.jwtUtils.GenerateToken(user.ID)
+	if err != nil {
+		return "", nil, err
+	}
+
 	response := user.ToResponse()
-	return &response, nil
+	return token, &response, nil
 }
 
 func (s *authService) Login(req entity.LoginRequest) (string, *entity.UserResponse, error) {

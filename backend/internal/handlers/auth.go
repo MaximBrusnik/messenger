@@ -27,7 +27,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Register(req)
+	token, user, err := h.authService.Register(req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -37,6 +37,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Пользователь успешно создан. Проверьте email для подтверждения.",
+		"token":   token,
 		"data":    user,
 	})
 }
