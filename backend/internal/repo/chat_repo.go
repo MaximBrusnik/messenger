@@ -17,6 +17,7 @@ type ChatRepository interface {
 	GetUnreadCount(chatID, userID uint) (int, error)
 	FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error)
 	GetParticipantIDs(chatID uint) ([]uint, error)
+	GetCommonChatIDs(userID1, userID2 uint) ([]uint, error)
 }
 
 type chatRepository struct {
@@ -113,6 +114,18 @@ func (r *chatRepository) GetParticipantIDs(chatID uint) ([]uint, error) {
 	err := r.db.Table("chat_users").
 		Where("chat_id = ?", chatID).
 		Pluck("user_id", &ids).Error
+	return ids, err
+}
+
+func (r *chatRepository) GetCommonChatIDs(userID1, userID2 uint) ([]uint, error) {
+	var ids []uint
+	err := r.db.Raw(`
+		SELECT cu1.chat_id FROM chat_users cu1
+		JOIN chat_users cu2 ON cu1.chat_id = cu2.chat_id
+		JOIN chats c ON c.id = cu1.chat_id
+		WHERE cu1.user_id = ? AND cu2.user_id = ?
+		AND c.deleted_at IS NULL
+	`, userID1, userID2).Pluck("chat_id", &ids).Error
 	return ids, err
 }
 

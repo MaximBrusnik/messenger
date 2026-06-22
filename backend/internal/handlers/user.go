@@ -120,6 +120,28 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	})
 }
 
+func (h *UserHandler) GetUser(c *gin.Context) {
+	requesterID := c.GetUint("user_id")
+
+	var uri struct {
+		ID uint `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&uri); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID пользователя"})
+		return
+	}
+
+	profile, err := h.userService.GetUserProfile(uri.ID, requesterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": profile,
+	})
+}
+
 func (h *UserHandler) GetSettings(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	settings, err := h.userService.GetSettings(userID)

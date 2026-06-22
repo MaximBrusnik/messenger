@@ -16,6 +16,7 @@ interface Props {
   onBack?: () => void;
   onMessage?: () => void;
   onUserStatus?: (userId: number, status: string) => void;
+  onOpenUserProfile?: (userId: number) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -54,7 +55,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage, onUserStatus }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile }: Props) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -164,12 +165,12 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus }: Prop
     <>
       <div className="chat-header">
         {onBack && <button className="back-btn" onClick={onBack}>←</button>}
-        <div className="chat-header-avatar">
+        <div className="chat-header-avatar" style={{ cursor: partner ? "pointer" : "default" }} onClick={() => partner && onOpenUserProfile?.(partner.id)}>
           {partner?.avatar ? (
             <img src={partner.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           ) : partner ? partner.username.charAt(0).toUpperCase() : "#"}
         </div>
-        <div className="chat-header-info">
+        <div className="chat-header-info" style={{ cursor: partner ? "pointer" : "default" }} onClick={() => partner && onOpenUserProfile?.(partner.id)}>
           <div className="chat-header-name">{partner?.username ?? chat.name}</div>
           <div className="chat-header-status">{lastSeenLabel(partner?.last_login)}</div>
         </div>

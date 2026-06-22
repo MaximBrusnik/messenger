@@ -49,7 +49,7 @@ func main() {
 	emailService := logic2.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppURL)
 
 	authService := logic2.NewAuthService(userRepo, jwtUtils, emailService)
-	userService := logic2.NewUserService(userRepo)
+	userService := logic2.NewUserService(userRepo, chatRepo)
 	chatService := logic2.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier)
 	reactionService := logic2.NewReactionService(reactionRepo, messageRepo, wsNotifier)
 
@@ -111,6 +111,7 @@ func main() {
 
 			protected.GET("/users", userHandler.GetAllUsers)
 			protected.GET("/users/search", userHandler.SearchUsers)
+			protected.GET("/users/:id", userHandler.GetUser)
 			protected.GET("/contacts", userHandler.GetContacts)
 			protected.POST("/contacts", userHandler.AddContact)
 

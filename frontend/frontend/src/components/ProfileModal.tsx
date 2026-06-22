@@ -14,6 +14,8 @@ export default function ProfileModal({ onClose }: Props) {
   const [tab, setTab] = useState<Tab>("profile");
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [bio, setBio] = useState(user?.bio ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(user?.date_of_birth ?? "");
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -43,7 +45,9 @@ export default function ProfileModal({ onClose }: Props) {
     setSaving(true);
     setSuccess(null);
     try {
-      const res = await apiRequest<{ data: User }>("/auth/profile", "PUT", { username, email });
+      const body: Record<string, unknown> = { username, email, bio };
+      if (dateOfBirth) body.date_of_birth = dateOfBirth;
+      const res = await apiRequest<{ data: User }>("/auth/profile", "PUT", body);
       setUser(res.data);
       setSuccess("Профиль обновлён");
       setTimeout(() => setSuccess(null), 2000);
@@ -51,6 +55,12 @@ export default function ProfileModal({ onClose }: Props) {
       alert(e instanceof Error ? e.message : "Ошибка");
     }
     setSaving(false);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    setUser(null);
+    onClose();
   }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -178,6 +188,16 @@ export default function ProfileModal({ onClose }: Props) {
                 </div>
               )}
 
+              <div className="form-row">
+                <label>О себе</label>
+                <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={500} />
+              </div>
+
+              <div className="form-row">
+                <label>Дата рождения</label>
+                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
+              </div>
+
               <button className="btn-primary" onClick={saveProfile} disabled={saving}>
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
@@ -215,6 +235,12 @@ export default function ProfileModal({ onClose }: Props) {
 
               <button className="btn-primary" onClick={saveSettings} disabled={saving}>
                 {saving ? "Сохранение..." : "Сохранить"}
+              </button>
+
+              <hr style={{ border: "none", borderTop: "1px solid #e0e0e0", margin: "8px 0" }} />
+
+              <button className="btn-danger" onClick={handleLogout}>
+                Выйти из аккаунта
               </button>
             </>
           )}

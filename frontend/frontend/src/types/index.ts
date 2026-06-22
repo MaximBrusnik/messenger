@@ -7,6 +7,9 @@ export interface User {
   avatar?: string;
   status?: string;
   email_verified: boolean;
+  bio?: string;
+  date_of_birth?: string;
+  common_chats?: number;
 }
 
 export interface Chat {
@@ -48,6 +51,7 @@ export interface Reaction {
 export interface UserSettings {
   show_online_status: boolean;
   last_seen_privacy: "everyone" | "contacts" | "nobody";
+  avatar_privacy: "everyone" | "contacts" | "nobody";
 }
 
 export interface WSMessage {

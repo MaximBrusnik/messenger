@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { apiRequest } from "../api/client";
-import type { Chat, User } from "../types";
+import type { User } from "../types";
 
 interface Props {
-  onChatCreated: (chat: Chat) => void;
+  onOpenProfile: (userId: number) => void;
 }
 
-export default function UserSearch({ onChatCreated }: Props) {
+export default function UserSearch({ onOpenProfile }: Props) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<User[]>([]);
   const [open, setOpen] = useState(false);
@@ -16,17 +16,6 @@ export default function UserSearch({ onChatCreated }: Props) {
     const data = await apiRequest<{ data: User[] }>(`/users/search?q=${q}`);
     setResults(data.data ?? []);
     setOpen(true);
-  }
-
-  async function startChat(user: User) {
-    const data = await apiRequest<{ data: Chat }>("/chats", "POST", {
-      user_id: user.id,
-      name: user.username,
-      type: "private",
-    });
-    onChatCreated(data.data);
-    setOpen(false);
-    setQ("");
   }
 
   const initial = (name: string) => name.charAt(0).toUpperCase();
@@ -44,7 +33,7 @@ export default function UserSearch({ onChatCreated }: Props) {
       {open && results.length > 0 && (
         <div className="search-results">
           {results.map((u) => (
-            <div key={u.id} className="search-result-item" onClick={() => startChat(u)}>
+            <div key={u.id} className="search-result-item" onClick={() => { onOpenProfile(u.id); setOpen(false); setQ(""); }}>
               <div style={{
                 width: 36, height: 36, borderRadius: "50%", background: "#3390ec",
                 color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
@@ -54,7 +43,7 @@ export default function UserSearch({ onChatCreated }: Props) {
               </div>
               <div>
                 <div style={{ fontWeight: 500, fontSize: 14 }}>{u.username}</div>
-                <div style={{ fontSize: 12, color: "#888" }}>Нажми чтобы написать</div>
+                <div style={{ fontSize: 12, color: "#888" }}>Нажми чтобы открыть профиль</div>
               </div>
             </div>
           ))}

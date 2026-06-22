@@ -268,11 +268,13 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 	for _, participant := range chat.Participants {
 		if participant.ID != currentUserID {
 			response.Participants = append(response.Participants, entity2.UserResponse{
-				ID:       participant.ID,
-				Username: participant.Username,
-				Email:    participant.Email,
-				Avatar:   participant.Avatar,
-				Status:   participant.Status,
+				ID:        participant.ID,
+				Username:  participant.Username,
+				Email:     participant.Email,
+				Avatar:    participant.Avatar,
+				Status:    participant.Status,
+				LastLogin: participant.LastLogin,
+				CreatedAt: participant.CreatedAt,
 			})
 		}
 	}
@@ -310,11 +312,13 @@ func (s *chatService) convertToMessageResponse(message *entity2.Message) *entity
 
 	if message.Sender.ID != 0 {
 		response.Sender = &entity2.UserResponse{
-			ID:       message.Sender.ID,
-			Username: message.Sender.Username,
-			Email:    message.Sender.Email,
-			Avatar:   message.Sender.Avatar,
-			Status:   message.Sender.Status,
+			ID:        message.Sender.ID,
+			Username:  message.Sender.Username,
+			Email:     message.Sender.Email,
+			Avatar:    message.Sender.Avatar,
+			Status:    message.Sender.Status,
+			LastLogin: message.Sender.LastLogin,
+			CreatedAt: message.Sender.CreatedAt,
 		}
 	}
 

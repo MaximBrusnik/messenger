@@ -5,6 +5,7 @@ import (
 	"MessangerMax/internal/repo"
 	"errors"
 	"strings"
+	"time"
 )
 
 type UserService interface {
@@ -17,14 +18,16 @@ type UserService interface {
 	ChangePassword(userID uint, req entity.ChangePasswordRequest) error
 	GetSettings(userID uint) (*entity.UserSettingsResponse, error)
 	UpdateSettings(userID uint, req entity.UpdateSettingsRequest) error
+	GetUserProfile(targetID, requesterID uint) (*entity.UserProfileResponse, error)
 }
 
 type userService struct {
 	userRepo repo.UserRepository
+	chatRepo repo.ChatRepository
 }
 
-func NewUserService(userRepo repo.UserRepository) UserService {
-	return &userService{userRepo: userRepo}
+func NewUserService(userRepo repo.UserRepository, chatRepo repo.ChatRepository) UserService {
+	return &userService{userRepo: userRepo, chatRepo: chatRepo}
 }
 
 func (s *userService) GetAllUsers(excludeID uint) ([]entity.UserResponse, error) {
@@ -108,6 +111,19 @@ func (s *userService) UpdateProfile(userID uint, req entity.UpdateProfileRequest
 		user.Avatar = req.Avatar
 	}
 
+	if req.Bio != "" || req.Bio == "" && user.Bio != "" {
+		user.Bio = req.Bio
+	}
+
+	if req.DateOfBirth != "" {
+		parsed, err := time.Parse("2006-01-02", req.DateOfBirth)
+		if err == nil {
+			user.DateOfBirth = &parsed
+		}
+	} else if req.DateOfBirth == "" {
+		user.DateOfBirth = nil
+	}
+
 	if err := s.userRepo.Update(user); err != nil {
 		return nil, err
 	}
@@ -162,4 +178,42 @@ func (s *userService) UpdateSettings(userID uint, req entity.UpdateSettingsReque
 	}
 
 	return s.userRepo.Update(user)
+}
+
+func (s *userService) GetUserProfile(targetID, requesterID uint) (*entity.UserProfileResponse, error) {
+	target, err := s.userRepo.FindByID(targetID)
+	if err != nil {
+		return nil, errors.New("пользователь не найден")
+	}
+
+	isSelf := targetID == requesterID
+	resp := target.ToResponse()
+
+	if !isSelf {
+		resp.Email = ""
+		if !target.ShowOnlineStatus {
+			resp.Status = ""
+		}
+		if target.LastSeenPrivacy != "everyone" {
+			resp.LastLogin = time.Time{}
+		}
+		if target.AvatarPrivacy != "everyone" {
+			if target.AvatarPrivacy == "nobody" {
+				resp.Avatar = ""
+			} else if target.AvatarPrivacy == "contacts" {
+				isContact, _ := s.userRepo.IsContact(requesterID, targetID)
+				if !isContact {
+					resp.Avatar = ""
+				}
+			}
+		}
+		// Always show bio and date_of_birth if filled
+	}
+
+	commonIDs, _ := s.chatRepo.GetCommonChatIDs(requesterID, targetID)
+
+	return &entity.UserProfileResponse{
+		UserResponse: resp,
+		CommonChats:  len(commonIDs),
+	}, nil
 }

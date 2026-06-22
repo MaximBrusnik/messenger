@@ -1,3 +1,5 @@
+import type { User } from "../types";
+
 const API_URL = "/api/v1";
 
 export async function apiRequest<T = unknown>(
@@ -22,6 +24,10 @@ export async function apiRequest<T = unknown>(
   }
 
   return res.json();
+}
+
+export async function getUserProfile(id: number) {
+  return apiRequest<{ data: User }>(`/users/${id}`);
 }
 
 export async function uploadFile(file: File) {

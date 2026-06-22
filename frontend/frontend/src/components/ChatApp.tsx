@@ -5,12 +5,14 @@ import { useAuth } from "../context/AuthContext";
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
 import ProfileModal from "./ProfileModal";
+import UserProfileModal from "./UserProfileModal";
 
 export default function ChatApp() {
   const { user, setUser } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
 
   const isMobile = window.innerWidth <= 768;
   const [mobileChat, setMobileChat] = useState(false);
@@ -48,6 +50,16 @@ export default function ChatApp() {
     setMobileChat(false);
   }
 
+  function handleOpenUserProfile(userId: number) {
+    setProfileUserId(userId);
+  }
+
+  async function handleStartChatFromProfile(targetId: number) {
+    const res = await apiRequest<{ data: Chat }>("/chats", "POST", { user_id: targetId });
+    handleChatCreated(res.data);
+    setProfileUserId(null);
+  }
+
   const handleUserStatus = useCallback((userId: number, status: string) => {
     if (userId === user?.id && user) {
       setUser({ ...user, status });
@@ -70,14 +82,13 @@ export default function ChatApp() {
         chats={chats}
         activeChat={activeChat}
         onSelectChat={openChat}
-        onLogout={logout}
-        onChatCreated={handleChatCreated}
+        onOpenUserProfile={handleOpenUserProfile}
         onOpenProfile={() => setShowProfile(true)}
       />
 
       <div className="chat">
         {activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon">💬</div>
@@ -87,6 +98,13 @@ export default function ChatApp() {
       </div>
 
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      {profileUserId !== null && (
+        <UserProfileModal
+          userId={profileUserId}
+          onClose={() => setProfileUserId(null)}
+          onStartChat={handleStartChatFromProfile}
+        />
+      )}
     </div>
   );
 }

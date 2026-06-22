@@ -6,8 +6,7 @@ interface Props {
   chats: Chat[];
   activeChat: Chat | null;
   onSelectChat: (chat: Chat) => void;
-  onLogout: () => void;
-  onChatCreated: (chat: Chat) => void;
+  onOpenUserProfile: (userId: number) => void;
   onOpenProfile: () => void;
 }
 
@@ -42,7 +41,7 @@ function chatTime(iso?: string): string {
 
 const initial = (name: string) => name.charAt(0).toUpperCase();
 
-export default function Sidebar({ user, chats, activeChat, onSelectChat, onLogout, onChatCreated, onOpenProfile }: Props) {
+export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenUserProfile, onOpenProfile }: Props) {
   const statusLabel = user.status === "online" ? "В сети" : `Был(а) ${formatTime(user.last_login)}`;
 
   return (
@@ -59,16 +58,9 @@ export default function Sidebar({ user, chats, activeChat, onSelectChat, onLogou
           <div className="sidebar-user-name">{user.username}</div>
           <div className="sidebar-user-status">{statusLabel}</div>
         </div>
-        <button className="logout-btn" onClick={onLogout} title="Выйти">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-</button>
       </div>
 
-      <UserSearch onChatCreated={onChatCreated} />
+      <UserSearch onOpenProfile={onOpenUserProfile} />
 
       <div className="chat-list">
         {chats.map((c) => (

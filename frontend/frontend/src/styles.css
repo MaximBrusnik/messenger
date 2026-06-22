@@ -889,6 +889,64 @@ body {
   cursor: default;
 }
 
+.btn-danger {
+  padding: 10px;
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.btn-danger:hover {
+  background: #c62828;
+}
+
+.form-row textarea {
+  padding: 10px 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color .15s;
+  background: #f5f5f5;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-row textarea:focus {
+  border-color: #3390ec;
+  background: #fff;
+}
+
+.user-profile-modal .user-profile-name {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.user-profile-modal .user-profile-status {
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+  margin-top: -8px;
+}
+
+.user-profile-modal .user-profile-bio {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
+}
+
+.user-profile-modal .user-profile-field {
+  font-size: 15px;
+  color: #333;
+}
+
 .success-msg {
   color: #43a047;
   font-size: 14px;
