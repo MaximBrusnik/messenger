@@ -78,7 +78,9 @@ export default function Sidebar({ user, chats, activeChat, onSelectChat, onLogou
             onClick={() => onSelectChat(c)}
           >
             <div className="chat-item-avatar">
-              {c.participants?.[0] ? initial(c.participants[0].username) : "#"}
+              {c.participants?.[0]?.avatar ? (
+                <img src={c.participants[0].avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+              ) : c.participants?.[0] ? initial(c.participants[0].username) : "#"}
             </div>
             <div className="chat-item-content">
               <div className="chat-item-name">{c.name}</div>

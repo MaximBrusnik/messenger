@@ -48,6 +48,12 @@ export default function ChatApp() {
     setMobileChat(false);
   }
 
+  const handleUserStatus = useCallback((userId: number, status: string) => {
+    if (userId === user?.id && user) {
+      setUser({ ...user, status });
+    }
+  }, [user, setUser]);
+
   function logout() {
     localStorage.removeItem("token");
     setUser(null);
@@ -71,7 +77,7 @@ export default function ChatApp() {
 
       <div className="chat">
         {activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon">💬</div>

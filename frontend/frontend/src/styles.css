@@ -455,10 +455,13 @@ body {
   display: flex;
   gap: 6px;
   align-items: center;
+  min-width: 0;
+  width: 100%;
 }
 
 .edit-inline input {
   flex: 1;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid #3390ec;
   border-radius: 8px;
@@ -475,6 +478,7 @@ body {
   font-size: 14px;
   font-weight: 500;
   transition: background .15s;
+  flex-shrink: 0;
 }
 
 .edit-save {
@@ -567,10 +571,7 @@ body {
 
 /* ── REACTION PICKER ── */
 .reaction-picker {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 0;
-  z-index: 10;
+  z-index: 100;
   background: #fff;
   border-radius: 24px;
   box-shadow: 0 4px 16px rgba(0,0,0,.15);
@@ -601,6 +602,7 @@ body {
   padding: 10px 16px;
   background: #f0f2f5;
   gap: 8px;
+  position: relative;
 }
 
 .input input[type="text"] {
@@ -651,6 +653,41 @@ body {
 .input-btn:disabled {
   opacity: .5;
   cursor: default;
+}
+
+/* ── EMOJI PICKER (INPUT) ── */
+.emoji-picker-input {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 260px;
+}
+
+.emoji-picker-input span {
+  cursor: pointer;
+  font-size: 24px;
+  padding: 4px 6px;
+  border-radius: 12px;
+  transition: background .1s;
+  line-height: 1;
+}
+
+.emoji-picker-input span:hover {
+  background: #f0f2f5;
+}
+
+@media (max-width: 768px) {
+  .emoji-picker-input {
+    max-width: calc(100vw - 32px);
+  }
 }
 
 /* ── MODAL OVERLAY ── */
@@ -1027,5 +1064,10 @@ body {
 
   .edit-inline {
     flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .edit-inline input {
+    min-width: 100px;
   }
 }

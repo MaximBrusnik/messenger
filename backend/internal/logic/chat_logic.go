@@ -271,6 +271,8 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 				ID:       participant.ID,
 				Username: participant.Username,
 				Email:    participant.Email,
+				Avatar:   participant.Avatar,
+				Status:   participant.Status,
 			})
 		}
 	}
@@ -311,6 +313,8 @@ func (s *chatService) convertToMessageResponse(message *entity2.Message) *entity
 			ID:       message.Sender.ID,
 			Username: message.Sender.Username,
 			Email:    message.Sender.Email,
+			Avatar:   message.Sender.Avatar,
+			Status:   message.Sender.Status,
 		}
 	}
 

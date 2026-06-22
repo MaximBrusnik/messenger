@@ -141,6 +141,7 @@ func (s *userService) GetSettings(userID uint) (*entity.UserSettingsResponse, er
 	return &entity.UserSettingsResponse{
 		ShowOnlineStatus: user.ShowOnlineStatus,
 		LastSeenPrivacy:  user.LastSeenPrivacy,
+		AvatarPrivacy:    user.AvatarPrivacy,
 	}, nil
 }
 
@@ -155,6 +156,9 @@ func (s *userService) UpdateSettings(userID uint, req entity.UpdateSettingsReque
 	}
 	if req.LastSeenPrivacy != "" {
 		user.LastSeenPrivacy = req.LastSeenPrivacy
+	}
+	if req.AvatarPrivacy != "" {
+		user.AvatarPrivacy = req.AvatarPrivacy
 	}
 
 	return s.userRepo.Update(user)

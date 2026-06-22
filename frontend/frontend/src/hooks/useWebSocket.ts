@@ -6,7 +6,8 @@ export function useWebSocket(
   onNewMessage: (msg: Message) => void,
   onMessageEdited: (msg: Message) => void,
   onReactionChange: () => void,
-  onAnyMessage?: () => void
+  onAnyMessage?: () => void,
+  onUserStatus?: (userId: number, status: string) => void,
 ) {
   const chatIdRef = useRef(chatId);
   chatIdRef.current = chatId;
@@ -22,6 +23,9 @@ export function useWebSocket(
 
   const onAnyMessageRef = useRef(onAnyMessage);
   onAnyMessageRef.current = onAnyMessage;
+
+  const onUserStatusRef = useRef(onUserStatus);
+  onUserStatusRef.current = onUserStatus;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -63,6 +67,11 @@ export function useWebSocket(
             case "REACTION_REMOVED":
               onReactionChangeRef.current();
               break;
+            case "USER_STATUS": {
+              const { user_id, status } = data.payload as { user_id: number; status: string };
+              onUserStatusRef.current?.(user_id, status);
+              break;
+            }
           }
         } catch {
           // ignore parse errors

@@ -21,6 +21,7 @@ type User struct {
 	Status            string    `gorm:"size:50;default:'offline'" json:"status"`
 	ShowOnlineStatus  bool      `gorm:"default:true" json:"show_online_status"`
 	LastSeenPrivacy   string    `gorm:"size:20;default:'everyone'" json:"last_seen_privacy"`
+	AvatarPrivacy     string    `gorm:"size:20;default:'everyone'" json:"avatar_privacy"`
 	EmailVerified     bool      `gorm:"default:false" json:"email_verified"`
 	VerificationToken string    `gorm:"size:255" json:"-"`
 
@@ -38,6 +39,7 @@ type UpdateProfileRequest struct {
 type UpdateSettingsRequest struct {
 	ShowOnlineStatus *bool  `json:"show_online_status,omitempty"`
 	LastSeenPrivacy  string `json:"last_seen_privacy,omitempty" binding:"omitempty,oneof=everyone contacts nobody"`
+	AvatarPrivacy    string `json:"avatar_privacy,omitempty" binding:"omitempty,oneof=everyone contacts nobody"`
 }
 
 type ChangePasswordRequest struct {
@@ -91,6 +93,7 @@ type UserResponse struct {
 type UserSettingsResponse struct {
 	ShowOnlineStatus bool   `json:"show_online_status"`
 	LastSeenPrivacy  string `json:"last_seen_privacy"`
+	AvatarPrivacy    string `json:"avatar_privacy"`
 }
 
 // Хэширование пароля

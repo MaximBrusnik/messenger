@@ -3,13 +3,19 @@ import { apiRequest } from "../api/client";
 import type { Chat, Message, Reaction } from "../types";
 import { useAuth } from "../context/AuthContext";
 import MessageInput from "./MessageInput";
-import ReactionPicker from "./ReactionPicker";
 import { useWebSocket } from "../hooks/useWebSocket";
+
+const emojis = [
+  "👍", "❤️", "🔥", "😂", "😮", "😢", "🙏",
+  "🎉", "👏", "💯", "🥰", "😍", "🤣", "😭",
+  "😡", "🤔", "👀", "💪", "🤝", "✨", "⭐",
+];
 
 interface Props {
   chat: Chat;
   onBack?: () => void;
   onMessage?: () => void;
+  onUserStatus?: (userId: number, status: string) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -48,12 +54,13 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onUserStatus }: Props) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [reactionMsgId, setReactionMsgId] = useState<number | null>(null);
+  const [pickerTop, setPickerTop] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
@@ -85,7 +92,7 @@ export default function ChatArea({ chat, onBack, onMessage }: Props) {
     loadMessages();
   }, [loadMessages]);
 
-  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage);
+  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage, onUserStatus);
 
   useEffect(() => {
     loadMessages();
@@ -187,7 +194,11 @@ export default function ChatArea({ chat, onBack, onMessage }: Props) {
             <div
               key={m.id}
               className={`msg ${isMine ? "mine" : ""}`}
-              onMouseEnter={() => setReactionMsgId(m.id)}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setPickerTop(rect.top - 8);
+                setReactionMsgId(m.id);
+              }}
               onMouseLeave={() => setReactionMsgId(null)}
             >
               {!isMine && <div className="msg-sender">{m.sender?.username}</div>}
@@ -259,10 +270,13 @@ export default function ChatArea({ chat, onBack, onMessage }: Props) {
               )}
 
               {reactionMsgId === m.id && editingId !== m.id && (
-                <ReactionPicker
-                  onSelect={(emoji) => handleReaction(m.id, emoji)}
-                  onClose={() => setReactionMsgId(null)}
-                />
+                <div className="reaction-picker" style={{ position: "fixed", top: pickerTop, left: "50%", transform: "translateX(-50%)" }} onMouseLeave={() => setReactionMsgId(null)}>
+                  {emojis.map((e) => (
+                    <span key={e} onClick={() => { handleReaction(m.id, e); setReactionMsgId(null); }}>
+                      {e}
+                    </span>
+                  ))}
+                </div>
               )}
 
               {isMine && editingId !== m.id && (

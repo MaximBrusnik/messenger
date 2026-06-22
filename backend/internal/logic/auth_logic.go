@@ -83,6 +83,7 @@ func (s *authService) Login(req entity.LoginRequest) (string, *entity.UserRespon
 	}
 
 	user.LastLogin = time.Now()
+	user.Status = "online"
 	s.userRepo.Update(user)
 
 	token, err := s.jwtUtils.GenerateToken(user.ID)

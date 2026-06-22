@@ -56,7 +56,7 @@ func main() {
 	authHandler := handlers2.NewAuthHandler(authService)
 	userHandler := handlers2.NewUserHandler(userService, authService)
 	chatHandler := handlers2.NewChatHandler(chatService)
-	wsHandler := handlers2.NewWSHandler(jwtUtils)
+	wsHandler := handlers2.NewWSHandler(jwtUtils, userRepo)
 	uploadHandler := handlers2.NewUploadHandler(cfg.UploadDir)
 	reactionHandler := handlers2.NewReactionHandler(reactionService)
 

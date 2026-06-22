@@ -51,6 +51,6 @@ export interface UserSettings {
 }
 
 export interface WSMessage {
-  type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED";
+  type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_STATUS" | "CONNECTED";
   payload: Record<string, unknown>;
 }

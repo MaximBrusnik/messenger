@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -21,16 +22,28 @@ var (
 		WriteBufferSize: 1024,
 	}
 
-	clients   = make(map[uint]*websocket.Conn)
+	clients   = make(map[uint]*Client)
 	clientsMu sync.RWMutex
 )
 
-type WSHandler struct {
-	jwtUtils utils.JWTUtils
+type Client struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
 }
 
-func NewWSHandler(jwtUtils utils.JWTUtils) *WSHandler {
-	return &WSHandler{jwtUtils: jwtUtils}
+func (c *Client) writeJSON(v interface{}) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn.WriteJSON(v)
+}
+
+type WSHandler struct {
+	jwtUtils utils.JWTUtils
+	userRepo repo.UserRepository
+}
+
+func NewWSHandler(jwtUtils utils.JWTUtils, userRepo repo.UserRepository) *WSHandler {
+	return &WSHandler{jwtUtils: jwtUtils, userRepo: userRepo}
 }
 
 func (h *WSHandler) HandleWebSocket(c *gin.Context) {
@@ -54,9 +67,11 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 	defer conn.Close()
 
 	registerClient(userID, conn)
+	h.setUserOnline(userID)
 	defer unregisterClient(userID)
+	defer h.setUserOffline(userID)
 
-	conn.WriteJSON(map[string]interface{}{
+	clients[userID].writeJSON(map[string]interface{}{
 		"type": "CONNECTED",
 		"payload": map[string]interface{}{
 			"message": "WebSocket подключен",
@@ -81,11 +96,13 @@ func registerClient(userID uint, conn *websocket.Conn) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
 
-	if oldConn, exists := clients[userID]; exists {
-		oldConn.Close()
+	if old, exists := clients[userID]; exists {
+		old.mu.Lock()
+		old.conn.Close()
+		old.mu.Unlock()
 	}
 
-	clients[userID] = conn
+	clients[userID] = &Client{conn: conn}
 	log.Printf("Client registered: user_id=%d, total_clients=%d", userID, len(clients))
 }
 
@@ -97,16 +114,52 @@ func unregisterClient(userID uint) {
 	log.Printf("Client unregistered: user_id=%d, total_clients=%d", userID, len(clients))
 }
 
+func (h *WSHandler) setUserOnline(userID uint) {
+	user, err := h.userRepo.FindByID(userID)
+	if err != nil {
+		return
+	}
+	user.Status = "online"
+	h.userRepo.Update(user)
+
+	Broadcast(entity.WSMessage{
+		Type: "USER_STATUS",
+		Payload: map[string]interface{}{
+			"user_id": userID,
+			"status":  "online",
+		},
+	})
+}
+
+func (h *WSHandler) setUserOffline(userID uint) {
+	user, err := h.userRepo.FindByID(userID)
+	if err != nil {
+		return
+	}
+	user.Status = "offline"
+	user.LastLogin = time.Now()
+	h.userRepo.Update(user)
+
+	Broadcast(entity.WSMessage{
+		Type: "USER_STATUS",
+		Payload: map[string]interface{}{
+			"user_id":    userID,
+			"status":     "offline",
+			"last_login": user.LastLogin,
+		},
+	})
+}
+
 func SendToUser(userID uint, message interface{}) error {
 	clientsMu.RLock()
-	conn, exists := clients[userID]
+	client, exists := clients[userID]
 	clientsMu.RUnlock()
 
 	if !exists {
 		return nil
 	}
 
-	return conn.WriteJSON(message)
+	return client.writeJSON(message)
 }
 
 func SendToUsers(userIDs []uint, message interface{}) {
@@ -119,12 +172,12 @@ func Broadcast(message interface{}) {
 	clientsMu.RLock()
 	defer clientsMu.RUnlock()
 
-	for userID, conn := range clients {
-		go func(uid uint, c *websocket.Conn) {
-			if err := c.WriteJSON(message); err != nil {
+	for userID, client := range clients {
+		go func(uid uint, c *Client) {
+			if err := c.writeJSON(message); err != nil {
 				log.Printf("Broadcast error to user %d: %v", uid, err)
 			}
-		}(userID, conn)
+		}(userID, client)
 	}
 }
 

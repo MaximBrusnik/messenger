@@ -1,6 +1,12 @@
 import { useState, useRef } from "react";
 import { uploadFile } from "../api/client";
 
+const emojis = [
+  "👍", "❤️", "🔥", "😂", "😮", "😢", "🙏",
+  "🎉", "👏", "💯", "🥰", "😍", "🤣", "😭",
+  "😡", "🤔", "👀", "💪", "🤝", "✨", "⭐",
+];
+
 interface Props {
   onSend: (text: string, attachment?: { url: string; name: string; size: number; type: string }) => void;
 }
@@ -8,7 +14,9 @@ interface Props {
 export default function MessageInput({ onSend }: Props) {
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleSend() {
     if (!text.trim()) return;
@@ -35,9 +43,27 @@ export default function MessageInput({ onSend }: Props) {
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  function pickEmoji(emoji: string) {
+    setText((prev) => prev + emoji);
+    inputRef.current?.focus();
+  }
+
   return (
     <div className="input">
+      <button className="input-btn" onClick={() => setShowEmoji(!showEmoji)} title="Эмодзи" disabled={uploading}>
+        😊
+      </button>
+      {showEmoji && (
+        <div className="emoji-picker-input">
+          {emojis.map((e) => (
+            <span key={e} onClick={() => { pickEmoji(e); setShowEmoji(false); }}>
+              {e}
+            </span>
+          ))}
+        </div>
+      )}
       <input
+        ref={inputRef}
         type="text"
         value={text}
         onChange={(e) => setText(e.target.value)}

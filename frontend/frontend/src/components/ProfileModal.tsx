@@ -21,6 +21,7 @@ export default function ProfileModal({ onClose }: Props) {
   // Privacy
   const [showOnline, setShowOnline] = useState(true);
   const [lastSeenPrivacy, setLastSeenPrivacy] = useState<string>("everyone");
+  const [avatarPrivacy, setAvatarPrivacy] = useState<string>("everyone");
 
   // Password
   const [oldPwd, setOldPwd] = useState("");
@@ -34,6 +35,7 @@ export default function ProfileModal({ onClose }: Props) {
     apiRequest<{ data: UserSettings }>("/auth/settings").then((res) => {
       setShowOnline(res.data.show_online_status);
       setLastSeenPrivacy(res.data.last_seen_privacy);
+      setAvatarPrivacy(res.data.avatar_privacy);
     }).catch(() => {});
   }, []);
 
@@ -71,6 +73,7 @@ export default function ProfileModal({ onClose }: Props) {
       await apiRequest("/auth/settings", "PUT", {
         show_online_status: showOnline,
         last_seen_privacy: lastSeenPrivacy,
+        avatar_privacy: avatarPrivacy,
       });
       setSuccess("Настройки сохранены");
       setTimeout(() => setSuccess(null), 2000);
@@ -196,6 +199,14 @@ export default function ProfileModal({ onClose }: Props) {
               <div className="form-row">
                 <label>Кто видит время последнего захода</label>
                 <select value={lastSeenPrivacy} onChange={(e) => setLastSeenPrivacy(e.target.value)}>
+                  <option value="everyone">Все</option>
+                  <option value="contacts">Только контакты</option>
+                  <option value="nobody">Никто</option>
+                </select>
+              </div>
+              <div className="form-row">
+                <label>Кто видит аватарку</label>
+                <select value={avatarPrivacy} onChange={(e) => setAvatarPrivacy(e.target.value)}>
                   <option value="everyone">Все</option>
                   <option value="contacts">Только контакты</option>
                   <option value="nobody">Никто</option>
