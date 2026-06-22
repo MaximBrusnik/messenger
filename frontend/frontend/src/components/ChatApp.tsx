@@ -17,6 +17,13 @@ export default function ChatApp() {
   const isMobile = window.innerWidth <= 768;
   const [mobileChat, setMobileChat] = useState(false);
 
+  // Request notification permission
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // Sync mobileChat with activeChat
   useEffect(() => {
     if (!isMobile) setMobileChat(false);

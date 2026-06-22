@@ -4,6 +4,7 @@ import type { Chat, Message, Reaction } from "../types";
 import { useAuth } from "../context/AuthContext";
 import MessageInput from "./MessageInput";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { playNotificationSound } from "../utils/sound";
 
 const emojis = [
   "👍", "❤️", "🔥", "😂", "😮", "😢", "🙏",
@@ -87,7 +88,16 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
       if (prev.some((m) => m.id === msg.id)) return prev;
       return [...prev, msg];
     });
-  }, []);
+    if (msg.sender_id !== user?.id) {
+      playNotificationSound();
+      if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+        new Notification("MessangerMax", {
+          body: `${msg.sender?.username ?? "Пользователь"}: ${msg.text.slice(0, 80)}`,
+          icon: msg.sender?.avatar || undefined,
+        });
+      }
+    }
+  }, [user?.id]);
 
   const onMessageEdited = useCallback((msg: Message) => {
     setMessages((prev) =>
