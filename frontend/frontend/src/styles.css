@@ -1029,6 +1029,13 @@ body {
     display: none;
   }
 
+  .app.mobile-view .chat {
+    display: none;
+  }
+  .app.mobile-view.show-chat .chat {
+    display: flex;
+  }
+
   .back-btn {
     display: inline-flex;
     align-items: center;
