@@ -66,12 +66,6 @@ type WSMessage struct {
 	Payload interface{} `json:"payload"`
 }
 
-const (
-	WSMessageNewMessage  = "NEW_MESSAGE"
-	WSMessageChatUpdated = "CHAT_UPDATED"
-	WSMessageUserStatus  = "USER_STATUS"
-)
-
 // DTO для запросов
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=100"`

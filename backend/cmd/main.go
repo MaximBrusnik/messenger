@@ -1,13 +1,13 @@
 package main
 
 import (
-	ai2 "MessangerMax/internal/ai"
+	integrationAi "MessangerMax/internal/ai"
 	"MessangerMax/internal/config"
-	entity2 "MessangerMax/internal/entity"
-	handlers2 "MessangerMax/internal/handlers"
-	logic2 "MessangerMax/internal/logic"
+	entities "MessangerMax/internal/entity"
+	httpHandlers "MessangerMax/internal/handlers"
+	messengerLogic "MessangerMax/internal/logic"
 	"MessangerMax/internal/middleware"
-	repo2 "MessangerMax/internal/repo"
+	repository "MessangerMax/internal/repo"
 	db "MessangerMax/pkg"
 	"MessangerMax/utils"
 	"github.com/gin-gonic/gin"
@@ -28,43 +28,43 @@ func main() {
 	}
 
 	if err := db.AutoMigrate(
-		&entity2.User{},
-		&entity2.Chat{},
-		&entity2.Message{},
-		&entity2.ChatUser{},
-		&entity2.MessageReaction{},
+		&entities.User{},
+		&entities.Chat{},
+		&entities.Message{},
+		&entities.ChatUser{},
+		&entities.MessageReaction{},
 	); err != nil {
 		log.Fatal("Ошибка миграции базы данных:", err)
 	}
 	log.Println("Миграции базы данных выполнены успешно")
 
-	userRepo := repo2.NewUserRepository(db)
-	chatRepo := repo2.NewChatRepository(db)
-	messageRepo := repo2.NewMessageRepository(db)
-	reactionRepo := repo2.NewReactionRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	chatRepo := repository.NewChatRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
+	reactionRepo := repository.NewReactionRepository(db)
 
 	// Создаём AI-ассистента, если его нет
 	seedAIBot(userRepo)
 
 	jwtUtils := utils.NewJWTUtils(cfg.JWTSecret)
 
-	wsNotifier := handlers2.NewWSNotifier(chatRepo)
+	wsNotifier := httpHandlers.NewWSNotifier(chatRepo)
 
-	emailService := logic2.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppURL)
+	emailService := messengerLogic.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppURL)
 
-	geminiClient := ai2.NewGeminiClient(cfg.GeminiAPIKey)
+	geminiClient := integrationAi.NewGeminiClient(cfg.GeminiAPIKey)
 
-	authService := logic2.NewAuthService(userRepo, jwtUtils, emailService)
-	userService := logic2.NewUserService(userRepo, chatRepo)
-	chatService := logic2.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier, geminiClient)
-	reactionService := logic2.NewReactionService(reactionRepo, messageRepo, wsNotifier)
+	authService := messengerLogic.NewAuthService(userRepo, jwtUtils, emailService)
+	userService := messengerLogic.NewUserService(userRepo, chatRepo)
+	chatService := messengerLogic.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier, geminiClient)
+	reactionService := messengerLogic.NewReactionService(reactionRepo, messageRepo, wsNotifier)
 
-	authHandler := handlers2.NewAuthHandler(authService)
-	userHandler := handlers2.NewUserHandler(userService, authService)
-	chatHandler := handlers2.NewChatHandler(chatService)
-	wsHandler := handlers2.NewWSHandler(jwtUtils, userRepo)
-	uploadHandler := handlers2.NewUploadHandler(cfg.UploadDir)
-	reactionHandler := handlers2.NewReactionHandler(reactionService)
+	authHandler := httpHandlers.NewAuthHandler(authService)
+	userHandler := httpHandlers.NewUserHandler(userService, authService)
+	chatHandler := httpHandlers.NewChatHandler(chatService)
+	wsHandler := httpHandlers.NewWSHandler(jwtUtils, userRepo)
+	uploadHandler := httpHandlers.NewUploadHandler(cfg.UploadDir)
+	reactionHandler := httpHandlers.NewReactionHandler(reactionService)
 
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -156,13 +156,13 @@ func main() {
 	}
 }
 
-func seedAIBot(userRepo repo2.UserRepository) {
+func seedAIBot(userRepo repository.UserRepository) {
 	_, err := userRepo.FindByUsername("Ассистент")
 	if err == nil {
 		return
 	}
 
-	bot := &entity2.User{
+	bot := &entities.User{
 		Username: "Ассистент",
 		Email:    "ai@messengermax.local",
 		Password: "",

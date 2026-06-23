@@ -13,8 +13,6 @@ type UserRepository interface {
 	FindByEmail(email string) (*entity.User, error)
 	FindByVerificationToken(token string) (*entity.User, error)
 	Update(user *entity.User) error
-
-	// Новые методы для мессенджера
 	FindAll(excludeID uint) ([]entity.User, error)
 	Search(query string, excludeID uint) ([]entity.User, error)
 	AddContact(userID, contactID uint) error
