@@ -9,7 +9,7 @@
 
 Android	Capacitor (WebView APK)
 
-AI	Gemini 2.0 Flash (Google AI Studio)
+AI	Gemini 2.5 Flash (Google AI Studio)
 
 билд:
 ----
