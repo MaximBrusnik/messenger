@@ -74,6 +74,14 @@ export default function ChatApp() {
     setProfileUserId(null);
   }
 
+  async function handleStartAIChat() {
+    const res = await apiRequest<{ data: Chat }>("/ai/chat");
+    if (res?.data) {
+      setActiveChat(res.data);
+      if (isMobile) setMobileChat(true);
+    }
+  }
+
   const handleUserStatus = useCallback((userId: number, status: string) => {
     if (userId === user?.id && user) {
       setUser({ ...user, status });
@@ -94,6 +102,7 @@ export default function ChatApp() {
         onOpenUserProfile={handleOpenUserProfile}
         onOpenProfile={() => setShowProfile(true)}
         onDeleteChat={handleDeleteChat}
+        onStartAIChat={handleStartAIChat}
       />
 
       <div className="chat">

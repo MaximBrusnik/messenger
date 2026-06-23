@@ -26,6 +26,7 @@ type User struct {
 	VerificationToken string     `gorm:"size:255" json:"-"`
 	Bio               string     `gorm:"size:500" json:"bio,omitempty"`
 	DateOfBirth       *time.Time `json:"date_of_birth,omitempty"`
+	IsBot             bool       `gorm:"default:false" json:"is_bot"`
 
 	Chats    []Chat    `gorm:"many2many:chat_users;" json:"-"`
 	Messages []Message `gorm:"foreignKey:SenderID" json:"-"`
@@ -94,6 +95,7 @@ type UserResponse struct {
 	EmailVerified bool      `json:"email_verified"`
 	Bio           string    `json:"bio,omitempty"`
 	DateOfBirth   string    `json:"date_of_birth,omitempty"`
+	IsBot         bool      `json:"is_bot"`
 }
 
 type UserProfileResponse struct {
@@ -139,6 +141,7 @@ func (u *User) ToResponse() UserResponse {
 		EmailVerified: u.EmailVerified,
 		Bio:           u.Bio,
 		DateOfBirth:   dob,
+		IsBot:         u.IsBot,
 	}
 }
 

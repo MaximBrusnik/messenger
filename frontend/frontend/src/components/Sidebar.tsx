@@ -9,6 +9,7 @@ interface Props {
   onOpenUserProfile: (userId: number) => void;
   onOpenProfile: () => void;
   onDeleteChat: (chatId: number) => void;
+  onStartAIChat?: () => void;
 }
 
 function formatTime(iso?: string): string {
@@ -42,7 +43,7 @@ function chatTime(iso?: string): string {
 
 const initial = (name: string) => name.charAt(0).toUpperCase();
 
-export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat }: Props) {
+export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat, onStartAIChat }: Props) {
   const statusLabel = user.status === "online" ? "В сети" : `Был(а) ${formatTime(user.last_login)}`;
 
   return (
@@ -62,6 +63,20 @@ export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenU
       </div>
 
       <UserSearch onOpenProfile={onOpenUserProfile} />
+
+      {onStartAIChat && (
+        <div
+          className="chat-item"
+          style={{ borderBottom: "1px solid #e8e8e8", cursor: "pointer" }}
+          onClick={onStartAIChat}
+        >
+          <div className="chat-item-avatar" style={{ background: "#7c4dff" }}>🤖</div>
+          <div className="chat-item-content">
+            <div className="chat-item-name">Ассистент</div>
+            <div className="chat-item-preview">AI-помощник</div>
+          </div>
+        </div>
+      )}
 
       <div className="chat-list">
         {chats.map((c) => (

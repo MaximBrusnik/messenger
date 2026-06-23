@@ -1,9 +1,12 @@
 package logic
 
 import (
+	ai2 "MessangerMax/internal/ai"
 	entity2 "MessangerMax/internal/entity"
 	repo2 "MessangerMax/internal/repo"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 )
 
@@ -19,13 +22,15 @@ type ChatService interface {
 	RemoveUserFromChat(chatID, userID, targetUserID uint) error
 	DeleteChat(chatID, userID uint) error
 	DeleteMessage(messageID, userID uint) error
+	GetOrCreateAIChat(userID uint) (*entity2.ChatResponse, error)
 }
 
 type chatService struct {
-	chatRepo    repo2.ChatRepository
-	messageRepo repo2.MessageRepository
-	userRepo    repo2.UserRepository
-	notifier    Notifier
+	chatRepo     repo2.ChatRepository
+	messageRepo  repo2.MessageRepository
+	userRepo     repo2.UserRepository
+	notifier     Notifier
+	geminiClient *ai2.GeminiClient
 }
 
 func NewChatService(
@@ -33,12 +38,14 @@ func NewChatService(
 	messageRepo repo2.MessageRepository,
 	userRepo repo2.UserRepository,
 	notifier Notifier,
+	geminiClient *ai2.GeminiClient,
 ) ChatService {
 	return &chatService{
-		chatRepo:    chatRepo,
-		messageRepo: messageRepo,
-		userRepo:    userRepo,
-		notifier:    notifier,
+		chatRepo:     chatRepo,
+		messageRepo:  messageRepo,
+		userRepo:     userRepo,
+		notifier:     notifier,
+		geminiClient: geminiClient,
 	}
 }
 
@@ -90,6 +97,18 @@ func (s *chatService) GetUserChats(userID uint) ([]entity2.ChatResponse, error) 
 
 	var responses []entity2.ChatResponse
 	for _, chat := range chats {
+		// Пропускаем чаты с AI-ботом (показываются через отдельную кнопку)
+		isBotChat := false
+		for _, p := range chat.Participants {
+			if p.ID != userID && p.IsBot {
+				isBotChat = true
+				break
+			}
+		}
+		if isBotChat {
+			continue
+		}
+
 		response, err := s.convertToChatResponse(&chat, userID)
 		if err != nil {
 			continue
@@ -163,6 +182,16 @@ func (s *chatService) SendMessage(userID, chatID uint, req entity2.SendMessageRe
 	// Уведомляем участников чата через WebSocket
 	response := s.convertToMessageResponse(message, userID)
 	s.notifier.SendNewMessage(chatID, response)
+
+	// Если в чате есть AI-бот — генерируем ответ асинхронно
+	if s.geminiClient != nil {
+		for _, participant := range chat.Participants {
+			if participant.IsBot {
+				go s.generateAIResponse(chatID, participant.ID)
+				break
+			}
+		}
+	}
 
 	return response, nil
 }
@@ -301,6 +330,72 @@ func (s *chatService) DeleteMessage(messageID, userID uint) error {
 	return nil
 }
 
+func (s *chatService) GetOrCreateAIChat(userID uint) (*entity2.ChatResponse, error) {
+	botUser, err := s.userRepo.FindByUsername("Ассистент")
+	if err != nil {
+		return nil, errors.New("AI-ассистент недоступен")
+	}
+
+	existingChat, err := s.chatRepo.FindPrivateChat(userID, botUser.ID)
+	if err == nil && existingChat != nil {
+		chat, err := s.chatRepo.FindByID(existingChat.ID)
+		if err == nil {
+			return s.convertToChatResponse(chat, userID)
+		}
+	}
+
+	chat := &entity2.Chat{
+		Type: "private",
+		Name: "🤖 Ассистент",
+	}
+	currentUser, _ := s.userRepo.FindByID(userID)
+	chat.Participants = []entity2.User{*currentUser, *botUser}
+
+	if err := s.chatRepo.Create(chat); err != nil {
+		return nil, err
+	}
+
+	return s.convertToChatResponse(chat, userID)
+}
+
+func (s *chatService) generateAIResponse(chatID, botID uint) {
+	// Загружаем последние 20 сообщений для контекста
+	messages, err := s.messageRepo.FindByChatID(chatID, 20, 0)
+	if err != nil {
+		return
+	}
+
+	var history []ai2.ChatMessage
+	for _, msg := range messages {
+		history = append(history, ai2.ChatMessage{
+			Text:  msg.Text,
+			IsBot: msg.SenderID == botID,
+		})
+	}
+
+	reply, err := s.geminiClient.GenerateResponse(history)
+	if err != nil {
+		log.Printf("Gemini API error: %v", err)
+		reply = fmt.Sprintf("Извините, произошла ошибка при обработке запроса. ошибка: %v", err)
+	}
+
+	botMessage := &entity2.Message{
+		ChatID:   chatID,
+		SenderID: botID,
+		Text:     reply,
+	}
+
+	if err := s.messageRepo.Create(botMessage); err != nil {
+		return
+	}
+
+	sender, _ := s.userRepo.FindByID(botID)
+	botMessage.Sender = *sender
+
+	response := s.convertToMessageResponse(botMessage, 0)
+	s.notifier.SendNewMessage(chatID, response)
+}
+
 // Вспомогательные методы
 func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID uint) (*entity2.ChatResponse, error) {
 	// Получаем последнее сообщение
@@ -340,6 +435,7 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 				Status:    participant.Status,
 				LastLogin: participant.LastLogin,
 				CreatedAt: participant.CreatedAt,
+				IsBot:     participant.IsBot,
 			})
 		}
 	}
@@ -398,6 +494,7 @@ func (s *chatService) convertToMessageResponse(message *entity2.Message, viewerI
 			Status:    message.Sender.Status,
 			LastLogin: message.Sender.LastLogin,
 			CreatedAt: message.Sender.CreatedAt,
+			IsBot:     message.Sender.IsBot,
 		}
 	}
 

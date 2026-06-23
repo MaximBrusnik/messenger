@@ -1,6 +1,7 @@
 package main
 
 import (
+	ai2 "MessangerMax/internal/ai"
 	"MessangerMax/internal/config"
 	entity2 "MessangerMax/internal/entity"
 	handlers2 "MessangerMax/internal/handlers"
@@ -42,15 +43,20 @@ func main() {
 	messageRepo := repo2.NewMessageRepository(db)
 	reactionRepo := repo2.NewReactionRepository(db)
 
+	// Создаём AI-ассистента, если его нет
+	seedAIBot(userRepo)
+
 	jwtUtils := utils.NewJWTUtils(cfg.JWTSecret)
 
 	wsNotifier := handlers2.NewWSNotifier(chatRepo)
 
 	emailService := logic2.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppURL)
 
+	geminiClient := ai2.NewGeminiClient(cfg.GeminiAPIKey)
+
 	authService := logic2.NewAuthService(userRepo, jwtUtils, emailService)
 	userService := logic2.NewUserService(userRepo, chatRepo)
-	chatService := logic2.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier)
+	chatService := logic2.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier, geminiClient)
 	reactionService := logic2.NewReactionService(reactionRepo, messageRepo, wsNotifier)
 
 	authHandler := handlers2.NewAuthHandler(authService)
@@ -122,6 +128,16 @@ func main() {
 			protected.GET("/chats/:id/messages/:msgId/reactions", reactionHandler.GetReactions)
 			protected.POST("/chats/:id/messages/:msgId/reactions", reactionHandler.AddReaction)
 			protected.DELETE("/chats/:id/messages/:msgId/reactions", reactionHandler.RemoveReaction)
+
+			protected.GET("/ai/chat", func(c *gin.Context) {
+				userID := c.GetUint("user_id")
+				chat, err := chatService.GetOrCreateAIChat(userID)
+				if err != nil {
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(200, gin.H{"data": chat})
+			})
 		}
 	}
 
@@ -138,4 +154,25 @@ func main() {
 	if err := router.Run(port); err != nil {
 		log.Fatal("Ошибка запуска сервера:", err)
 	}
+}
+
+func seedAIBot(userRepo repo2.UserRepository) {
+	_, err := userRepo.FindByUsername("Ассистент")
+	if err == nil {
+		return
+	}
+
+	bot := &entity2.User{
+		Username: "Ассистент",
+		Email:    "ai@messengermax.local",
+		Password: "",
+		IsActive: true,
+		IsBot:    true,
+	}
+	bot.HashPassword("none")
+	if err := userRepo.Create(bot); err != nil {
+		log.Printf("Ошибка создания AI-ассистента: %v", err)
+		return
+	}
+	log.Println("AI-ассистент создан")
 }

@@ -10,6 +10,7 @@ export interface User {
   bio?: string;
   date_of_birth?: string;
   common_chats?: number;
+  is_bot?: boolean;
 }
 
 export interface Chat {

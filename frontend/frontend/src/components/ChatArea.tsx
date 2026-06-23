@@ -248,14 +248,14 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     <>
       <div className="chat-header">
         {onBack && <button className="back-btn" onClick={onBack}>←</button>}
-        <div className="chat-header-avatar" style={{ cursor: partner ? "pointer" : "default" }} onClick={() => partner && onOpenUserProfile?.(partner.id)}>
+        <div className="chat-header-avatar" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default", background: partner?.is_bot ? "#7c4dff" : undefined }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
           {partner?.avatar ? (
             <img src={partner.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-          ) : partner ? partner.username.charAt(0).toUpperCase() : "#"}
+          ) : partner?.is_bot ? "🤖" : partner ? partner.username.charAt(0).toUpperCase() : "#"}
         </div>
-        <div className="chat-header-info" style={{ cursor: partner ? "pointer" : "default" }} onClick={() => partner && onOpenUserProfile?.(partner.id)}>
+        <div className="chat-header-info" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default" }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
           <div className="chat-header-name">{partner?.username ?? chat.name}</div>
-          <div className="chat-header-status">{lastSeenLabel(partner?.last_login)}</div>
+          <div className="chat-header-status">{partner?.is_bot ? "AI-ассистент" : lastSeenLabel(partner?.last_login)}</div>
         </div>
         <div className="chat-menu-container" ref={menuRef}>
           <button className="chat-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
