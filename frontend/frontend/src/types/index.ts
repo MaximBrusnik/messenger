@@ -11,6 +11,7 @@ export interface User {
   date_of_birth?: string;
   common_chats?: number;
   is_bot?: boolean;
+  is_admin?: boolean;
 }
 
 export interface Chat {
@@ -54,6 +55,18 @@ export interface UserSettings {
   show_online_status: boolean;
   last_seen_privacy: "everyone" | "contacts" | "nobody";
   avatar_privacy: "everyone" | "contacts" | "nobody";
+}
+
+export interface MusicTrack {
+  id: number;
+  title: string;
+  artist: string;
+  original_name: string;
+  size: number;
+  mime_type: string;
+  uploaded_by: number;
+  status: string;
+  created_at: string;
 }
 
 export interface WSMessage {

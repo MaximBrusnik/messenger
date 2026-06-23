@@ -33,6 +33,7 @@ func main() {
 		&entities.Message{},
 		&entities.ChatUser{},
 		&entities.MessageReaction{},
+		&entities.Music{},
 	); err != nil {
 		log.Fatal("Ошибка миграции базы данных:", err)
 	}
@@ -42,9 +43,11 @@ func main() {
 	chatRepo := repository.NewChatRepository(db)
 	messageRepo := repository.NewMessageRepository(db)
 	reactionRepo := repository.NewReactionRepository(db)
+	musicRepo := repository.NewMusicRepository(db)
 
-	// Создаём AI-ассистента, если его нет
+	// Создаём AI-ассистента и администратора, если их нет
 	seedAIBot(userRepo)
+	seedAdmin(userRepo)
 
 	jwtUtils := utils.NewJWTUtils(cfg.JWTSecret)
 
@@ -58,6 +61,7 @@ func main() {
 	userService := messengerLogic.NewUserService(userRepo, chatRepo)
 	chatService := messengerLogic.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier, geminiClient)
 	reactionService := messengerLogic.NewReactionService(reactionRepo, messageRepo, wsNotifier)
+	musicService := messengerLogic.NewMusicService(musicRepo, cfg.MusicDir)
 
 	authHandler := httpHandlers.NewAuthHandler(authService)
 	userHandler := httpHandlers.NewUserHandler(userService, authService)
@@ -65,6 +69,7 @@ func main() {
 	wsHandler := httpHandlers.NewWSHandler(jwtUtils, userRepo)
 	uploadHandler := httpHandlers.NewUploadHandler(cfg.UploadDir)
 	reactionHandler := httpHandlers.NewReactionHandler(reactionService)
+	musicHandler := httpHandlers.NewMusicHandler(musicService)
 
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -138,6 +143,20 @@ func main() {
 				}
 				c.JSON(200, gin.H{"data": chat})
 			})
+
+			protected.GET("/music", musicHandler.List)
+			protected.POST("/music/upload", musicHandler.Upload)
+			protected.GET("/music/:id/stream", musicHandler.Stream)
+			protected.GET("/music/:id/download", musicHandler.Download)
+			protected.DELETE("/music/:id", musicHandler.Delete)
+
+			admin := protected.Group("/admin")
+			admin.Use(middleware.AdminMiddleware(userRepo))
+			{
+				admin.GET("/music/pending", musicHandler.ListPending)
+				admin.PUT("/music/:id/approve", musicHandler.Approve)
+				admin.PUT("/music/:id/reject", musicHandler.Reject)
+			}
 		}
 	}
 
@@ -175,4 +194,25 @@ func seedAIBot(userRepo repository.UserRepository) {
 		return
 	}
 	log.Println("AI-ассистент создан")
+}
+
+func seedAdmin(userRepo repository.UserRepository) {
+	_, err := userRepo.FindByUsername("Admin")
+	if err == nil {
+		return
+	}
+
+	admin := &entities.User{
+		Username: "Admin",
+		Email:    "admin@messengermax.local",
+		Password: "",
+		IsActive: true,
+		IsAdmin:  true,
+	}
+	admin.HashPassword("07062002")
+	if err := userRepo.Create(admin); err != nil {
+		log.Printf("Ошибка создания администратора: %v", err)
+		return
+	}
+	log.Println("Администратор создан")
 }

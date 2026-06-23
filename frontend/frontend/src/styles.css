@@ -1012,7 +1012,10 @@ body {
     width: 100%;
     min-width: 0;
     flex: none;
+    padding-bottom: 50px;
   }
+
+
 
   .chat {
     width: 100%;
@@ -1265,4 +1268,264 @@ body {
 }
 .msg-check.read {
   color: #53bdeb;
+}
+
+/* ── SIDEBAR TABS ── */
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fff;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 10px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+  transition: color .15s, border-color .15s;
+  border-bottom: 2px solid transparent;
+}
+
+.sidebar-tab:hover {
+  color: #3390ec;
+}
+
+.sidebar-tab.active {
+  color: #3390ec;
+  border-bottom-color: #3390ec;
+}
+
+/* ── MUSIC TAB ── */
+.music-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.music-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.music-upload-btn {
+  padding: 6px 12px;
+  background: #3390ec;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.music-upload-btn:hover {
+  background: #2a7bcc;
+}
+
+.music-empty {
+  padding: 24px 16px;
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+}
+
+.music-list {
+  flex: 1;
+}
+
+.music-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background .1s;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.music-item:hover {
+  background: #f5f6f8;
+}
+
+.music-item.active {
+  background: #e8f4fd;
+}
+
+.music-item-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.music-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.music-item-title {
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-item-artist {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-item-size {
+  font-size: 12px;
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+.music-item-download {
+  font-size: 16px;
+  text-decoration: none;
+  opacity: 0.5;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+
+.music-item-download:hover {
+  opacity: 1;
+}
+
+.music-item-approve,
+.music-item-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px;
+  flex-shrink: 0;
+  opacity: 0.3;
+  transition: opacity .15s;
+}
+
+.music-item:hover .music-item-approve,
+.music-item:hover .music-item-delete {
+  opacity: 0.5;
+}
+
+.music-item .music-item-approve:hover,
+.music-item .music-item-delete:hover {
+  opacity: 1;
+}
+
+/* ── MUSIC PLAYER ── */
+.music-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px 24px;
+  gap: 20px;
+}
+
+.music-player .back-btn {
+  align-self: flex-start;
+  margin-bottom: -8px;
+}
+
+.music-player-header {
+  text-align: center;
+}
+
+.music-player-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+
+.music-player-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.music-player-artist {
+  font-size: 14px;
+  color: #888;
+}
+
+.music-player-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.music-play-btn {
+  background: none;
+  border: none;
+  font-size: 40px;
+  cursor: pointer;
+  transition: transform .1s;
+}
+
+.music-play-btn:active {
+  transform: scale(0.9);
+}
+
+.music-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.music-progress-fill {
+  height: 100%;
+  background: #3390ec;
+  border-radius: 3px;
+  transition: width .1s;
+}
+
+.music-time {
+  font-size: 13px;
+  color: #888;
+}
+
+.music-download-btn {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #3390ec;
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background .15s;
+}
+
+.music-download-btn:hover {
+  background: #2a7bcc;
+}
+
+@media (max-width: 768px) {
+  .music-player {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .music-player-icon {
+    font-size: 48px;
+  }
 }

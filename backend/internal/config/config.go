@@ -20,6 +20,7 @@ type Config struct {
 	SMTPFrom     string
 	AppURL       string
 	GeminiAPIKey string
+	MusicDir     string
 }
 
 func Load() *Config {
@@ -40,6 +41,7 @@ func Load() *Config {
 		SMTPFrom:     getEnv("SMTP_FROM", "MessangerMax <noreply@example.com>"),
 		AppURL:       getEnv("APP_URL", "http://localhost:5173"),
 		GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
+		MusicDir:     getEnv("MUSIC_DIR", "music"),
 	}
 }
 

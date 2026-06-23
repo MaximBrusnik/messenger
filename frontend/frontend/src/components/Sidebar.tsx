@@ -1,15 +1,20 @@
 import UserSearch from "./UserSearch";
+import MusicTab from "./MusicTab";
 import type { Chat, User } from "../types";
 
 interface Props {
   user: User;
   chats: Chat[];
   activeChat: Chat | null;
+  activeTab: "chats" | "music";
+  activeTrackId: number | null;
   onSelectChat: (chat: Chat) => void;
   onOpenUserProfile: (userId: number) => void;
   onOpenProfile: () => void;
   onDeleteChat: (chatId: number) => void;
   onStartAIChat?: () => void;
+  onTabChange: (tab: "chats" | "music") => void;
+  onPlayTrack: (id: number) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -43,7 +48,11 @@ function chatTime(iso?: string): string {
 
 const initial = (name: string) => name.charAt(0).toUpperCase();
 
-export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat, onStartAIChat }: Props) {
+export default function Sidebar({
+  user, chats, activeChat, activeTab, activeTrackId,
+  onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat, onStartAIChat,
+  onTabChange, onPlayTrack,
+}: Props) {
   const statusLabel = user.status === "online" ? "В сети" : `Был(а) ${formatTime(user.last_login)}`;
 
   return (
@@ -62,54 +71,75 @@ export default function Sidebar({ user, chats, activeChat, onSelectChat, onOpenU
         </div>
       </div>
 
-      <UserSearch onOpenProfile={onOpenUserProfile} />
-
-      {onStartAIChat && (
-        <div
-          className="chat-item"
-          style={{ borderBottom: "1px solid #e8e8e8", cursor: "pointer" }}
-          onClick={onStartAIChat}
+      <div className="sidebar-tabs">
+        <button
+          className={`sidebar-tab${activeTab === "chats" ? " active" : ""}`}
+          onClick={() => onTabChange("chats")}
         >
-          <div className="chat-item-avatar" style={{ background: "#7c4dff" }}>🤖</div>
-          <div className="chat-item-content">
-            <div className="chat-item-name">Ассистент</div>
-            <div className="chat-item-preview">AI-помощник</div>
-          </div>
-        </div>
-      )}
+          💬 Чаты
+        </button>
+        <button
+          className={`sidebar-tab${activeTab === "music" ? " active" : ""}`}
+          onClick={() => onTabChange("music")}
+        >
+          🎵 Музыка
+        </button>
+      </div>
 
-      <div className="chat-list">
-        {chats.map((c) => (
-          <div
-            key={c.id}
-            className={`chat-item${activeChat?.id === c.id ? " active" : ""}`}
-            onClick={() => onSelectChat(c)}
-          >
-            <div className="chat-item-avatar">
-              {c.participants?.[0]?.avatar ? (
-                <img src={c.participants[0].avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-              ) : c.participants?.[0] ? initial(c.participants[0].username) : "#"}
-            </div>
-            <div className="chat-item-content">
-              <div className="chat-item-name">{c.name}</div>
-              <div className="chat-item-preview">
-                {c.last_message ? c.last_message.text || (c.last_message.attachment_type === "image" ? "Фото" : "Файл") : "Нет сообщений"}
+      {activeTab === "chats" ? (
+        <>
+          <UserSearch onOpenProfile={onOpenUserProfile} />
+
+          {onStartAIChat && (
+            <div
+              className="chat-item"
+              style={{ borderBottom: "1px solid #e8e8e8", cursor: "pointer" }}
+              onClick={onStartAIChat}
+            >
+              <div className="chat-item-avatar" style={{ background: "#7c4dff" }}>🤖</div>
+              <div className="chat-item-content">
+                <div className="chat-item-name">Ассистент</div>
+                <div className="chat-item-preview">AI-помощник</div>
               </div>
             </div>
-            <div className="chat-item-right">
-              <div className="chat-item-time">{chatTime(c.last_message?.created_at)}</div>
-              {c.unread ? <div className="chat-item-unread">{c.unread}</div> : null}
-            </div>
-            <button
-              className="chat-item-delete"
-              onClick={(e) => { e.stopPropagation(); onDeleteChat(c.id); }}
-              title="Удалить чат"
-            >
-              🗑️
-            </button>
+          )}
+
+          <div className="chat-list">
+            {chats.map((c) => (
+              <div
+                key={c.id}
+                className={`chat-item${activeChat?.id === c.id ? " active" : ""}`}
+                onClick={() => onSelectChat(c)}
+              >
+                <div className="chat-item-avatar">
+                  {c.participants?.[0]?.avatar ? (
+                    <img src={c.participants[0].avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                  ) : c.participants?.[0] ? initial(c.participants[0].username) : "#"}
+                </div>
+                <div className="chat-item-content">
+                  <div className="chat-item-name">{c.name}</div>
+                  <div className="chat-item-preview">
+                    {c.last_message ? c.last_message.text || (c.last_message.attachment_type === "image" ? "Фото" : "Файл") : "Нет сообщений"}
+                  </div>
+                </div>
+                <div className="chat-item-right">
+                  <div className="chat-item-time">{chatTime(c.last_message?.created_at)}</div>
+                  {c.unread ? <div className="chat-item-unread">{c.unread}</div> : null}
+                </div>
+                <button
+                  className="chat-item-delete"
+                  onClick={(e) => { e.stopPropagation(); onDeleteChat(c.id); }}
+                  title="Удалить чат"
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      ) : (
+        <MusicTab onPlay={onPlayTrack} activeTrackId={activeTrackId} isAdmin={user.is_admin} />
+      )}
     </div>
   );
 }

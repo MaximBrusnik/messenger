@@ -27,6 +27,7 @@ type User struct {
 	Bio               string     `gorm:"size:500" json:"bio,omitempty"`
 	DateOfBirth       *time.Time `json:"date_of_birth,omitempty"`
 	IsBot             bool       `gorm:"default:false" json:"is_bot"`
+	IsAdmin           bool       `gorm:"default:false" json:"is_admin"`
 
 	Chats    []Chat    `gorm:"many2many:chat_users;" json:"-"`
 	Messages []Message `gorm:"foreignKey:SenderID" json:"-"`
@@ -90,6 +91,7 @@ type UserResponse struct {
 	Bio           string    `json:"bio,omitempty"`
 	DateOfBirth   string    `json:"date_of_birth,omitempty"`
 	IsBot         bool      `json:"is_bot"`
+	IsAdmin       bool      `json:"is_admin"`
 }
 
 type UserProfileResponse struct {
@@ -136,6 +138,7 @@ func (u *User) ToResponse() UserResponse {
 		Bio:           u.Bio,
 		DateOfBirth:   dob,
 		IsBot:         u.IsBot,
+		IsAdmin:       u.IsAdmin,
 	}
 }
 

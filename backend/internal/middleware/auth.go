@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"MessangerMax/internal/repo"
 	"MessangerMax/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -42,6 +43,28 @@ func AuthMiddleware(jwtUtils utils.JWTUtils) gin.HandlerFunc {
 
 		// Сохранение userID в контексте
 		c.Set("user_id", userID)
+		c.Next()
+	}
+}
+
+// AdminMiddleware проверяет, что пользователь является администратором
+func AdminMiddleware(userRepo repo.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Требуется авторизация"})
+			c.Abort()
+			return
+		}
+
+		user, err := userRepo.FindByID(userID.(uint))
+		if err != nil || !user.IsAdmin {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Доступ запрещён"})
+			c.Abort()
+			return
+		}
+
+		c.Set("is_admin", true)
 		c.Next()
 	}
 }

@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { apiRequest, deleteChat } from "../api/client";
-import type { Chat } from "../types";
+import { apiRequest, deleteChat, getMusic } from "../api/client";
+import type { Chat, MusicTrack } from "../types";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
+import MusicPlayer from "./MusicPlayer";
 import ProfileModal from "./ProfileModal";
 import UserProfileModal from "./UserProfileModal";
+
 
 export default function ChatApp() {
   const { user, setUser } = useAuth();
@@ -13,9 +15,12 @@ export default function ChatApp() {
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"chats" | "music">("chats");
+  const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
 
   const isMobile = window.innerWidth <= 768;
   const [mobileChat, setMobileChat] = useState(false);
+  const [mobilePlayer, setMobilePlayer] = useState(false);
 
   // Request notification permission
   useEffect(() => {
@@ -26,7 +31,7 @@ export default function ChatApp() {
 
   // Sync mobileChat with activeChat
   useEffect(() => {
-    if (!isMobile) setMobileChat(false);
+    if (!isMobile) { setMobileChat(false); setMobilePlayer(false); }
   }, [isMobile]);
 
   const loadChats = useCallback(async () => {
@@ -40,6 +45,7 @@ export default function ChatApp() {
 
   async function openChat(chat: Chat) {
     setActiveChat(chat);
+    setActiveTab("chats");
     if (isMobile) setMobileChat(true);
     await apiRequest(`/chats/${chat.id}/read`, "POST");
   }
@@ -78,7 +84,33 @@ export default function ChatApp() {
     const res = await apiRequest<{ data: Chat }>("/ai/chat");
     if (res?.data) {
       setActiveChat(res.data);
+      setActiveTab("chats");
       if (isMobile) setMobileChat(true);
+    }
+  }
+
+  async function handlePlayTrack(id: number) {
+    try {
+      const res = await getMusic();
+      const track = res?.data?.find((t: MusicTrack) => t.id === id);
+      if (track) {
+        setSelectedTrack(track);
+        if (isMobile) setMobilePlayer(true);
+      }
+    } catch { /* ignore */ }
+  }
+
+  function handleMusicBack() {
+    setMobilePlayer(false);
+    setSelectedTrack(null);
+  }
+
+  function handleTabChange(tab: "chats" | "music") {
+    setActiveTab(tab);
+    if (tab !== "music") setSelectedTrack(null);
+    if (isMobile && tab === "chats") {
+      setMobileChat(false);
+      setMobilePlayer(false);
     }
   }
 
@@ -89,24 +121,33 @@ export default function ChatApp() {
   }, [user, setUser]);
 
   const mobileClass = isMobile
-    ? `mobile-view${mobileChat ? " show-chat" : ""}`
+    ? `mobile-view${mobileChat || (activeTab === "music" && mobilePlayer) ? " show-chat" : ""}`
     : "";
 
   return (
     <div className={`app ${mobileClass}`}>
       <Sidebar
-        user={user!}
-        chats={chats}
-        activeChat={activeChat}
-        onSelectChat={openChat}
-        onOpenUserProfile={handleOpenUserProfile}
-        onOpenProfile={() => setShowProfile(true)}
-        onDeleteChat={handleDeleteChat}
-        onStartAIChat={handleStartAIChat}
-      />
+          user={user!}
+          chats={chats}
+          activeChat={activeChat}
+          activeTab={activeTab}
+          activeTrackId={selectedTrack?.id ?? null}
+          onSelectChat={openChat}
+          onOpenUserProfile={handleOpenUserProfile}
+          onOpenProfile={() => setShowProfile(true)}
+          onDeleteChat={handleDeleteChat}
+          onStartAIChat={handleStartAIChat}
+          onTabChange={handleTabChange}
+          onPlayTrack={handlePlayTrack}
+        />
 
       <div className="chat">
-        {activeChat ? (
+        {activeTab === "music" && selectedTrack ? (
+          <MusicPlayer
+            track={selectedTrack}
+            onBack={isMobile ? handleMusicBack : undefined}
+          />
+        ) : activeChat ? (
           <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} />
         ) : (
           <div className="empty-state">
