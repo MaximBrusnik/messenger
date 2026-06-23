@@ -414,6 +414,16 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 		Unread:    unreadCount,
 	}
 
+	// Для приватных чатов имя = имя собеседника (не текущего пользователя)
+	if chat.Type == "private" {
+		for _, p := range chat.Participants {
+			if p.ID != currentUserID {
+				response.Name = p.Username
+				break
+			}
+		}
+	}
+
 	// Добавляем участников (без текущего пользователя)
 	for _, participant := range chat.Participants {
 		if participant.ID != currentUserID {
