@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { apiRequest, deleteMessage } from "../api/client";
 import type { Chat, Message, Reaction } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -71,12 +71,24 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
   const editRef = useRef<HTMLInputElement>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const scrollPosRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
+  const loadMorePendingRef = useRef(false);
+
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const loadMessages = useCallback(async () => {
     try {
       setError(null);
-      const res = await apiRequest<{ data: Message[] }>(`/chats/${chat.id}/messages`);
-      setMessages(res.data ?? []);
+      offsetRef.current = 0;
+      setHasMore(true);
+      const res = await apiRequest<{ data: Message[] }>(`/chats/${chat.id}/messages?limit=50&offset=0`);
+      const data = res.data ?? [];
+      setMessages(data);
+      setHasMore(data.length >= 50);
+      offsetRef.current = data.length;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
     }
@@ -133,8 +145,22 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     loadMessages();
   }, [loadMessages]);
 
+  useLayoutEffect(() => {
+    if (scrollPosRef.current && messagesRef.current) {
+      const el = messagesRef.current;
+      el.scrollTop = scrollPosRef.current.scrollTop + (el.scrollHeight - scrollPosRef.current.scrollHeight);
+      scrollPosRef.current = null;
+    }
+  }, [messages]);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (loadMorePendingRef.current) {
+      loadMorePendingRef.current = false;
+      return;
+    }
+    if (messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -216,6 +242,35 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     } catch { /* ignore */ }
   }
 
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    loadMorePendingRef.current = true;
+
+    const el = messagesRef.current;
+    if (el) {
+      scrollPosRef.current = { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight };
+    }
+
+    try {
+      const res = await apiRequest<{ data: Message[] }>(`/chats/${chat.id}/messages?limit=50&offset=${offsetRef.current}`);
+      const newMsgs = res.data ?? [];
+      offsetRef.current += newMsgs.length;
+      setHasMore(newMsgs.length >= 50);
+      setMessages((prev) => [...newMsgs, ...prev]);
+    } catch { /* ignore */ }
+
+    setLoadingMore(false);
+  }
+
+  function handleScroll() {
+    if (loadingMore || !hasMore) return;
+    const el = messagesRef.current;
+    if (el && el.scrollTop < 80) {
+      loadMore();
+    }
+  }
+
   function handleCopyText(text: string) {
     navigator.clipboard.writeText(text);
     setCtxMsgId(null);
@@ -282,7 +337,17 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
         </div>
       )}
 
-      <div className="messages">
+      <div className="messages" ref={messagesRef} onScroll={handleScroll}>
+        {loadingMore && (
+          <div style={{ textAlign: "center", padding: "12px", color: "#888", fontSize: 13 }}>
+            Загрузка...
+          </div>
+        )}
+        {!loadingMore && !hasMore && messages.length > 0 && (
+          <div style={{ textAlign: "center", padding: "12px", color: "#aaa", fontSize: 12 }}>
+            Все сообщения загружены
+          </div>
+        )}
         {messages.length === 0 && !error && (
           <div className="empty-state">
             <div className="empty-icon">💬</div>
