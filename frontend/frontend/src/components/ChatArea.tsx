@@ -221,6 +221,15 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     setCtxMsgId(null);
   }
 
+  function linkifyText(text: string) {
+    const parts = text.split(/(https?:\/\/[^\s]+)/g);
+    return parts.map((part, i) =>
+      part.match(/^https?:\/\//)
+        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a>
+        : part
+    );
+  }
+
   function handleOpenContextMenu(msgId: number, e: React.MouseEvent) {
     const rect = e.currentTarget.getBoundingClientRect();
     const menuWidth = 240;
@@ -308,7 +317,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
               ) : (
                 <>
                   <div className="msg-text">
-                    {m.text}
+                    {linkifyText(m.text)}
                     {m.edited && <span className="edited-mark"> edited</span>}
                   </div>
 
@@ -385,7 +394,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
               </span>
             ))}
           </div>
-          <div className="ctx-message-text">{ctxMessage.text}</div>
+          <div className="ctx-message-text">{linkifyText(ctxMessage.text)}</div>
           {ctxMessage.sender_id === user?.id && (
             <button onClick={() => { setEditingId(ctxMsgId); setEditText(ctxMessage.text); setCtxMsgId(null); }}>
               ✏️ Редактировать
