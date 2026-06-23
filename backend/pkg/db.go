@@ -41,7 +41,7 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 		}
 
 		log.Printf("База не готова (попытка %d/%d): %v", i+1, maxRetries, err)
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	return nil, fmt.Errorf("не удалось подключиться к БД после %d попыток: %w", maxRetries, err)
