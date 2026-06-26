@@ -95,7 +95,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     }
   }, [chat.id]);
 
-  const markReadRef = useRef<ReturnType<typeof setTimeout>>();
+  const markReadRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const markRead = useCallback(() => {
     if (document.hidden) return;
     if (markReadRef.current) return;

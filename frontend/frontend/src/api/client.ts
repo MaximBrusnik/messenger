@@ -89,6 +89,14 @@ export async function unpinMessage(chatId: number) {
   return apiRequest(`/chats/${chatId}/pin`, "DELETE");
 }
 
+export async function registerDevice(token: string, platform: string) {
+  return apiRequest("/devices/register", "POST", { token, platform });
+}
+
+export async function unregisterDevice(token: string) {
+  return apiRequest("/devices/unregister", "DELETE", { token });
+}
+
 export async function uploadFile(file: File) {
   const token = localStorage.getItem("token");
   const form = new FormData();

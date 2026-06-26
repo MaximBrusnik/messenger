@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "769436975613",
+    "project_id": "testfirebase-b9adb",
+    "storage_bucket": "testfirebase-b9adb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769436975613:android:459e4f591a825653d51994",
+        "android_client_info": {
+          "package_name": "com.messangermax.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9_NbXlnBgcZQfcufZ5mAED5ZYbxADWs4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -34,6 +34,7 @@ func main() {
 		&entities.ChatUser{},
 		&entities.MessageReaction{},
 		&entities.Music{},
+		&entities.DeviceToken{},
 	); err != nil {
 		log.Fatal("Ошибка миграции базы данных:", err)
 	}
@@ -47,6 +48,7 @@ func main() {
 	messageRepo := repository.NewMessageRepository(db)
 	reactionRepo := repository.NewReactionRepository(db)
 	musicRepo := repository.NewMusicRepository(db)
+	deviceTokenRepo := repository.NewDeviceTokenRepository(db)
 
 	// Создаём AI-ассистента и администратора, если их нет
 	seedAIBot(userRepo)
@@ -54,7 +56,8 @@ func main() {
 
 	jwtUtils := utils.NewJWTUtils(cfg.JWTSecret)
 
-	wsNotifier := httpHandlers.NewWSNotifier(chatRepo)
+	pushService := messengerLogic.NewPushService(cfg.FCM_Credentials, deviceTokenRepo)
+	wsNotifier := httpHandlers.NewWSNotifier(chatRepo, pushService)
 
 	emailService := messengerLogic.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppURL)
 
@@ -74,6 +77,7 @@ func main() {
 	uploadHandler := httpHandlers.NewUploadHandler(cfg.UploadDir)
 	reactionHandler := httpHandlers.NewReactionHandler(reactionService)
 	musicHandler := httpHandlers.NewMusicHandler(musicService)
+	deviceHandler := httpHandlers.NewDeviceHandler(deviceTokenRepo)
 
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -134,6 +138,9 @@ func main() {
 			protected.GET("/users/:id", userHandler.GetUser)
 			protected.GET("/contacts", userHandler.GetContacts)
 			protected.POST("/contacts", userHandler.AddContact)
+
+			protected.POST("/devices/register", deviceHandler.RegisterDevice)
+			protected.DELETE("/devices/unregister", deviceHandler.UnregisterDevice)
 
 			protected.POST("/upload", uploadHandler.Upload)
 

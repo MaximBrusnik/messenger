@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "./api/client";
 import type { User } from "./types";
 import { AuthProvider } from "./context/AuthContext";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import AuthPage from "./components/AuthPage";
 import ChatApp from "./components/ChatApp";
 import VerifyEmail from "./components/VerifyEmail";
@@ -9,6 +10,8 @@ import VerifyEmail from "./components/VerifyEmail";
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [route, setRoute] = useState(window.location.pathname + window.location.search);
+
+  usePushNotifications(user);
 
   useEffect(() => {
     apiRequest<{ data: User }>("/auth/profile")

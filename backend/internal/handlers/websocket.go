@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"MessangerMax/internal/entity"
+	messengerLogic "MessangerMax/internal/logic"
 	"MessangerMax/internal/repo"
 	"MessangerMax/utils"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -227,11 +229,12 @@ func Broadcast(message interface{}) {
 
 // WSNotifier — реализация logic.Notifier для рассылки через WebSocket
 type WSNotifier struct {
-	chatRepo repo.ChatRepository
+	chatRepo    repo.ChatRepository
+	pushService *messengerLogic.PushService
 }
 
-func NewWSNotifier(chatRepo repo.ChatRepository) *WSNotifier {
-	return &WSNotifier{chatRepo: chatRepo}
+func NewWSNotifier(chatRepo repo.ChatRepository, pushService *messengerLogic.PushService) *WSNotifier {
+	return &WSNotifier{chatRepo: chatRepo, pushService: pushService}
 }
 
 func (n *WSNotifier) SendNewMessage(chatID uint, message *entity.MessageResponse) {
@@ -249,6 +252,41 @@ func (n *WSNotifier) SendNewMessage(chatID uint, message *entity.MessageResponse
 	}
 
 	SendToUsers(participants, payload)
+
+	// Push-уведомления для офлайн-участников
+	if n.pushService == nil {
+		return
+	}
+	title := "Новое сообщение"
+	if message.Sender != nil && message.Sender.Username != "" {
+		title = message.Sender.Username
+	}
+	body := message.Text
+	if body == "" {
+		if message.AttachmentType == "image" {
+			body = "📷 Фото"
+		} else if message.AttachmentURL != "" {
+			body = "📎 Файл"
+		}
+	}
+	if len(body) > 120 {
+		body = body[:120] + "..."
+	}
+
+	data := &messengerLogic.FcmData{
+		Type:   "NEW_MESSAGE",
+		ChatID: fmt.Sprintf("%d", chatID),
+	}
+
+	for _, pid := range participants {
+		if pid == message.SenderID {
+			continue
+		}
+		if IsUserOnline(pid) {
+			continue
+		}
+		n.pushService.SendPush(pid, title, body, data)
+	}
 }
 
 func (n *WSNotifier) SendMessageEdited(chatID uint, message *entity.MessageResponse) {
