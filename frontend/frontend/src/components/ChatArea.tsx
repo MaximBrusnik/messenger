@@ -386,6 +386,13 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           </div>
         )}
         {messages.map((m) => {
+          if (m.system_type) {
+            return (
+              <div key={m.id} className="msg-system">
+                {m.text}
+              </div>
+            );
+          }
           const isMine = m.sender_id === user?.id;
           return (
             <div

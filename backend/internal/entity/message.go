@@ -21,6 +21,9 @@ type Message struct {
 	Edited   bool       `gorm:"default:false" json:"edited"`
 	EditedAt *time.Time `json:"edited_at,omitempty"`
 
+	// Системное сообщение (pin, unpin и т.д.)
+	SystemType string `gorm:"size:20" json:"system_type,omitempty"`
+
 	// Вложения
 	AttachmentType string `gorm:"size:50" json:"attachment_type,omitempty"`
 	AttachmentURL  string `gorm:"size:500" json:"attachment_url,omitempty"`
@@ -57,6 +60,7 @@ type MessageResponse struct {
 	EditedAt       *time.Time         `json:"edited_at,omitempty"`
 	Sender         *UserResponse      `json:"sender,omitempty"`
 	Reactions      []ReactionResponse `json:"reactions,omitempty"`
+	SystemType     string             `json:"system_type,omitempty"`
 	AttachmentType string             `json:"attachment_type,omitempty"`
 	AttachmentURL  string             `json:"attachment_url,omitempty"`
 	AttachmentName string             `json:"attachment_name,omitempty"`

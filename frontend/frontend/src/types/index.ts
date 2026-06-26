@@ -38,6 +38,7 @@ export interface Message {
   edited_at?: string;
   sender?: User;
   reactions?: Reaction[];
+  system_type?: string;
   attachment_type?: string;
   attachment_url?: string;
   attachment_name?: string;

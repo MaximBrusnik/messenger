@@ -427,6 +427,24 @@ func (s *chatService) PinMessage(chatID, userID, messageID uint) error {
 		return err
 	}
 
+	user, _ := s.userRepo.FindByID(userID)
+	username := user.Username
+	if username == "" {
+		username = "Пользователь"
+	}
+
+	systemMsg := &entity2.Message{
+		ChatID:     chatID,
+		SenderID:   userID,
+		Text:       username + " закрепил(а) сообщение",
+		SystemType: "pin",
+	}
+	if err := s.messageRepo.Create(systemMsg); err == nil {
+		systemMsg.Sender = *user
+		systemResponse := s.convertToMessageResponse(systemMsg, userID)
+		s.notifier.SendNewMessage(chatID, systemResponse)
+	}
+
 	response := s.convertToMessageResponse(msg, userID)
 	s.notifier.SendMessagePinned(chatID, response)
 	return nil
@@ -451,6 +469,24 @@ func (s *chatService) UnpinMessage(chatID, userID uint) error {
 
 	if err := s.chatRepo.UnpinMessage(chatID); err != nil {
 		return err
+	}
+
+	user, _ := s.userRepo.FindByID(userID)
+	username := user.Username
+	if username == "" {
+		username = "Пользователь"
+	}
+
+	systemMsg := &entity2.Message{
+		ChatID:     chatID,
+		SenderID:   userID,
+		Text:       username + " открепил(а) сообщение",
+		SystemType: "unpin",
+	}
+	if err := s.messageRepo.Create(systemMsg); err == nil {
+		systemMsg.Sender = *user
+		systemResponse := s.convertToMessageResponse(systemMsg, userID)
+		s.notifier.SendNewMessage(chatID, systemResponse)
 	}
 
 	s.notifier.SendMessageUnpinned(chatID)
@@ -546,6 +582,7 @@ func (s *chatService) convertToMessageResponse(message *entity2.Message, viewerI
 		CreatedAt:      message.CreatedAt,
 		Edited:         message.Edited,
 		EditedAt:       message.EditedAt,
+		SystemType:     message.SystemType,
 		AttachmentType: message.AttachmentType,
 		AttachmentURL:  message.AttachmentURL,
 		AttachmentName: message.AttachmentName,
