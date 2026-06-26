@@ -24,11 +24,15 @@ type Config struct {
 }
 
 func Load() *Config {
+	password := getEnv("DB_PASSWORD", "")
+	if password == "" {
+		password = getEnv("DB_PASS", "postgres")
+	}
 	return &Config{
 		DBHost:       getEnv("DB_HOST", "localhost"),
 		DBPort:       getEnv("DB_PORT", "5432"),
 		DBUser:       getEnv("DB_USER", "postgres"),
-		DBPassword:   getEnv("DB_PASSWORD", "postgres"),
+		DBPassword:   password,
 		DBName:       getEnv("DB_NAME", "auth_db"),
 		JWTSecret:    getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
 		ServerPort:   getEnv("SERVER_PORT", "8080"),

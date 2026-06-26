@@ -11,7 +11,12 @@ import (
 )
 
 const (
-	maxRetries = 5
+	maxRetries      = 5
+	retryInterval   = 5 * time.Second
+	connMaxLifetime = 30 * time.Minute
+	connMaxIdleTime = 5 * time.Minute
+	maxOpenConns    = 25
+	maxIdleConns    = 10
 )
 
 func NewDB(config *config.Config) (*gorm.DB, error) {
@@ -32,6 +37,10 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 
 		if err == nil {
 			sqlDB, _ := db.DB()
+			sqlDB.SetConnMaxLifetime(connMaxLifetime)
+			sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
+			sqlDB.SetMaxOpenConns(maxOpenConns)
+			sqlDB.SetMaxIdleConns(maxIdleConns)
 			err = sqlDB.Ping()
 		}
 
@@ -41,7 +50,7 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 		}
 
 		log.Printf("База не готова (попытка %d/%d): %v", i+1, maxRetries, err)
-		time.Sleep(5 * time.Second)
+		time.Sleep(retryInterval)
 	}
 
 	return nil, fmt.Errorf("не удалось подключиться к БД после %d попыток: %w", maxRetries, err)
