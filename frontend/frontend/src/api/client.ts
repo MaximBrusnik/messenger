@@ -81,6 +81,14 @@ export async function rejectMusic(id: number) {
   return apiRequest(`/admin/music/${id}/reject`, "PUT");
 }
 
+export async function pinMessage(chatId: number, msgId: number) {
+  return apiRequest(`/chats/${chatId}/pin/${msgId}`, "PUT");
+}
+
+export async function unpinMessage(chatId: number) {
+  return apiRequest(`/chats/${chatId}/pin`, "DELETE");
+}
+
 export async function uploadFile(file: File) {
   const token = localStorage.getItem("token");
   const form = new FormData();

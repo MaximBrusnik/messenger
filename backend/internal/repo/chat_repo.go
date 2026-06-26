@@ -19,6 +19,8 @@ type ChatRepository interface {
 	GetParticipantIDs(chatID uint) ([]uint, error)
 	GetCommonChatIDs(userID1, userID2 uint) ([]uint, error)
 	Delete(chatID uint) error
+	PinMessage(chatID, messageID uint) error
+	UnpinMessage(chatID uint) error
 }
 
 type chatRepository struct {
@@ -132,6 +134,18 @@ func (r *chatRepository) GetCommonChatIDs(userID1, userID2 uint) ([]uint, error)
 
 func (r *chatRepository) Delete(chatID uint) error {
 	return r.db.Delete(&entity.Chat{}, chatID).Error
+}
+
+func (r *chatRepository) PinMessage(chatID, messageID uint) error {
+	return r.db.Model(&entity.Chat{}).
+		Where("id = ?", chatID).
+		Update("pinned_message_id", messageID).Error
+}
+
+func (r *chatRepository) UnpinMessage(chatID uint) error {
+	return r.db.Model(&entity.Chat{}).
+		Where("id = ?", chatID).
+		Update("pinned_message_id", nil).Error
 }
 
 func (r *chatRepository) FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error) {

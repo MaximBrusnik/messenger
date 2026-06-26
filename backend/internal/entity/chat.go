@@ -20,6 +20,10 @@ type Chat struct {
 	Messages     []Message `gorm:"foreignKey:ChatID" json:"messages,omitempty"`
 	LastMessage  *Message  `gorm:"-" json:"last_message,omitempty"`
 	UnreadCount  int       `gorm:"-" json:"unread,omitempty"`
+
+	//Закрепления сообщений
+	PinnedMessageID *uint    `gorm:"default:null" json:"pinned_message_id,omitempty"`
+	PinnedMessage   *Message `gorm:"-" json:"pinned_message,omitempty"`
 }
 
 type ChatUser struct {
@@ -38,12 +42,13 @@ type CreateChatRequest struct {
 }
 
 type ChatResponse struct {
-	ID           uint             `json:"id"`
-	Name         string           `json:"name,omitempty"`
-	Type         string           `json:"type"`
-	CreatedAt    time.Time        `json:"created_at"`
-	UpdatedAt    time.Time        `json:"updated_at"`
-	Participants []UserResponse   `json:"participants,omitempty"`
-	LastMessage  *MessageResponse `json:"last_message,omitempty"`
-	Unread       int              `json:"unread,omitempty"`
+	ID            uint             `json:"id"`
+	Name          string           `json:"name,omitempty"`
+	Type          string           `json:"type"`
+	CreatedAt     time.Time        `json:"created_at"`
+	UpdatedAt     time.Time        `json:"updated_at"`
+	Participants  []UserResponse   `json:"participants,omitempty"`
+	LastMessage   *MessageResponse `json:"last_message,omitempty"`
+	Unread        int              `json:"unread,omitempty"`
+	PinnedMessage *MessageResponse `json:"pinned_message,omitempty"`
 }

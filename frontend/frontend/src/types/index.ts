@@ -23,6 +23,7 @@ export interface Chat {
   participants?: User[];
   last_message?: Message;
   unread?: number;
+  pinned_message?: Message;
 }
 
 export interface Message {
@@ -70,6 +71,6 @@ export interface MusicTrack {
 }
 
 export interface WSMessage {
-  type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_STATUS" | "CONNECTED" | "MESSAGE_DELETED" | "CHAT_DELETED" | "MESSAGES_READ";
+  type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_STATUS" | "CONNECTED" | "MESSAGE_DELETED" | "CHAT_DELETED" | "MESSAGES_READ" | "MESSAGE_PINNED" | "MESSAGE_UNPINNED";
   payload: Record<string, unknown>;
 }

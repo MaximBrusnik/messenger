@@ -7,10 +7,17 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	pongWait   = 60 * time.Second
+	pingPeriod = 30 * time.Second
+	writeWait  = 10 * time.Second
 )
 
 var (
@@ -27,8 +34,9 @@ var (
 )
 
 type Client struct {
-	conn *websocket.Conn
-	mu   sync.Mutex
+	conn   *websocket.Conn
+	mu     sync.Mutex
+	active atomic.Bool
 }
 
 func (c *Client) writeJSON(v interface{}) error {
@@ -39,11 +47,41 @@ func (c *Client) writeJSON(v interface{}) error {
 
 type WSHandler struct {
 	jwtUtils utils.JWTUtils
-	userRepo repo.UserRepository
 }
 
-func NewWSHandler(jwtUtils utils.JWTUtils, userRepo repo.UserRepository) *WSHandler {
-	return &WSHandler{jwtUtils: jwtUtils, userRepo: userRepo}
+func NewWSHandler(jwtUtils utils.JWTUtils) *WSHandler {
+	return &WSHandler{jwtUtils: jwtUtils}
+}
+
+func IsUserOnline(userID uint) bool {
+	clientsMu.RLock()
+	defer clientsMu.RUnlock()
+	_, ok := clients[userID]
+	return ok
+}
+
+func DisconnectUser(userID uint) {
+	clientsMu.Lock()
+	client, exists := clients[userID]
+	if exists {
+		delete(clients, userID)
+	}
+	clientsMu.Unlock()
+
+	if exists && client.active.Load() {
+		client.active.Store(false)
+		client.mu.Lock()
+		client.conn.Close()
+		client.mu.Unlock()
+
+		Broadcast(entity.WSMessage{
+			Type: "USER_STATUS",
+			Payload: map[string]interface{}{
+				"user_id": userID,
+				"status":  "offline",
+			},
+		})
+	}
 }
 
 func (h *WSHandler) HandleWebSocket(c *gin.Context) {
@@ -64,63 +102,8 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 		log.Printf("WebSocket upgrade error: %v", err)
 		return
 	}
-	defer conn.Close()
 
-	registerClient(userID, conn)
-	h.setUserOnline(userID)
-	defer unregisterClient(userID)
-	defer h.setUserOffline(userID)
-
-	clients[userID].writeJSON(map[string]interface{}{
-		"type": "CONNECTED",
-		"payload": map[string]interface{}{
-			"message": "WebSocket подключен",
-			"user_id": userID,
-		},
-	})
-
-	for {
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Printf("WebSocket read error: %v", err)
-			break
-		}
-
-		if messageType == websocket.TextMessage {
-			log.Printf("Received: %s", p)
-		}
-	}
-}
-
-func registerClient(userID uint, conn *websocket.Conn) {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-
-	if old, exists := clients[userID]; exists {
-		old.mu.Lock()
-		old.conn.Close()
-		old.mu.Unlock()
-	}
-
-	clients[userID] = &Client{conn: conn}
-	log.Printf("Client registered: user_id=%d, total_clients=%d", userID, len(clients))
-}
-
-func unregisterClient(userID uint) {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-
-	delete(clients, userID)
-	log.Printf("Client unregistered: user_id=%d, total_clients=%d", userID, len(clients))
-}
-
-func (h *WSHandler) setUserOnline(userID uint) {
-	user, err := h.userRepo.FindByID(userID)
-	if err != nil {
-		return
-	}
-	user.Status = "online"
-	h.userRepo.Update(user)
+	client := registerClient(userID, conn)
 
 	Broadcast(entity.WSMessage{
 		Type: "USER_STATUS",
@@ -129,25 +112,86 @@ func (h *WSHandler) setUserOnline(userID uint) {
 			"status":  "online",
 		},
 	})
-}
 
-func (h *WSHandler) setUserOffline(userID uint) {
-	user, err := h.userRepo.FindByID(userID)
-	if err != nil {
-		return
-	}
-	user.Status = "offline"
-	user.LastLogin = time.Now()
-	h.userRepo.Update(user)
-
-	Broadcast(entity.WSMessage{
-		Type: "USER_STATUS",
-		Payload: map[string]interface{}{
-			"user_id":    userID,
-			"status":     "offline",
-			"last_login": user.LastLogin,
+	SendToUser(userID, map[string]interface{}{
+		"type": "CONNECTED",
+		"payload": map[string]interface{}{
+			"message": "WebSocket подключен",
+			"user_id": userID,
 		},
 	})
+
+	// Cleanup on disconnect: unregister, broadcast offline, close conn
+	defer func() {
+		unregisterClient(userID, client)
+		if client.active.Load() {
+			Broadcast(entity.WSMessage{
+				Type: "USER_STATUS",
+				Payload: map[string]interface{}{
+					"user_id": userID,
+					"status":  "offline",
+				},
+			})
+		}
+		conn.Close()
+	}()
+
+	// Ping/pong heartbeat
+	conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	go func() {
+		ticker := time.NewTicker(pingPeriod)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(writeWait)); err != nil {
+				return
+			}
+		}
+	}()
+
+	// Read loop
+	for {
+		_, p, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("WebSocket read error: %v", err)
+			break
+		}
+
+		log.Printf("Received: %s", p)
+	}
+}
+
+func registerClient(userID uint, conn *websocket.Conn) *Client {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+
+	client := &Client{conn: conn}
+	client.active.Store(true)
+
+	if old, exists := clients[userID]; exists {
+		old.active.Store(false)
+		old.mu.Lock()
+		old.conn.Close()
+		old.mu.Unlock()
+	}
+
+	clients[userID] = client
+	log.Printf("Client registered: user_id=%d, total_clients=%d", userID, len(clients))
+	return client
+}
+
+func unregisterClient(userID uint, client *Client) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+
+	if current, exists := clients[userID]; exists && current == client {
+		delete(clients, userID)
+		log.Printf("Client unregistered: user_id=%d, total_clients=%d", userID, len(clients))
+	}
 }
 
 func SendToUser(userID uint, message interface{}) error {
@@ -285,6 +329,41 @@ func (n *WSNotifier) SendChatDeleted(chatID uint) {
 			"chat_id": chatID,
 		},
 	})
+}
+
+func (n *WSNotifier) SendMessagePinned(chatID uint, message *entity.MessageResponse) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "MESSAGE_PINNED",
+		"payload": map[string]interface{}{
+			"chat_id": chatID,
+			"message": message,
+		},
+	}
+
+	SendToUsers(participants, payload)
+}
+
+func (n *WSNotifier) SendMessageUnpinned(chatID uint) {
+	participants, err := n.chatRepo.GetParticipantIDs(chatID)
+	if err != nil {
+		log.Printf("WSNotifier: failed to get participants for chat %d: %v", chatID, err)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"type": "MESSAGE_UNPINNED",
+		"payload": map[string]interface{}{
+			"chat_id": chatID,
+		},
+	}
+
+	SendToUsers(participants, payload)
 }
 
 func (n *WSNotifier) SendMessagesRead(chatID uint, messageIDs []uint, readByUserID uint) {

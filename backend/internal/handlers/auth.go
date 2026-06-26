@@ -86,12 +86,24 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
+	uid := userID.(uint)
+	if IsUserOnline(uid) {
+		user.Status = "online"
+	} else {
+		user.Status = "offline"
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"data": user,
 	})
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if exists {
+		DisconnectUser(userID.(uint))
+	}
+
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{

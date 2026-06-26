@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type OnlineTracker interface {
+	IsOnline(userID uint) bool
+}
+
 type UserService interface {
 	GetAllUsers(excludeID uint) ([]entity.UserResponse, error)
 	SearchUsers(query string, excludeID uint) ([]entity.UserResponse, error)
@@ -22,12 +26,23 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepo repo.UserRepository
-	chatRepo repo.ChatRepository
+	userRepo      repo.UserRepository
+	chatRepo      repo.ChatRepository
+	onlineTracker OnlineTracker
 }
 
-func NewUserService(userRepo repo.UserRepository, chatRepo repo.ChatRepository) UserService {
-	return &userService{userRepo: userRepo, chatRepo: chatRepo}
+func NewUserService(userRepo repo.UserRepository, chatRepo repo.ChatRepository, onlineTracker OnlineTracker) UserService {
+	return &userService{userRepo: userRepo, chatRepo: chatRepo, onlineTracker: onlineTracker}
+}
+
+func (s *userService) enrichStatus(responses []entity.UserResponse) {
+	for i := range responses {
+		if s.onlineTracker.IsOnline(responses[i].ID) {
+			responses[i].Status = "online"
+		} else {
+			responses[i].Status = "offline"
+		}
+	}
 }
 
 func (s *userService) GetAllUsers(excludeID uint) ([]entity.UserResponse, error) {
@@ -41,6 +56,7 @@ func (s *userService) GetAllUsers(excludeID uint) ([]entity.UserResponse, error)
 		responses = append(responses, user.ToResponse())
 	}
 
+	s.enrichStatus(responses)
 	return responses, nil
 }
 
@@ -55,6 +71,7 @@ func (s *userService) SearchUsers(query string, excludeID uint) ([]entity.UserRe
 		responses = append(responses, user.ToResponse())
 	}
 
+	s.enrichStatus(responses)
 	return responses, nil
 }
 
@@ -82,6 +99,7 @@ func (s *userService) GetContacts(userID uint) ([]entity.UserResponse, error) {
 		responses = append(responses, contact.ToResponse())
 	}
 
+	s.enrichStatus(responses)
 	return responses, nil
 }
 
@@ -188,6 +206,13 @@ func (s *userService) GetUserProfile(targetID, requesterID uint) (*entity.UserPr
 
 	isSelf := targetID == requesterID
 	resp := target.ToResponse()
+
+	// Status from online tracker (source of truth), not from DB
+	if s.onlineTracker.IsOnline(targetID) {
+		resp.Status = "online"
+	} else {
+		resp.Status = "offline"
+	}
 
 	if !isSelf {
 		resp.Email = ""

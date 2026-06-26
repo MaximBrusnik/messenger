@@ -39,6 +39,9 @@ func main() {
 	}
 	log.Println("Миграции базы данных выполнены успешно")
 
+	// Сброс статусов при старте — источник правды теперь in-memory (clients map)
+	db.Model(&entities.User{}).Where("status = ?", "online").Update("status", "offline")
+
 	userRepo := repository.NewUserRepository(db)
 	chatRepo := repository.NewChatRepository(db)
 	messageRepo := repository.NewMessageRepository(db)
@@ -58,7 +61,8 @@ func main() {
 	geminiClient := integrationAi.NewGeminiClient(cfg.GeminiAPIKey)
 
 	authService := messengerLogic.NewAuthService(userRepo, jwtUtils, emailService)
-	userService := messengerLogic.NewUserService(userRepo, chatRepo)
+
+	userService := messengerLogic.NewUserService(userRepo, chatRepo, wsOnlineTracker{})
 	chatService := messengerLogic.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier, geminiClient)
 	reactionService := messengerLogic.NewReactionService(reactionRepo, messageRepo, wsNotifier)
 	musicService := messengerLogic.NewMusicService(musicRepo, cfg.MusicDir)
@@ -66,7 +70,7 @@ func main() {
 	authHandler := httpHandlers.NewAuthHandler(authService)
 	userHandler := httpHandlers.NewUserHandler(userService, authService)
 	chatHandler := httpHandlers.NewChatHandler(chatService)
-	wsHandler := httpHandlers.NewWSHandler(jwtUtils, userRepo)
+	wsHandler := httpHandlers.NewWSHandler(jwtUtils)
 	uploadHandler := httpHandlers.NewUploadHandler(cfg.UploadDir)
 	reactionHandler := httpHandlers.NewReactionHandler(reactionService)
 	musicHandler := httpHandlers.NewMusicHandler(musicService)
@@ -120,6 +124,9 @@ func main() {
 			protected.PUT("/chats/:id/messages/:msgId", chatHandler.EditMessage)
 			protected.DELETE("/chats/:id/messages/:msgId", chatHandler.DeleteMessage)
 			protected.POST("/chats/:id/read", chatHandler.MarkAsRead)
+			protected.PUT("/chats/:id/pin/:msgId", chatHandler.PinMessage)
+			protected.DELETE("/chats/:id/pin", chatHandler.UnpinMessage)
+
 			protected.DELETE("/chats/:id", chatHandler.DeleteChat)
 
 			protected.GET("/users", userHandler.GetAllUsers)
@@ -173,6 +180,12 @@ func main() {
 	if err := router.Run(port); err != nil {
 		log.Fatal("Ошибка запуска сервера:", err)
 	}
+}
+
+type wsOnlineTracker struct{}
+
+func (wsOnlineTracker) IsOnline(userID uint) bool {
+	return httpHandlers.IsUserOnline(userID)
 }
 
 func seedAIBot(userRepo repository.UserRepository) {

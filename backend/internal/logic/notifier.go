@@ -10,4 +10,6 @@ type Notifier interface {
 	SendMessageDeleted(chatID uint, messageID uint)
 	SendChatDeleted(chatID uint)
 	SendMessagesRead(chatID uint, messageIDs []uint, readByUserID uint)
+	SendMessagePinned(chatID uint, message *entity.MessageResponse)
+	SendMessageUnpinned(chatID uint)
 }

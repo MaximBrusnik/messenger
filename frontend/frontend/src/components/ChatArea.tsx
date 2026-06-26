@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
-import { apiRequest, deleteMessage } from "../api/client";
+import { apiRequest, deleteMessage, pinMessage, unpinMessage } from "../api/client";
 import type { Chat, Message, Reaction } from "../types";
 import { useAuth } from "../context/AuthContext";
 import MessageInput from "./MessageInput";
@@ -62,6 +62,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
+  const [pinnedMessage, setPinnedMessage] = useState<Message | undefined>(chat.pinned_message);
 
   const [error, setError] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -94,6 +95,16 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     }
   }, [chat.id]);
 
+  const markReadRef = useRef<ReturnType<typeof setTimeout>>();
+  const markRead = useCallback(() => {
+    if (document.hidden) return;
+    if (markReadRef.current) return;
+    markReadRef.current = setTimeout(() => {
+      markReadRef.current = undefined;
+    }, 2000);
+    apiRequest(`/chats/${chat.id}/read`, "POST");
+  }, [chat.id]);
+
   const onNewMessage = useCallback((msg: Message) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === msg.id)) return prev;
@@ -107,8 +118,9 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           icon: msg.sender?.avatar || undefined,
         });
       }
+      markRead();
     }
-  }, [user?.id]);
+  }, [user?.id, markRead]);
 
   const onMessageEdited = useCallback((msg: Message) => {
     setMessages((prev) =>
@@ -139,11 +151,22 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     );
   }, [chat.id]);
 
-  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage, onUserStatus, onMessageDeleted, onChatDeleted, onMessagesRead);
+  const onMessagePinned = useCallback((chatId: number, msg: Message) => {
+    if (chatId !== chat.id) return;
+    setPinnedMessage(msg);
+  }, [chat.id]);
+
+  const onMessageUnpinned = useCallback((chatId: number) => {
+    if (chatId !== chat.id) return;
+    setPinnedMessage(undefined);
+  }, [chat.id]);
+
+  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage, onUserStatus, onMessageDeleted, onChatDeleted, onMessagesRead, onMessagePinned, onMessageUnpinned);
 
   useEffect(() => {
+    setPinnedMessage(chat.pinned_message);
     loadMessages();
-  }, [loadMessages]);
+  }, [loadMessages, chat.id]);
 
   useLayoutEffect(() => {
     if (scrollPosRef.current && messagesRef.current) {
@@ -337,6 +360,14 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
         </div>
       )}
 
+      {pinnedMessage && (
+        <div className="pinned-banner">
+          <span className="pinned-icon">📌</span>
+          <span className="pinned-text">{pinnedMessage.text.slice(0, 100)}</span>
+          <button className="pinned-unpin" onClick={() => unpinMessage(chat.id)}>✕</button>
+        </div>
+      )}
+
       <div className="messages" ref={messagesRef} onScroll={handleScroll}>
         {loadingMore && (
           <div style={{ textAlign: "center", padding: "12px", color: "#888", fontSize: 13 }}>
@@ -459,7 +490,6 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
               </span>
             ))}
           </div>
-          <div className="ctx-message-text">{linkifyText(ctxMessage.text)}</div>
           {ctxMessage.sender_id === user?.id && (
             <button onClick={() => { setEditingId(ctxMsgId); setEditText(ctxMessage.text); setCtxMsgId(null); }}>
               ✏️ Редактировать
@@ -471,7 +501,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           <button onClick={() => { alert("Пересылка будет позже"); setCtxMsgId(null); }}>
             📤 Переслать
           </button>
-          <button onClick={() => { alert("Закрепление будет позже"); setCtxMsgId(null); }}>
+          <button onClick={() => { pinMessage(chat.id, ctxMsgId); setCtxMsgId(null); }}>
             📌 Закрепить
           </button>
           {ctxMessage.sender_id === user?.id && (

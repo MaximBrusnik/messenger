@@ -11,6 +11,8 @@ export function useWebSocket(
   onMessageDeleted?: (msgId: number) => void,
   onChatDeleted?: (chatId: number) => void,
   onMessagesRead?: (chatId: number, messageIds: number[]) => void,
+  onMessagePinned?: (chatId: number, msg: Message) => void,
+  onMessageUnpinned?: (chatId: number) => void,
 ) {
   const chatIdRef = useRef(chatId);
   chatIdRef.current = chatId;
@@ -38,6 +40,12 @@ export function useWebSocket(
 
   const onMessagesReadRef = useRef(onMessagesRead);
   onMessagesReadRef.current = onMessagesRead;
+
+  const onMessagePinnedRef = useRef(onMessagePinned);
+  onMessagePinnedRef.current = onMessagePinned;
+
+  const onMessageUnpinnedRef = useRef(onMessageUnpinned);
+  onMessageUnpinnedRef.current = onMessageUnpinned;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -92,6 +100,16 @@ export function useWebSocket(
             case "CHAT_DELETED": {
               const { chat_id } = data.payload as { chat_id: number };
               onChatDeletedRef.current?.(chat_id);
+              break;
+            }
+            case "MESSAGE_PINNED": {
+              const { chat_id, message } = data.payload as { chat_id: number; message: Message };
+              onMessagePinnedRef.current?.(chat_id, message);
+              break;
+            }
+            case "MESSAGE_UNPINNED": {
+              const { chat_id } = data.payload as { chat_id: number };
+              onMessageUnpinnedRef.current?.(chat_id);
               break;
             }
             case "MESSAGES_READ": {

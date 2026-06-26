@@ -259,6 +259,44 @@ func (h *ChatHandler) DeleteChat(c *gin.Context) {
 	})
 }
 
+func (h *ChatHandler) PinMessage(c *gin.Context) {
+	chatID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID чата"})
+		return
+	}
+
+	messageID, err := strconv.ParseUint(c.Param("msgId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID сообщения"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	if err := h.chatService.PinMessage(uint(chatID), userID, uint(messageID)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Сообщение закреплено"})
+}
+
+func (h *ChatHandler) UnpinMessage(c *gin.Context) {
+	chatID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID чата"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	if err := h.chatService.UnpinMessage(uint(chatID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Сообщение откреплено"})
+}
+
 func (h *ChatHandler) DeleteMessage(c *gin.Context) {
 	messageID, err := strconv.ParseUint(c.Param("msgId"), 10, 32)
 	if err != nil {

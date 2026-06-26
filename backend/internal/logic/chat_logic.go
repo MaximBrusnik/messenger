@@ -23,6 +23,8 @@ type ChatService interface {
 	DeleteChat(chatID, userID uint) error
 	DeleteMessage(messageID, userID uint) error
 	GetOrCreateAIChat(userID uint) (*entity2.ChatResponse, error)
+	PinMessage(chatID, userID, messageID uint) error
+	UnpinMessage(chatID, userID uint) error
 }
 
 type chatService struct {
@@ -396,6 +398,65 @@ func (s *chatService) generateAIResponse(chatID, botID uint) {
 	s.notifier.SendNewMessage(chatID, response)
 }
 
+func (s *chatService) PinMessage(chatID, userID, messageID uint) error {
+	chat, err := s.chatRepo.FindByID(chatID)
+	if err != nil {
+		return errors.New("чат не найден")
+	}
+
+	isParticipant := false
+	for _, p := range chat.Participants {
+		if p.ID == userID {
+			isParticipant = true
+			break
+		}
+	}
+	if !isParticipant {
+		return errors.New("доступ запрещен")
+	}
+
+	msg, err := s.messageRepo.FindByID(messageID)
+	if err != nil {
+		return errors.New("сообщение не найдено")
+	}
+	if msg.ChatID != chatID {
+		return errors.New("сообщение не принадлежит чату")
+	}
+
+	if err := s.chatRepo.PinMessage(chatID, messageID); err != nil {
+		return err
+	}
+
+	response := s.convertToMessageResponse(msg, userID)
+	s.notifier.SendMessagePinned(chatID, response)
+	return nil
+}
+
+func (s *chatService) UnpinMessage(chatID, userID uint) error {
+	chat, err := s.chatRepo.FindByID(chatID)
+	if err != nil {
+		return errors.New("чат не найден")
+	}
+
+	isParticipant := false
+	for _, p := range chat.Participants {
+		if p.ID == userID {
+			isParticipant = true
+			break
+		}
+	}
+	if !isParticipant {
+		return errors.New("доступ запрещен")
+	}
+
+	if err := s.chatRepo.UnpinMessage(chatID); err != nil {
+		return err
+	}
+
+	s.notifier.SendMessageUnpinned(chatID)
+	return nil
+}
+
 // Вспомогательные методы
 func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID uint) (*entity2.ChatResponse, error) {
 	// Получаем последнее сообщение
@@ -460,6 +521,14 @@ func (s *chatService) convertToChatResponse(chat *entity2.Chat, currentUserID ui
 			IsRead:    lastMessage.IsRead,
 			ReadAt:    lastMessage.ReadAt,
 			CreatedAt: lastMessage.CreatedAt,
+		}
+	}
+
+	// Добавляем закреплённое сообщение
+	if chat.PinnedMessageID != nil {
+		pinned, err := s.messageRepo.FindByID(*chat.PinnedMessageID)
+		if err == nil {
+			response.PinnedMessage = s.convertToMessageResponse(pinned, currentUserID)
 		}
 	}
 
