@@ -3,17 +3,20 @@ package handlers
 import (
 	"MessangerMax/internal/entity"
 	"MessangerMax/internal/logic"
+	"MessangerMax/internal/repo"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
 	authService logic.AuthService
+	userRepo    repo.UserRepository
 }
 
-func NewAuthHandler(authService logic.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService logic.AuthService, userRepo repo.UserRepository) *AuthHandler {
+	return &AuthHandler{authService: authService, userRepo: userRepo}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -102,6 +105,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if exists {
 		DisconnectUser(userID.(uint))
+		h.userRepo.UpdateLastLogin(userID.(uint), time.Now())
 	}
 
 	c.SetCookie("access_token", "", -1, "/", "", false, true)

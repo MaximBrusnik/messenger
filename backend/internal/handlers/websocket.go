@@ -49,10 +49,11 @@ func (c *Client) writeJSON(v interface{}) error {
 
 type WSHandler struct {
 	jwtUtils utils.JWTUtils
+	userRepo repo.UserRepository
 }
 
-func NewWSHandler(jwtUtils utils.JWTUtils) *WSHandler {
-	return &WSHandler{jwtUtils: jwtUtils}
+func NewWSHandler(jwtUtils utils.JWTUtils, userRepo repo.UserRepository) *WSHandler {
+	return &WSHandler{jwtUtils: jwtUtils, userRepo: userRepo}
 }
 
 func IsUserOnline(userID uint) bool {
@@ -135,6 +136,7 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 				},
 			})
 		}
+		h.userRepo.UpdateLastLogin(userID, time.Now())
 		conn.Close()
 	}()
 

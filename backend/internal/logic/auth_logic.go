@@ -44,6 +44,7 @@ func (s *authService) Register(req entity.RegisterRequest) (string, *entity.User
 		Username:          req.Username,
 		Email:             req.Email,
 		IsActive:          true,
+		LastLogin:         time.Now(),
 		VerificationToken: GenerateVerificationToken(),
 	}
 

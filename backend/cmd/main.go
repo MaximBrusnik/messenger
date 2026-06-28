@@ -70,10 +70,10 @@ func main() {
 	reactionService := messengerLogic.NewReactionService(reactionRepo, messageRepo, wsNotifier)
 	musicService := messengerLogic.NewMusicService(musicRepo, cfg.MusicDir)
 
-	authHandler := httpHandlers.NewAuthHandler(authService)
+	authHandler := httpHandlers.NewAuthHandler(authService, userRepo)
 	userHandler := httpHandlers.NewUserHandler(userService, authService)
 	chatHandler := httpHandlers.NewChatHandler(chatService)
-	wsHandler := httpHandlers.NewWSHandler(jwtUtils)
+	wsHandler := httpHandlers.NewWSHandler(jwtUtils, userRepo)
 	uploadHandler := httpHandlers.NewUploadHandler(cfg.UploadDir)
 	reactionHandler := httpHandlers.NewReactionHandler(reactionService)
 	musicHandler := httpHandlers.NewMusicHandler(musicService)

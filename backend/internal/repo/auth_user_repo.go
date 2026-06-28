@@ -4,6 +4,7 @@ import (
 	"MessangerMax/internal/entity"
 	"errors"
 	"gorm.io/gorm"
+	"time"
 )
 
 type UserRepository interface {
@@ -20,6 +21,7 @@ type UserRepository interface {
 	GetContacts(userID uint) ([]entity.User, error)
 	IsContact(userID, contactID uint) (bool, error)
 	UpdatePassword(userID uint, hashedPassword string) error
+	UpdateLastLogin(userID uint, t time.Time) error
 }
 
 type userRepository struct {
@@ -140,4 +142,10 @@ func (r *userRepository) UpdatePassword(userID uint, hashedPassword string) erro
 	return r.db.Model(&entity.User{}).
 		Where("id = ?", userID).
 		Update("password", hashedPassword).Error
+}
+
+func (r *userRepository) UpdateLastLogin(userID uint, t time.Time) error {
+	return r.db.Model(&entity.User{}).
+		Where("id = ?", userID).
+		Update("last_login", t).Error
 }
