@@ -13,10 +13,10 @@ import (
 const (
 	maxRetries      = 5
 	retryInterval   = 5 * time.Second
-	connMaxLifetime = 30 * time.Minute
-	connMaxIdleTime = 5 * time.Minute
-	maxOpenConns    = 25
-	maxIdleConns    = 10
+	connMaxLifetime = 1 * time.Minute
+	connMaxIdleTime = 30 * time.Second
+	maxOpenConns    = 10
+	maxIdleConns    = 5
 )
 
 func NewDB(config *config.Config) (*gorm.DB, error) {
@@ -25,7 +25,7 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 		" password=" + config.DBPassword +
 		" dbname=" + config.DBName +
 		" port=" + config.DBPort +
-		" sslmode=disable"
+		" sslmode=disable connect_timeout=5 prefer_simple_protocol=true"
 
 	var db *gorm.DB
 	var err error
