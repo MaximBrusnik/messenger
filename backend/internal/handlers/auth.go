@@ -38,6 +38,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	if token == "" {
+		c.JSON(http.StatusCreated, gin.H{
+			"message":                     "Пользователь успешно создан. Проверьте email для подтверждения.",
+			"requires_email_verification": true,
+		})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Пользователь успешно создан. Проверьте email для подтверждения.",
 		"token":   token,
@@ -122,13 +130,15 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.VerifyEmail(token); err != nil {
+	jwt, err := h.authService.VerifyEmail(token)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Email успешно подтверждён",
+		"token":   jwt,
 	})
 }
 

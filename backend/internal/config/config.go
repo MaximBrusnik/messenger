@@ -22,6 +22,8 @@ type Config struct {
 	GeminiAPIKey    string
 	MusicDir        string
 	FCM_Credentials string
+
+	RequireEmailVerification bool
 }
 
 func Load() *Config {
@@ -48,6 +50,8 @@ func Load() *Config {
 		GeminiAPIKey:    getEnv("GEMINI_API_KEY", ""),
 		MusicDir:        getEnv("MUSIC_DIR", "music"),
 		FCM_Credentials: getEnv("FCM_CREDENTIALS", ""),
+
+		RequireEmailVerification: getEnv("REQUIRE_EMAIL_VERIFICATION", "true") == "true",
 	}
 }
 

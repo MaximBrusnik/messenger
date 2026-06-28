@@ -63,7 +63,7 @@ func main() {
 
 	geminiClient := integrationAi.NewGeminiClient(cfg.GeminiAPIKey)
 
-	authService := messengerLogic.NewAuthService(userRepo, jwtUtils, emailService)
+	authService := messengerLogic.NewAuthService(userRepo, jwtUtils, emailService, cfg.RequireEmailVerification)
 
 	userService := messengerLogic.NewUserService(userRepo, chatRepo, wsOnlineTracker{})
 	chatService := messengerLogic.NewChatService(chatRepo, messageRepo, userRepo, wsNotifier, geminiClient)

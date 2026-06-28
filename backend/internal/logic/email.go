@@ -48,10 +48,10 @@ func (s *emailService) SendVerificationEmail(to, token string) error {
 
 	link := fmt.Sprintf("%s/verify-email?token=%s", s.appURL, token)
 
-	subject := "Подтвердите email — MessangerMax"
+	subject := "Подтвердите email — MessAnger"
 	body := fmt.Sprintf(`Здравствуйте!
 
-Спасибо за регистрацию в MessangerMax.
+Спасибо за регистрацию в MessAnger.
 
 Для подтверждения email-адреса перейдите по ссылке:
 %s
@@ -61,8 +61,9 @@ func (s *emailService) SendVerificationEmail(to, token string) error {
 С уважением,
 Команда MessangerMax`, link)
 
+	fromHeader := fmt.Sprintf("MessAnger <%s>", s.from)
 	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
-		s.from, to, subject, body)
+		fromHeader, to, subject, body)
 
 	addr := fmt.Sprintf("%s:%s", s.host, s.port)
 	auth := smtp.PlainAuth("", s.user, s.pass, s.host)

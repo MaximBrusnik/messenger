@@ -25,7 +25,7 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 		" password=" + config.DBPassword +
 		" dbname=" + config.DBName +
 		" port=" + config.DBPort +
-		" sslmode=disable connect_timeout=5 prefer_simple_protocol=true"
+		" sslmode=disable connect_timeout=5"
 
 	var db *gorm.DB
 	var err error

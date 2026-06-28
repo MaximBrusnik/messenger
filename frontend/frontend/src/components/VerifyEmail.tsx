@@ -13,8 +13,13 @@ export default function VerifyEmail() {
       setMessage("Токен не указан");
       return;
     }
-    apiRequest<{ message: string }>(`/auth/verify-email?token=${token}`)
+    apiRequest<{ message: string; token?: string }>(`/auth/verify-email?token=${token}`)
       .then((res) => {
+        if (res.token) {
+          localStorage.setItem("token", res.token);
+          window.location.href = "/";
+          return;
+        }
         setStatus("success");
         setMessage(res.message);
       })
