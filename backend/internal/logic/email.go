@@ -2,6 +2,7 @@ package logic
 
 import (
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -68,11 +69,60 @@ func (s *emailService) SendVerificationEmail(to, token string) error {
 	addr := fmt.Sprintf("%s:%s", s.host, s.port)
 	auth := smtp.PlainAuth("", s.user, s.pass, s.host)
 
-	if err := smtp.SendMail(addr, auth, s.from, []string{to}, []byte(msg)); err != nil {
+	var err error
+	if s.port == "465" {
+		err = s.sendMailSSL(addr, auth, s.from, []string{to}, []byte(msg))
+	} else {
+		err = smtp.SendMail(addr, auth, s.from, []string{to}, []byte(msg))
+	}
+	if err != nil {
 		return fmt.Errorf("email send failed: %w", err)
 	}
 
 	log.Printf("Verification email sent to %s", to)
+	return nil
+}
+
+func (s *emailService) sendMailSSL(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+	host := s.host
+	tlsCfg := &tls.Config{ServerName: host}
+
+	conn, err := tls.Dial("tcp", addr, tlsCfg)
+	if err != nil {
+		return fmt.Errorf("tls dial: %w", err)
+	}
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("smtp client: %w", err)
+	}
+	defer client.Close()
+
+	if err = client.Auth(auth); err != nil {
+		return fmt.Errorf("smtp auth: %w", err)
+	}
+
+	if err = client.Mail(from); err != nil {
+		return fmt.Errorf("smtp mail: %w", err)
+	}
+
+	for _, addr := range to {
+		if err = client.Rcpt(addr); err != nil {
+			return fmt.Errorf("smtp rcpt %s: %w", addr, err)
+		}
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("smtp data: %w", err)
+	}
+	defer w.Close()
+
+	if _, err = w.Write(msg); err != nil {
+		return fmt.Errorf("smtp write: %w", err)
+	}
+
 	return nil
 }
 
