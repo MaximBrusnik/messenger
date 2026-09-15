@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package messengermax.music.v1;
+
+option go_package = "messengermax/proto/gen/music;pb";
+
+import "google/protobuf/timestamp.proto";
+
+service MusicService {
+  rpc List(ListRequest) returns (MusicListResponse);
+  rpc ListPending(ListRequest) returns (MusicListResponse);
+  rpc Create(CreateMusicRequest) returns (Music);
+  rpc GetMusic(GetMusicRequest) returns (Music);
+  rpc GetFilePath(GetMusicRequest) returns (FilePathResponse);
+  rpc Approve(GetMusicRequest) returns (Empty);
+  rpc Reject(GetMusicRequest) returns (Empty);
+  rpc Delete(GetMusicRequest) returns (Empty);
+}
+
+message ListRequest {
+  uint64 user_id = 1;
+  bool is_admin = 2;
+}
+
+message CreateMusicRequest {
+  uint64 uploaded_by = 1;
+  bool is_admin = 2;
+  string original_name = 3;
+  string title = 4;
+  string artist = 5;
+  int64 size = 6;
+  string mime_type = 7;
+  string filename = 8;
+}
+
+message GetMusicRequest {
+  uint64 id = 1;
+}
+
+message FilePathResponse {
+  string path = 1;
+  string original_name = 2;
+}
+
+message MusicListResponse {
+  repeated Music items = 1;
+}
+
+message Music {
+  uint64 id = 1;
+  string title = 2;
+  string artist = 3;
+  string original_name = 4;
+  int64 size = 5;
+  string mime_type = 6;
+  uint64 uploaded_by = 7;
+  string status = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message Empty {}

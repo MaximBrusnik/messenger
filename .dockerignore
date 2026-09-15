@@ -1,0 +1,9 @@
+frontend/frontend/node_modules
+frontend/frontend/dist
+frontend/frontend/android
+backend
+.git
+uploads
+music
+*.exe
+*.test

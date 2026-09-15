@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package messengermax.realtime.v1;
+
+option go_package = "messengermax/proto/gen/realtime;pb";
+
+message Empty {}
+
+service RealtimeService {
+  rpc IsOnline(IsOnlineRequest) returns (IsOnlineResponse);
+  rpc GetOnlineStatuses(GetOnlineStatusesRequest) returns (OnlineStatusesResponse);
+  rpc Disconnect(DisconnectRequest) returns (Empty);
+}
+
+message IsOnlineRequest {
+  uint64 user_id = 1;
+}
+
+message IsOnlineResponse {
+  bool online = 1;
+}
+
+message GetOnlineStatusesRequest {
+  repeated uint64 user_ids = 1;
+}
+
+message OnlineStatusesResponse {
+  map<uint64, bool> online = 1;
+}
+
+message DisconnectRequest {
+  uint64 user_id = 1;
+}

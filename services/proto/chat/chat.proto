@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package messengermax.chat.v1;
+
+option go_package = "messengermax/proto/gen/chat;pb";
+
+import "google/protobuf/timestamp.proto";
+
+service ChatService {
+  rpc CreateChat(CreateChatRequest) returns (Chat);
+  rpc GetUserChats(GetUserChatsRequest) returns (ChatsResponse);
+  rpc GetChatByID(GetChatRequest) returns (Chat);
+  rpc SendMessage(SendMessageRequest) returns (Message);
+  rpc GetMessages(GetMessagesRequest) returns (MessagesResponse);
+  rpc EditMessage(EditMessageRequest) returns (Message);
+  rpc DeleteMessage(DeleteMessageRequest) returns (Empty);
+  rpc MarkAsRead(MarkAsReadRequest) returns (Empty);
+  rpc PinMessage(PinMessageRequest) returns (Message);
+  rpc UnpinMessage(UnpinMessageRequest) returns (Empty);
+  rpc DeleteChat(DeleteChatRequest) returns (Empty);
+  rpc GetOrCreateAIChat(GetOrCreateAIChatRequest) returns (Chat);
+  rpc AddReaction(AddReactionRequest) returns (Reaction);
+  rpc RemoveReaction(RemoveReactionRequest) returns (Empty);
+  rpc GetReactions(GetReactionsRequest) returns (ReactionsResponse);
+}
+
+message CreateChatRequest {
+  uint64 user_id = 1;
+  repeated uint64 participant_ids = 2;
+  string name = 3;
+  string type = 4;
+}
+
+message GetUserChatsRequest {
+  uint64 user_id = 1;
+}
+
+message GetChatRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+}
+
+message SendMessageRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+  string content = 3;
+  string attachment_type = 4;
+  string attachment_url = 5;
+  string attachment_name = 6;
+  int64 attachment_size = 7;
+}
+
+message GetMessagesRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message EditMessageRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+  uint64 message_id = 3;
+  string content = 4;
+}
+
+message DeleteMessageRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+  uint64 message_id = 3;
+}
+
+message MarkAsReadRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+}
+
+message PinMessageRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+  uint64 message_id = 3;
+}
+
+message UnpinMessageRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+}
+
+message DeleteChatRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+}
+
+message GetOrCreateAIChatRequest {
+  uint64 user_id = 1;
+}
+
+message AddReactionRequest {
+  uint64 user_id = 1;
+  uint64 message_id = 2;
+  string reaction = 3;
+}
+
+message RemoveReactionRequest {
+  uint64 user_id = 1;
+  uint64 message_id = 2;
+  string reaction = 3;
+}
+
+message GetReactionsRequest {
+  uint64 message_id = 1;
+}
+
+message ChatsResponse {
+  repeated Chat chats = 1;
+}
+
+message MessagesResponse {
+  repeated Message messages = 1;
+}
+
+message ReactionsResponse {
+  repeated Reaction reactions = 1;
+}
+
+message Chat {
+  uint64 id = 1;
+  string name = 2;
+  string type = 3;
+  string avatar = 4;
+  uint64 pinned_message_id = 5;
+  repeated ChatUser participants = 6;
+  Message last_message = 7;
+  int32 unread = 8;
+  Message pinned_message = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message ChatUser {
+  uint64 user_id = 1;
+  bool is_admin = 2;
+  google.protobuf.Timestamp joined_at = 3;
+  google.protobuf.Timestamp last_read = 4;
+}
+
+message Message {
+  uint64 id = 1;
+  uint64 chat_id = 2;
+  uint64 sender_id = 3;
+  string text = 4;
+  bool is_read = 5;
+  bool edited = 6;
+  string system_type = 7;
+  string attachment_type = 8;
+  string attachment_url = 9;
+  string attachment_name = 10;
+  int64 attachment_size = 11;
+  google.protobuf.Timestamp created_at = 12;
+  repeated Reaction reactions = 13;
+  google.protobuf.Timestamp read_at = 14;
+  google.protobuf.Timestamp edited_at = 15;
+}
+
+message Reaction {
+  uint64 message_id = 1;
+  uint64 user_id = 2;
+  string reaction = 3;
+  string username = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message Empty {}

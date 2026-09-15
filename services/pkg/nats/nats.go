@@ -1,0 +1,194 @@
+// Package nats provides a JetStream-backed event bus with the same
+// producer/consumer API previously used for Kafka.
+package nats
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/nats-io/nats.go"
+)
+
+const (
+	streamName = "MESSENGER"
+	keyHeader  = "X-Message-Key"
+
+	TopicUserEvents      = "user.events"
+	TopicMessageCreated  = "chat.message.created"
+	TopicMessageEdited   = "chat.message.edited"
+	TopicMessageDeleted  = "chat.message.deleted"
+	TopicMessagePinned   = "chat.message.pinned"
+	TopicMessageUnpinned = "chat.message.unpinned"
+	TopicReactionAdded   = "chat.reaction.added"
+	TopicReactionRemoved = "chat.reaction.removed"
+	TopicReadReceived    = "chat.read"
+	TopicChatDeleted     = "chat.deleted"
+	TopicAITrigger       = "chat.ai.trigger"
+)
+
+var AllTopics = []string{
+	TopicUserEvents,
+	TopicMessageCreated,
+	TopicMessageEdited,
+	TopicMessageDeleted,
+	TopicMessagePinned,
+	TopicMessageUnpinned,
+	TopicReactionAdded,
+	TopicReactionRemoved,
+	TopicReadReceived,
+	TopicChatDeleted,
+	TopicAITrigger,
+}
+
+// connect establishes a NATS connection with retries and ensures the
+// JetStream stream that captures all event subjects exists.
+func connect(url string) (*nats.Conn, nats.JetStreamContext) {
+	var nc *nats.Conn
+	var err error
+	for i := 0; i < 30; i++ {
+		nc, err = nats.Connect(url,
+			nats.MaxReconnects(100),
+			nats.ReconnectWait(500*time.Millisecond),
+		)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	if err != nil || nc == nil {
+		log.Printf("nats: connect %s failed: %v", url, err)
+		return nil, nil
+	}
+	js, err := nc.JetStream()
+	if err != nil {
+		log.Printf("nats: jetstream unavailable: %v", err)
+		return nc, nil
+	}
+	if err := ensureStream(js); err != nil {
+		log.Printf("nats: stream setup failed: %v", err)
+	}
+	return nc, js
+}
+
+func ensureStream(js nats.JetStreamContext) error {
+	if _, err := js.StreamInfo(streamName); err == nil {
+		return nil
+	}
+	_, err := js.AddStream(&nats.StreamConfig{
+		Name:      streamName,
+		Subjects:  AllTopics,
+		Retention: nats.LimitsPolicy,
+		Storage:   nats.FileStorage,
+		MaxAge:    24 * time.Hour,
+	})
+	return err
+}
+
+// Producer is a thin wrapper around a NATS JetStream publisher.
+type Producer struct {
+	mu  sync.Mutex
+	url string
+	nc  *nats.Conn
+	js  nats.JetStreamContext
+}
+
+// NewProducer creates a NATS producer for the given server URL.
+func NewProducer(url string) *Producer {
+	p := &Producer{url: url}
+	p.connect()
+	return p
+}
+
+func (p *Producer) connect() {
+	nc, js := connect(p.url)
+	p.mu.Lock()
+	p.nc, p.js = nc, js
+	p.mu.Unlock()
+}
+
+// Publish marshals a JSON-safe event struct to a subject.
+func (p *Producer) Publish(topic string, key string, value interface{}) {
+	p.mu.Lock()
+	js := p.js
+	p.mu.Unlock()
+	if js == nil {
+		log.Printf("nats: not connected, dropping %s", topic)
+		return
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		log.Printf("nats: marshal %s failed: %v", topic, err)
+		return
+	}
+	hdr := nats.Header{}
+	if key != "" {
+		hdr.Set(keyHeader, key)
+	}
+	msg := &nats.Msg{Subject: topic, Header: hdr, Data: data}
+	if _, err := js.PublishMsg(msg); err != nil {
+		log.Printf("nats: publish %s failed: %v", topic, err)
+	}
+}
+
+// Close closes the underlying connection.
+func (p *Producer) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.nc != nil {
+		p.nc.Close()
+	}
+	return nil
+}
+
+// Consumer is a JetStream durable queue consumer with an event handler.
+type Consumer struct {
+	nc     *nats.Conn
+	subs   []*nats.Subscription
+	handle func(topic string, key string, value []byte)
+}
+
+// NewConsumer creates a durable JetStream consumer for a queue group
+// reading the given subjects. Callers must call Run to keep it alive.
+func NewConsumer(url string, groupID string, topics []string, handle func(topic, key string, value []byte)) *Consumer {
+	c := &Consumer{handle: handle}
+	nc, js := connect(url)
+	if js == nil {
+		return c
+	}
+	c.nc = nc
+	for _, topic := range topics {
+		durable := groupID + "-" + strings.ReplaceAll(topic, ".", "-")
+		sub, err := js.QueueSubscribe(topic, groupID, func(m *nats.Msg) {
+			if c.handle != nil {
+				c.handle(m.Subject, m.Header.Get(keyHeader), m.Data)
+			}
+			_ = m.Ack()
+		},
+			nats.Durable(durable),
+			nats.ManualAck(),
+			nats.AckExplicit(),
+			nats.AckWait(5*time.Minute),
+		)
+		if err != nil {
+			log.Printf("nats: subscribe %s failed: %v", topic, err)
+			continue
+		}
+		c.subs = append(c.subs, sub)
+	}
+	return c
+}
+
+// Run blocks until the context is cancelled, then cleans up.
+func (c *Consumer) Run(ctx context.Context) {
+	<-ctx.Done()
+	for _, s := range c.subs {
+		_ = s.Unsubscribe()
+	}
+	if c.nc != nil {
+		_ = c.nc.Drain()
+	}
+}

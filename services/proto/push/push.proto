@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package messengermax.push.v1;
+
+option go_package = "messengermax/proto/gen/push;pb";
+
+message Empty {}
+
+service PushService {
+  rpc RegisterDevice(RegisterDeviceRequest) returns (Empty);
+  rpc UnregisterDevice(UnregisterDeviceRequest) returns (Empty);
+}
+
+message RegisterDeviceRequest {
+  uint64 user_id = 1;
+  string token = 2;
+  string platform = 3;
+}
+
+message UnregisterDeviceRequest {
+  string token = 1;
+}
+
+message FcmConfig {
+  string credentials_path = 1;
+}

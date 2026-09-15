@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package messengermax.user.v1;
+
+option go_package = "messengermax/proto/gen/user;pb";
+
+import "google/protobuf/timestamp.proto";
+
+service UserService {
+  rpc GetProfile(GetProfileRequest) returns (UserProfile);
+  rpc GetProfilesBulk(GetProfilesBulkRequest) returns (GetProfilesBulkResponse);
+  rpc GetAllUsers(GetAllUsersRequest) returns (UsersResponse);
+  rpc SearchUsers(SearchUsersRequest) returns (UsersResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UserProfile);
+  rpc ChangePassword(ChangePasswordRequest) returns (Empty);
+  rpc GetContacts(GetContactsRequest) returns (UsersResponse);
+  rpc AddContact(AddContactRequest) returns (UsersResponse);
+  rpc GetSettings(GetSettingsRequest) returns (Settings);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (Settings);
+  rpc ResolveUserByName(ResolveUserByNameRequest) returns (ResolveUserByNameResponse);
+}
+
+message ResolveUserByNameRequest {
+  string username = 1;
+}
+
+message ResolveUserByNameResponse {
+  uint64 user_id = 1;
+  bool found = 2;
+}
+
+message GetProfileRequest {
+  uint64 user_id = 1;
+}
+
+message GetProfilesBulkRequest {
+  repeated uint64 user_ids = 1;
+}
+
+message GetProfilesBulkResponse {
+  repeated UserProfile users = 1;
+}
+
+message GetAllUsersRequest {
+  uint64 exclude_id = 1;
+}
+
+message SearchUsersRequest {
+  string query = 1;
+  uint64 exclude_id = 2;
+}
+
+message GetContactsRequest {
+  uint64 user_id = 1;
+}
+
+message AddContactRequest {
+  uint64 user_id = 1;
+  uint64 contact_id = 2;
+}
+
+message GetSettingsRequest {
+  uint64 user_id = 1;
+}
+
+message UpdateSettingsRequest {
+  uint64 user_id = 1;
+  bool show_online_status = 2;
+  string last_seen_privacy = 3;
+  string avatar_privacy = 4;
+}
+
+message UpdateProfileRequest {
+  uint64 user_id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar = 4;
+  string bio = 5;
+  string date_of_birth = 6;
+  bool clear_avatar = 7;
+}
+
+message ChangePasswordRequest {
+  uint64 user_id = 1;
+  string old_password = 2;
+  string new_password = 3;
+}
+
+message UsersResponse {
+  repeated UserProfile users = 1;
+}
+
+message UserProfile {
+  uint64 id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar = 4;
+  string status = 5;
+  bool email_verified = 6;
+  string bio = 7;
+  string date_of_birth = 8;
+  bool is_bot = 9;
+  bool is_admin = 10;
+  bool is_contact = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp last_login = 13;
+}
+
+message Settings {
+  bool show_online_status = 1;
+  string last_seen_privacy = 2;
+  string avatar_privacy = 3;
+}
+
+message Empty {}
