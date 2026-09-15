@@ -38,6 +38,15 @@ func main() {
 	botID := resolveBotID(cfg)
 	server := service.NewServer(chatRepo, messageRepo, reactionRepo, producer, botID)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Write call-ended system messages into chats.
+	consumer := nats.NewConsumer(cfg.NATS.URL, "chat-service", []string{nats.TopicCallEnded}, func(topic, key string, value []byte) {
+		server.HandleCallEnded(value)
+	})
+	go consumer.Run(ctx)
+
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
 		pbchat.RegisterChatServiceServer(s, server)
 	}); err != nil {

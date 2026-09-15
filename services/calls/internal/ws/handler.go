@@ -30,6 +30,7 @@ type inbound struct {
 
 type invitePayload struct {
 	CalleeID uint64 `json:"callee_id"`
+	ChatID   uint64 `json:"chat_id"`
 	CallType string `json:"call_type"`
 }
 
@@ -59,7 +60,7 @@ var upgrader = websocket.Upgrader{
 // CallStateManager exposes the parts of the gRPC call service that the
 // signaling controller needs. It is implemented by service.Server.
 type CallStateManager interface {
-	StartCallForSignaling(ctx context.Context, callerID, calleeID uint, callType entity.CallType) (*entity.Call, error)
+	StartCallForSignaling(ctx context.Context, callerID, calleeID uint, chatID uint, callType entity.CallType) (*entity.Call, error)
 	AcceptCallForSignaling(ctx context.Context, callID, userID uint) (*entity.Call, error)
 	EndCallForSignaling(ctx context.Context, callID, userID uint, reason string) (*entity.Call, error)
 	FindActiveForSignaling(ctx context.Context, userID uint) (*entity.Call, error)
@@ -172,7 +173,7 @@ func (c *Controller) handleInvite(ctx context.Context, callerID uint, raw json.R
 	if p.CallType == string(entity.CallTypeVideo) {
 		callType = entity.CallTypeVideo
 	}
-	call, err := c.manager.StartCallForSignaling(ctx, callerID, uint(p.CalleeID), callType)
+	call, err := c.manager.StartCallForSignaling(ctx, callerID, uint(p.CalleeID), uint(p.ChatID), callType)
 	if err != nil {
 		c.hub.SendToUser(callerID, hub.WSMessage{Type: "CALL_ERROR", Payload: gin.H{"error": err.Error()}})
 		return
@@ -336,6 +337,7 @@ func callPayload(call *entity.Call) gin.H {
 		"call_id":        call.ID,
 		"caller_id":      call.CallerID,
 		"callee_id":      call.CalleeID,
+		"chat_id":        call.ChatID,
 		"call_type":      call.CallType,
 		"status":         call.Status,
 		"started_at_ms":  call.StartedAtMs,

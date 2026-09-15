@@ -352,14 +352,14 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
               <button
                 className="chat-call-btn"
                 title="Аудиозвонок"
-                onClick={() => startCall({ userId: partner.id, username: partner.username }, "audio")}
+                onClick={() => startCall({ userId: partner.id, username: partner.username }, "audio", chat.id)}
               >
                 📞
               </button>
               <button
                 className="chat-call-btn"
                 title="Видеозвонок"
-                onClick={() => startCall({ userId: partner.id, username: partner.username }, "video")}
+                onClick={() => startCall({ userId: partner.id, username: partner.username }, "video", chat.id)}
               >
                 🎥
               </button>

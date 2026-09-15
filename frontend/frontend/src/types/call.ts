@@ -39,7 +39,7 @@ export interface IceConfig {
 
 // WebSocket signaling messages (client <-> call-service).
 export type SignalingMessage =
-  | { type: "CALL_INVITE"; payload: { callee_id: number; call_type: CallType } }
+  | { type: "CALL_INVITE"; payload: { callee_id: number; call_type: CallType; chat_id?: number } }
   | { type: "CALL_ACCEPT"; payload: { call_id: number } }
   | { type: "CALL_REJECT"; payload: { call_id: number; reason?: string } }
   | { type: "CALL_END"; payload: { call_id: number; reason?: string } }

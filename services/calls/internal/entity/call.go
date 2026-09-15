@@ -30,6 +30,7 @@ type Call struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	CallerID     uint       `gorm:"index;not null" json:"caller_id"`
 	CalleeID     uint       `gorm:"index;not null" json:"callee_id"`
+	ChatID       uint       `gorm:"index" json:"chat_id,omitempty"`
 	CallType     CallType   `gorm:"size:10;default:'audio'" json:"call_type"`
 	Status       CallStatus `gorm:"size:20;default:'ringing';index" json:"status"`
 	StartedAtMs  int64      `json:"started_at_ms"`

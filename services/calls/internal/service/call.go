@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -9,6 +10,7 @@ import (
 
 	"messengermax/calls/internal/entity"
 	"messengermax/calls/internal/repo"
+	"messengermax/pkg/nats"
 	pb "messengermax/proto/gen/calls"
 )
 
@@ -19,10 +21,11 @@ const RingTimeout = 30 * time.Second
 type Server struct {
 	pb.UnimplementedCallServiceServer
 	callRepo repo.CallRepository
+	producer *nats.Producer
 }
 
-func NewServer(callRepo repo.CallRepository) *Server {
-	return &Server{callRepo: callRepo}
+func NewServer(callRepo repo.CallRepository, producer *nats.Producer) *Server {
+	return &Server{callRepo: callRepo, producer: producer}
 }
 
 func (s *Server) StartCall(ctx context.Context, req *pb.StartCallRequest) (*pb.CallSession, error) {
@@ -57,7 +60,7 @@ func (s *Server) StartCall(ctx context.Context, req *pb.StartCallRequest) (*pb.C
 // StartCallForSignaling is the entry point used by the WebSocket controller
 // when a caller sends CALL_INVITE. Returns the created call or a stderr-like
 // error message the controller relays to the caller.
-func (s *Server) StartCallForSignaling(ctx context.Context, callerID, calleeID uint, callType entity.CallType) (*entity.Call, error) {
+func (s *Server) StartCallForSignaling(ctx context.Context, callerID, calleeID uint, chatID uint, callType entity.CallType) (*entity.Call, error) {
 	call, err := s.StartCall(ctx, &pb.StartCallRequest{
 		CallerId: uint64(callerID),
 		CalleeId: uint64(calleeID),
@@ -66,7 +69,12 @@ func (s *Server) StartCallForSignaling(ctx context.Context, callerID, calleeID u
 	if err != nil {
 		return nil, err
 	}
-	return fromProto(call), nil
+	e := fromProto(call)
+	if chatID != 0 {
+		e.ChatID = chatID
+		_ = s.callRepo.Update(e)
+	}
+	return e, nil
 }
 
 func (s *Server) AcceptCallForSignaling(ctx context.Context, callID, userID uint) (*entity.Call, error) {
@@ -139,7 +147,28 @@ func (s *Server) EndCall(ctx context.Context, req *pb.EndCallRequest) (*pb.CallS
 	if err := s.callRepo.Update(call); err != nil {
 		return nil, status.Error(codes.Internal, "не удалось завершить звонок")
 	}
+	s.publishCallEnded(call)
 	return toProto(call), nil
+}
+
+// publishCallEnded emits the call-ended event so the chat service can write
+// a system message into the originating chat.
+func (s *Server) publishCallEnded(call *entity.Call) {
+	if s.producer == nil || call.ChatID == 0 {
+		return
+	}
+	s.producer.Publish(nats.TopicCallEnded, itoa(uint64(call.ID)), nats.EventCallEnded{
+		CallID:      int64(call.ID),
+		ChatID:      int64(call.ChatID),
+		CallerID:    int64(call.CallerID),
+		CalleeID:    int64(call.CalleeID),
+		CallType:    string(call.CallType),
+		Status:      string(call.Status),
+		EndReason:   call.EndReason,
+		StartedAtMs: call.StartedAtMs,
+		EndedAtMs:   call.EndedAtMs,
+		DurationMs:  call.DurationMs,
+	})
 }
 
 func (s *Server) EndCallForSignaling(ctx context.Context, callID, userID uint, reason string) (*entity.Call, error) {
@@ -164,6 +193,25 @@ func (s *Server) GetActiveCall(ctx context.Context, req *pb.GetActiveCallRequest
 // call when a participant's signaling connection drops.
 func (s *Server) FindActiveForSignaling(ctx context.Context, userID uint) (*entity.Call, error) {
 	return s.callRepo.FindActiveForUser(userID)
+}
+
+// FindExpiredRinging returns ringing calls that exceeded their ring timeout.
+func (s *Server) FindExpiredRinging(nowMs int64) ([]entity.Call, error) {
+	return s.callRepo.FindExpiredRinging(nowMs)
+}
+
+// ExpireRingingCall ends a ringing call that nobody accepted (ring timeout).
+// It routes through EndCall so the call-ended event is published.
+func (s *Server) ExpireRingingCall(ctx context.Context, call *entity.Call) (*entity.Call, error) {
+	ended, err := s.EndCall(ctx, &pb.EndCallRequest{
+		CallId: uint64(call.ID),
+		UserId: uint64(call.CallerID),
+		Reason: "timeout",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return fromProto(ended), nil
 }
 
 func (s *Server) GetCallHistory(ctx context.Context, req *pb.GetCallHistoryRequest) (*pb.CallsResponse, error) {
@@ -191,6 +239,10 @@ func toProto(call *entity.Call) *pb.CallSession {
 		DurationMs:   call.DurationMs,
 		EndReason:    call.EndReason,
 	}
+}
+
+func itoa(n uint64) string {
+	return strconv.FormatUint(n, 10)
 }
 
 func fromProto(call *pb.CallSession) *entity.Call {

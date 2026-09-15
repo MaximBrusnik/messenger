@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sort"
 	"strconv"
@@ -244,6 +245,67 @@ func (s *Server) UnpinMessage(ctx context.Context, req *pb.UnpinMessageRequest) 
 		ChatID: int64(req.ChatId),
 	})
 	return &pb.Empty{}, nil
+}
+
+// HandleCallEnded consumes calls.call.ended events and writes a system
+// message ("call") into the chat the call originated from.
+func (s *Server) HandleCallEnded(value []byte) {
+	var e nats.EventCallEnded
+	if err := json.Unmarshal(value, &e); err != nil {
+		return
+	}
+	if e.ChatID <= 0 {
+		return
+	}
+	text, senderID := callEndedSystemText(e)
+	msg := &entity.Message{
+		ChatID:     uint(e.ChatID),
+		SenderID:   senderID,
+		Text:       text,
+		SystemType: "call",
+	}
+	if err := s.messageRepo.Create(msg); err != nil {
+		return
+	}
+	m := toMessageProto(msg, nil)
+	s.publishCreated(uint(e.ChatID), m)
+}
+
+// callEndedSystemText builds the human-readable system message and picks a
+// sender id for a call that reached a terminal state.
+func callEndedSystemText(e nats.EventCallEnded) (string, uint) {
+	sender := uint(e.CallerID)
+	callLabel := "звонок"
+	if e.CallType == "video" {
+		callLabel = "видеозвонок"
+	}
+	switch e.Status {
+	case "missed":
+		return "Пропущенный " + callLabel, sender
+	case "rejected":
+		return "Звонок отклонён", uint(e.CalleeID)
+	case "cancelled":
+		return "Звонок отменён", sender
+	default:
+		if e.DurationMs > 0 {
+			return "Звонок завершён · " + formatCallDuration(e.DurationMs), sender
+		}
+		return "Звонок завершён", sender
+	}
+}
+
+func formatCallDuration(ms int64) string {
+	total := ms / 1000
+	m := total / 60
+	s := total % 60
+	return strconv.FormatInt(m, 10) + ":" + twoDigits(s)
+}
+
+func twoDigits(n int64) string {
+	if n < 10 {
+		return "0" + strconv.FormatInt(n, 10)
+	}
+	return strconv.FormatInt(n, 10)
 }
 
 func (s *Server) DeleteChat(ctx context.Context, req *pb.DeleteChatRequest) (*pb.Empty, error) {

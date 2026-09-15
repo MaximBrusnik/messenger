@@ -17,6 +17,8 @@ const (
 	streamName = "MESSENGER"
 	keyHeader  = "X-Message-Key"
 
+	TopicCallEnded = "calls.call.ended"
+
 	TopicUserEvents      = "user.events"
 	TopicMessageCreated  = "chat.message.created"
 	TopicMessageEdited   = "chat.message.edited"
@@ -31,6 +33,7 @@ const (
 )
 
 var AllTopics = []string{
+	TopicCallEnded,
 	TopicUserEvents,
 	TopicMessageCreated,
 	TopicMessageEdited,
@@ -75,16 +78,36 @@ func connect(url string) (*nats.Conn, nats.JetStreamContext) {
 }
 
 func ensureStream(js nats.JetStreamContext) error {
-	if _, err := js.StreamInfo(streamName); err == nil {
-		return nil
-	}
-	_, err := js.AddStream(&nats.StreamConfig{
+	cfg := &nats.StreamConfig{
 		Name:      streamName,
 		Subjects:  AllTopics,
 		Retention: nats.LimitsPolicy,
 		Storage:   nats.FileStorage,
 		MaxAge:    24 * time.Hour,
-	})
+	}
+	info, err := js.StreamInfo(streamName)
+	if err != nil {
+		_, err = js.AddStream(cfg)
+		return err
+	}
+	// Merge any newly added topics into the existing stream config so the
+	// stream keeps capturing them after startup.
+	existing := info.Config.Subjects
+	seen := make(map[string]bool, len(existing))
+	for _, s := range existing {
+		seen[s] = true
+	}
+	merged := existing
+	for _, s := range AllTopics {
+		if !seen[s] {
+			seen[s] = true
+			merged = append(merged, s)
+		}
+	}
+	if len(merged) != len(existing) {
+		info.Config.Subjects = merged
+		_, err = js.UpdateStream(&info.Config)
+	}
 	return err
 }
 

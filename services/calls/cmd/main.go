@@ -16,6 +16,7 @@ import (
 	"messengermax/pkg/config"
 	"messengermax/pkg/grpcsrv"
 	"messengermax/pkg/jwt"
+	"messengermax/pkg/nats"
 	"messengermax/pkg/postgres"
 	pbcalls "messengermax/proto/gen/calls"
 )
@@ -35,13 +36,15 @@ func main() {
 	callRepo := repo.NewCallRepository(db)
 	jwtManager := jwt.NewManager(cfg.JWTSecret)
 	hubInstance := hub.New()
-	srv := service.NewServer(callRepo)
+	producer := nats.NewProducer(cfg.NATS.URL)
+	defer producer.Close()
+	srv := service.NewServer(callRepo, producer)
 	wsCtrl := ws.NewController(jwtManager, hubInstance, srv)
 
 	// expire ringing calls that nobody accepted
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go sweepMissedCalls(ctx, callRepo, wsCtrl)
+	go sweepMissedCalls(ctx, srv, wsCtrl)
 
 	// gRPC API
 	grpcErr := make(chan error, 1)
@@ -74,7 +77,7 @@ func main() {
 
 // sweepMissedCalls marks ringing calls that exceeded the ring timeout as
 // missed, notifying participants over the signaling channel.
-func sweepMissedCalls(ctx context.Context, callRepo repo.CallRepository, ctrl *ws.Controller) {
+func sweepMissedCalls(ctx context.Context, srv *service.Server, ctrl *ws.Controller) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -82,17 +85,17 @@ func sweepMissedCalls(ctx context.Context, callRepo repo.CallRepository, ctrl *w
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			expired, err := callRepo.FindExpiredRinging(time.Now().UnixMilli())
+			expired, err := srv.FindExpiredRinging(time.Now().UnixMilli())
 			if err != nil {
 				continue
 			}
 			for i := range expired {
-				expired[i].Status = entity.CallStatusMissed
-				expired[i].EndedAtMs = time.Now().UnixMilli()
-				expired[i].EndReason = "timeout"
-				_ = callRepo.Update(&expired[i])
-				log.Printf("calls: ringing call %d missed (timeout)", expired[i].ID)
-				ctrl.NotifyCallEnded(&expired[i])
+				call, err := srv.ExpireRingingCall(ctx, &expired[i])
+				if err != nil {
+					continue
+				}
+				log.Printf("calls: ringing call %d missed (timeout)", call.ID)
+				ctrl.NotifyCallEnded(call)
 			}
 		}
 	}

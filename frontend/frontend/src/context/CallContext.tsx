@@ -45,7 +45,7 @@ interface CallCtx {
   error: string | null;
   supported: boolean;
   secureContext: boolean;
-  startCall: (peer: Peer, type: CallType) => Promise<void>;
+  startCall: (peer: Peer, type: CallType, chatId?: number) => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
   endCall: () => void;
@@ -257,7 +257,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // ── public actions ────────────────────────────────────────────────────
   const startCall = useCallback(
-    async (target: Peer, type: CallType) => {
+    async (target: Peer, type: CallType, chatId?: number) => {
       if (!supported) {
         showError("Звонки недоступны в этом браузере (нужен HTTPS и поддержка WebRTC).");
         return;
@@ -275,7 +275,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       roleRef.current = "caller";
       setCallSession(null);
       setPhase("outgoing");
-      if (!send({ type: "CALL_INVITE", payload: { callee_id: target.userId, call_type: type } })) {
+      if (!send({ type: "CALL_INVITE", payload: { callee_id: target.userId, call_type: type, chat_id: chatId } })) {
         webrtc.close();
         setPeer(null);
         setPhase("idle");
