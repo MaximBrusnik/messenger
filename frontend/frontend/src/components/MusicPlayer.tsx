@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, Download, Music, Pause, Play } from "lucide-react";
 import { getMusicStreamUrl, getMusicDownloadUrl } from "../api/client";
 import type { MusicTrack } from "../types";
 
@@ -72,17 +73,17 @@ export default function MusicPlayer({ track, onBack }: Props) {
     <div className="music-player">
       <audio ref={audioRef} preload="metadata" />
 
-      {onBack && <button className="back-btn" onClick={onBack}>←</button>}
+      {onBack && <button className="back-btn" onClick={onBack}><ChevronLeft size={22} /></button>}
 
       <div className="music-player-header">
-        <div className="music-player-icon">🎵</div>
+        <div className="music-player-icon"><Music size={34} /></div>
         <div className="music-player-title">{track.title}</div>
         <div className="music-player-artist">{track.artist || "Неизвестный исполнитель"}</div>
       </div>
 
       <div className="music-player-controls">
         <button className="music-play-btn" onClick={togglePlay}>
-          {playing ? "⏸️" : "▶️"}
+          {playing ? <Pause size={28} /> : <Play size={28} />}
         </button>
 
         <div className="music-progress-bar" onClick={seek}>
@@ -99,7 +100,7 @@ export default function MusicPlayer({ track, onBack }: Props) {
         href={getMusicDownloadUrl(track.id)}
         download
       >
-        ⬇️ Скачать
+        <Download size={16} /> Скачать
       </a>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoaderCircle, MessageSquare, X } from "lucide-react";
 import { getUserProfile } from "../api/client";
 import type { User } from "../types";
 
@@ -32,14 +33,14 @@ export default function UserProfileModal({ userId, onClose, onStartChat }: Props
       <div className="modal-content user-profile-modal">
         <div className="profile-modal-header">
           <h2>Профиль</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="close-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
         <div className="profile-body">
           {loading ? (
-            <div style={{ textAlign: "center", padding: 24, color: "#888" }}>Загрузка...</div>
+            <div className="profile-loading"><LoaderCircle size={28} className="spin" /></div>
           ) : !profile ? (
-            <div style={{ textAlign: "center", padding: 24, color: "#e53935" }}>Пользователь не найден</div>
+            <div className="profile-loading" style={{ color: "#e53935" }}>Пользователь не найден</div>
           ) : (
             <>
               <div className="avatar-section">
@@ -85,7 +86,7 @@ export default function UserProfileModal({ userId, onClose, onStartChat }: Props
 
               {onStartChat && (
                 <button className="btn-primary" onClick={() => onStartChat(userId)}>
-                  Написать сообщение
+                  <MessageSquare size={16} /> Написать сообщение
                 </button>
               )}
             </>

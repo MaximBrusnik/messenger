@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Phone, X } from "lucide-react";
 import { useCall } from "../context/CallContext";
 import { getUserProfile } from "../api/client";
 
@@ -38,10 +39,10 @@ export default function IncomingCallModal({ peer }: Props) {
         </div>
         <div className="call-controls">
           <button className="call-btn hangup" onClick={rejectCall} title="Отклонить">
-            ✕
+            <X size={24} />
           </button>
           <button className="call-btn answer" onClick={acceptCall} title="Ответить">
-            📞
+            <Phone size={24} />
           </button>
         </div>
       </div>

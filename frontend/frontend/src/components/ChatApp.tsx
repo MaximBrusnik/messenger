@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
+import { MessagesSquare } from "lucide-react";
 import { apiRequest, deleteChat, getMusic } from "../api/client";
 import type { Chat, MusicTrack } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { loadChatAppearance, saveChatAppearance, type ChatAppearance } from "../utils/chatTheme";
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
 import MusicPlayer from "./MusicPlayer";
@@ -17,6 +19,7 @@ export default function ChatApp() {
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"chats" | "music">("chats");
   const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
+  const [chatAppearance, setChatAppearance] = useState<Record<number, ChatAppearance>>(loadChatAppearance);
 
   const isMobile = window.innerWidth <= 768;
   const [mobileChat, setMobileChat] = useState(false);
@@ -114,6 +117,14 @@ export default function ChatApp() {
     }
   }
 
+  function handleAppearanceChange(chatId: number, patch: ChatAppearance) {
+    setChatAppearance((prev) => {
+      const next = { ...prev, [chatId]: { ...prev[chatId], ...patch } };
+      saveChatAppearance(next);
+      return next;
+    });
+  }
+
   const handleUserStatus = useCallback((userId: number, status: string) => {
     if (userId === user?.id && user) {
       setUser({ ...user, status });
@@ -148,10 +159,10 @@ export default function ChatApp() {
             onBack={isMobile ? handleMusicBack : undefined}
           />
         ) : activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} />
         ) : (
           <div className="empty-state">
-            <div className="empty-icon">💬</div>
+            <div className="empty-icon"><MessagesSquare size={30} /></div>
             <div>Выберите чат, чтобы начать общение</div>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MessageSquare } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import VerificationSent from "./VerificationSent";
@@ -58,6 +59,9 @@ export default function AuthPage() {
   return (
     <div className="auth">
       <div className="auth-card">
+        <div className="auth-logo">
+          <div className="auth-logo-badge"><MessageSquare size={26} /></div>
+        </div>
         <h2>{mode === "login" ? "Вход" : "Регистрация"}</h2>
 
         <input

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CircleCheck, CircleX, LoaderCircle } from "lucide-react";
 import { apiRequest } from "../api/client";
 
 export default function VerifyEmail() {
@@ -34,18 +35,18 @@ export default function VerifyEmail() {
       <div className="auth-card" style={{ textAlign: "center" }}>
         {status === "loading" && (
           <>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>⏳</div>
+            <div className="auth-status-icon info"><LoaderCircle size={34} className="spin" /></div>
             <div>Подтверждение email...</div>
           </>
         )}
         {status === "success" && (
           <>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>✅</div>
+            <div className="auth-status-icon success"><CircleCheck size={34} /></div>
             <div style={{ color: "#43a047", fontWeight: 500, fontSize: 16 }}>{message}</div>
             <a
               href="/"
               style={{
-                display: "block", marginTop: 16, color: "#3390ec",
+                display: "block", marginTop: 16, color: "var(--accent)",
                 textDecoration: "none", fontWeight: 500,
               }}
             >
@@ -55,12 +56,12 @@ export default function VerifyEmail() {
         )}
         {status === "error" && (
           <>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>❌</div>
+            <div className="auth-status-icon error"><CircleX size={34} /></div>
             <div style={{ color: "#e53935", fontWeight: 500, fontSize: 16 }}>{message}</div>
             <a
               href="/"
               style={{
-                display: "block", marginTop: 16, color: "#3390ec",
+                display: "block", marginTop: 16, color: "var(--accent)",
                 textDecoration: "none", fontWeight: 500,
               }}
             >

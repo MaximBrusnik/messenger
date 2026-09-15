@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Mic, MicOff, PhoneOff, Video, VideoOff, X } from "lucide-react";
 import { useCall } from "../context/CallContext";
 
 function formatDuration(ms: number): string {
@@ -80,7 +81,7 @@ export default function CallScreen() {
               onClick={toggleVideo}
               title={videoEnabled ? "Выключить камеру" : "Включить камеру"}
             >
-              {videoEnabled ? "🎥" : "🚫"}
+              {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
             </button>
           )}
           {phase === "active" && (
@@ -89,11 +90,11 @@ export default function CallScreen() {
               onClick={toggleMute}
               title={muted ? "Включить микрофон" : "Выключить микрофон"}
             >
-              {muted ? "🔇" : "🎤"}
+              {muted ? <MicOff size={24} /> : <Mic size={24} />}
             </button>
           )}
           <button className="call-btn hangup" onClick={endCall} title="Завершить">
-            {phase === "outgoing" ? "✕" : "📞"}
+            {phase === "outgoing" ? <X size={24} /> : <PhoneOff size={24} />}
           </button>
         </div>
       </div>

@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import { CircleCheck, CircleX, KeyRound, LogOut, Palette, Shield, User as UserIcon, X } from "lucide-react";
 import { apiRequest, uploadFile } from "../api/client";
 import type { User, UserSettings } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 interface Props {
   onClose: () => void;
 }
 
-type Tab = "profile" | "privacy" | "password";
+type Tab = "profile" | "privacy" | "password" | "theme";
 
 export default function ProfileModal({ onClose }: Props) {
   const { user, setUser } = useAuth();
+  const { theme, toggle } = useTheme();
   const [tab, setTab] = useState<Tab>("profile");
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -142,13 +145,14 @@ export default function ProfileModal({ onClose }: Props) {
       <div className="modal-content">
         <div className="profile-modal-header">
           <h2>Настройки</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="close-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
         <div className="profile-tabs">
-          <div className={`profile-tab${tab === "profile" ? " active" : ""}`} onClick={() => setTab("profile")}>Профиль</div>
-          <div className={`profile-tab${tab === "privacy" ? " active" : ""}`} onClick={() => setTab("privacy")}>Приватность</div>
-          <div className={`profile-tab${tab === "password" ? " active" : ""}`} onClick={() => setTab("password")}>Пароль</div>
+          <div className={`profile-tab${tab === "profile" ? " active" : ""}`} onClick={() => setTab("profile")}><UserIcon size={15} /> Профиль</div>
+          <div className={`profile-tab${tab === "privacy" ? " active" : ""}`} onClick={() => setTab("privacy")}><Shield size={15} /> Приватность</div>
+          <div className={`profile-tab${tab === "password" ? " active" : ""}`} onClick={() => setTab("password")}><KeyRound size={15} /> Пароль</div>
+          <div className={`profile-tab${tab === "theme" ? " active" : ""}`} onClick={() => setTab("theme")}><Palette size={15} /> Тема</div>
         </div>
 
         <div className="profile-body">
@@ -186,9 +190,9 @@ export default function ProfileModal({ onClose }: Props) {
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" style={{ flex: 1 }} />
                   {user?.email_verified ? (
-                    <span style={{ color: "#43a047", fontSize: 13, whiteSpace: "nowrap" }}>✅ Подтверждён</span>
+                    <span className="verified-badge"><CircleCheck size={15} /> Подтверждён</span>
                   ) : (
-                    <span style={{ color: "#e53935", fontSize: 13, whiteSpace: "nowrap" }}>❌ Не подтверждён</span>
+                    <span className="verified-badge unverified"><CircleX size={15} /> Не подтверждён</span>
                   )}
                 </div>
               </div>
@@ -256,10 +260,10 @@ export default function ProfileModal({ onClose }: Props) {
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
 
-              <hr style={{ border: "none", borderTop: "1px solid #e0e0e0", margin: "8px 0" }} />
+              <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "12px 0" }} />
 
               <button className="btn-danger" onClick={handleLogout}>
-                Выйти из аккаунта
+                <LogOut size={16} /> Выйти из аккаунта
               </button>
             </>
           )}
@@ -280,6 +284,29 @@ export default function ProfileModal({ onClose }: Props) {
 
               <button className="btn-primary" onClick={changePassword} disabled={saving || !oldPwd || !newPwd}>
                 {saving ? "Сохранение..." : "Сменить пароль"}
+              </button>
+            </>
+          )}
+
+          {tab === "theme" && (
+            <>
+              <div className="form-row theme-row">
+                <div>
+                  <label>Тёмная тема</label>
+                  <div className="form-hint">Применить тёмное оформление</div>
+                </div>
+                <label className="theme-switch">
+                  <input type="checkbox" checked={theme === "dark"} onChange={toggle} />
+                  <span className="theme-switch-track">
+                    <span className="theme-switch-thumb" />
+                  </span>
+                </label>
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+              <button className="btn-danger" onClick={handleLogout}>
+                <LogOut size={16} /> Выйти из аккаунта
               </button>
             </>
           )}

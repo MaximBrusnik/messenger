@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { uploadFile } from "../api/client";
+import { FaceSlightlySmiling, Paperclip, Send } from "lucide-react";
 
 const emojis = [
   "👍", "❤️", "🔥", "😂", "😮", "😢", "🙏",
@@ -51,7 +52,7 @@ export default function MessageInput({ onSend }: Props) {
   return (
     <div className="input">
       <button className="input-btn" onClick={() => setShowEmoji(!showEmoji)} title="Эмодзи" disabled={uploading}>
-        😊
+        <FaceSlightlySmiling size={20} />
       </button>
       {showEmoji && (
         <div className="emoji-picker-input">
@@ -73,10 +74,10 @@ export default function MessageInput({ onSend }: Props) {
       />
       <input ref={fileRef} type="file" style={{ display: "none" }} onChange={handleFile} />
       <button className="input-btn" onClick={() => fileRef.current?.click()} title="Прикрепить файл" disabled={uploading}>
-        📎
+        <Paperclip size={20} />
       </button>
       <button className="input-btn send" onClick={handleSend} disabled={uploading || !text.trim()}>
-        ➤
+        <Send size={20} />
       </button>
     </div>
   );

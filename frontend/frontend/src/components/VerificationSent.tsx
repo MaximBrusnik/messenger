@@ -1,8 +1,10 @@
+import { Mail } from "lucide-react";
+
 export default function VerificationSent({ email, onBack }: { email: string; onBack: () => void }) {
   return (
     <div className="auth">
       <div className="auth-card" style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>📧</div>
+        <div className="auth-status-icon info"><Mail size={34} /></div>
         <h2>Проверьте почту</h2>
         <p>
           Письмо со ссылкой для подтверждения отправлено на <strong>{email}</strong>

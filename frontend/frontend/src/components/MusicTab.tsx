@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { CircleCheck, CircleX, Download, Music, Trash } from "lucide-react";
 import { getMusic, getPendingMusic, uploadMusic, deleteMusic, approveMusic, rejectMusic, getMusicDownloadUrl } from "../api/client";
 import type { MusicTrack } from "../types";
 
@@ -103,7 +104,7 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
           <div className="music-list">
             {pendingTracks.map((t) => (
               <div key={t.id} className="music-item">
-                <div className="music-item-icon">🎵</div>
+                <div className="music-item-icon"><Music size={18} /></div>
                 <div className="music-item-info">
                   <div className="music-item-title">{t.title}</div>
                   <div className="music-item-artist">{t.artist || "Неизвестный исполнитель"}</div>
@@ -114,14 +115,14 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
                   onClick={() => handleApprove(t.id)}
                   title="Одобрить"
                 >
-                  ✅
+                  <CircleCheck size={18} />
                 </button>
                 <button
                   className="music-item-delete"
                   onClick={() => handleReject(t.id)}
                   title="Отклонить"
                 >
-                  ❌
+                  <CircleX size={18} />
                 </button>
               </div>
             ))}
@@ -145,7 +146,7 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
                   className={`music-item${activeTrackId === t.id ? " active" : ""}`}
                   onClick={() => onPlay(t.id)}
                 >
-                  <div className="music-item-icon">🎵</div>
+                  <div className="music-item-icon"><Music size={18} /></div>
                   <div className="music-item-info">
                     <div className="music-item-title">{t.title}</div>
                     <div className="music-item-artist">{t.artist || "Неизвестный исполнитель"}</div>
@@ -158,14 +159,14 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
                     onClick={(e) => e.stopPropagation()}
                     title="Скачать"
                   >
-                    ⬇️
+                    <Download size={16} />
                   </a>
                   <button
                     className="music-item-delete"
                     onClick={(e) => handleDelete(t.id, e)}
                     title="Удалить"
                   >
-                    🗑️
+                    <Trash size={16} />
                   </button>
                 </div>
               ))}
@@ -198,7 +199,7 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
               className={`music-item${activeTrackId === t.id ? " active" : ""}`}
               onClick={() => onPlay(t.id)}
             >
-              <div className="music-item-icon">🎵</div>
+              <div className="music-item-icon"><Music size={18} /></div>
               <div className="music-item-info">
                 <div className="music-item-title">{t.title}</div>
                 <div className="music-item-artist">{t.artist || "Неизвестный исполнитель"}</div>
@@ -211,14 +212,14 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
                 onClick={(e) => e.stopPropagation()}
                 title="Скачать"
               >
-                ⬇️
+                <Download size={16} />
               </a>
               <button
                 className="music-item-delete"
                 onClick={(e) => handleDelete(t.id, e)}
                 title="Удалить"
               >
-                🗑️
+                <Trash size={16} />
               </button>
             </div>
           ))}

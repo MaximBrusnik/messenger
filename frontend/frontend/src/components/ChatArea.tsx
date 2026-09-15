@@ -1,6 +1,28 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
+import type { CSSProperties } from "react";
+import {
+  Bot,
+  Check,
+  CheckCheck,
+  ChevronLeft,
+  Copy,
+  EllipsisVertical,
+  FileText,
+  Forward,
+  MessageSquare,
+  Paperclip,
+  Pencil,
+  Phone,
+  PhoneCall,
+  Pin,
+  Trash2,
+  Video,
+  X,
+} from "lucide-react";
 import { apiRequest, deleteMessage, pinMessage, unpinMessage } from "../api/client";
 import type { Chat, Message, Reaction } from "../types";
+import type { ChatAppearance } from "../utils/chatTheme";
+import { CHAT_COLORS, CHAT_WALLPAPERS } from "../utils/chatTheme";
 import { useAuth } from "../context/AuthContext";
 import MessageInput from "./MessageInput";
 import { useWebSocket } from "../hooks/useWebSocket";
@@ -20,6 +42,8 @@ interface Props {
   onUserStatus?: (userId: number, status: string) => void;
   onOpenUserProfile?: (userId: number) => void;
   onDeleteChat?: (chatId: number) => void;
+  appearance?: ChatAppearance;
+  onAppearanceChange?: (patch: ChatAppearance) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -58,7 +82,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile, onDeleteChat }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile, onDeleteChat, appearance, onAppearanceChange }: Props) {
   const { user } = useAuth();
   const { startCall } = useCall();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -332,15 +356,25 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
 
   const partner = chat.participants?.find((p) => p.id !== user?.id);
   const ctxMessage = ctxMsgId !== null ? messages.find((m) => m.id === ctxMsgId) : null;
+  const activeBg = appearance?.bg ?? "default";
+
+  const accentStyle = {
+    display: "contents",
+    ...(appearance?.color ? { ["--chat-accent" as string]: appearance.color } : {}),
+  } as CSSProperties;
+
+  const selectColor = (color: string | undefined) => {
+    onAppearanceChange?.({ color });
+  };
 
   return (
-    <>
+    <div style={accentStyle}>
       <div className="chat-header">
-        {onBack && <button className="back-btn" onClick={onBack}>←</button>}
+        {onBack && <button className="back-btn" onClick={onBack}><ChevronLeft size={22} /></button>}
         <div className="chat-header-avatar" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default", background: partner?.is_bot ? "#7c4dff" : undefined }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
           {partner?.avatar ? (
             <img src={partner.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-          ) : partner?.is_bot ? "🤖" : partner ? partner.username.charAt(0).toUpperCase() : "#"}
+          ) : partner?.is_bot ? <Bot size={22} /> : partner ? partner.username.charAt(0).toUpperCase() : "#"}
         </div>
         <div className="chat-header-info" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default" }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
           <div className="chat-header-name">{partner?.username ?? chat.name}</div>
@@ -354,22 +388,62 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                 title="Аудиозвонок"
                 onClick={() => startCall({ userId: partner.id, username: partner.username }, "audio", chat.id)}
               >
-                📞
+                <Phone size={20} />
               </button>
               <button
                 className="chat-call-btn"
                 title="Видеозвонок"
                 onClick={() => startCall({ userId: partner.id, username: partner.username }, "video", chat.id)}
               >
-                🎥
+                <Video size={21} />
               </button>
             </>
           )}
           <div className="chat-menu-container" ref={menuRef}>
-            <button className="chat-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+            <button className="chat-menu-btn" onClick={() => setShowMenu(!showMenu)}>
+              <EllipsisVertical size={20} />
+            </button>
             {showMenu && (
               <div className="chat-menu-dropdown">
-                <button onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>Удалить чат</button>
+                <div className="chat-menu-section">
+                  <div className="chat-menu-heading">Цвет чата</div>
+                  <div className="color-row">
+                    <div
+                      className={`color-dot-baseline${!appearance?.color ? " selected" : ""}`}
+                      onClick={() => selectColor(undefined)}
+                      title="Стандартный"
+                    >
+                      <Check size={14} />
+                    </div>
+                    {CHAT_COLORS.map((c) => (
+                      <div
+                        key={c}
+                        className={`color-dot${appearance?.color === c ? " selected" : ""}`}
+                        style={{ background: c }}
+                        onClick={() => selectColor(c)}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="chat-menu-section">
+                  <div className="chat-menu-heading">Обои чата</div>
+                  <div className="bg-row">
+                    {CHAT_WALLPAPERS.map((w) => (
+                      <div
+                        key={w.id}
+                        className={`bg-swatch bg-preview-${w.id}${activeBg === w.id ? " selected" : ""}`}
+                        onClick={() => onAppearanceChange?.({ bg: w.id })}
+                        title={w.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="chat-menu-section">
+                  <button className="plain danger" onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>
+                    <Trash2 size={16} /> Удалить чат
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -384,13 +458,13 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
 
       {pinnedMessage && (
         <div className="pinned-banner">
-          <span className="pinned-icon">📌</span>
+          <Pin size={15} className="pinned-icon" />
           <span className="pinned-text">{pinnedMessage.text.slice(0, 100)}</span>
-          <button className="pinned-unpin" onClick={() => unpinMessage(chat.id)}>✕</button>
+          <button className="pinned-unpin" onClick={() => unpinMessage(chat.id)}><X size={15} /></button>
         </div>
       )}
 
-      <div className="messages" ref={messagesRef} onScroll={handleScroll}>
+      <div className={`messages chat-bg-${activeBg}`} ref={messagesRef} onScroll={handleScroll}>
         {loadingMore && (
           <div style={{ textAlign: "center", padding: "12px", color: "#888", fontSize: 13 }}>
             Загрузка...
@@ -403,14 +477,21 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
         )}
         {messages.length === 0 && !error && (
           <div className="empty-state">
-            <div className="empty-icon">💬</div>
+            <div className="empty-icon"><MessageSquare size={30} /></div>
             <div>Нет сообщений</div>
           </div>
         )}
         {messages.map((m) => {
           if (m.system_type) {
+            const isCall = m.system_type === "call";
+            const isVideoCall = isCall && /видео|без звука/i.test(m.text);
             return (
-              <div key={m.id} className="msg-system">
+              <div key={m.id} className={`msg-system${isCall ? " call-ended" : ""}`}>
+                {isCall && (
+                  <span className="sys-icon">
+                    {isVideoCall ? <Video size={14} /> : <PhoneCall size={14} />}
+                  </span>
+                )}
                 {m.text}
               </div>
             );
@@ -436,8 +517,8 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                       if (e.key === "Escape") setEditingId(null);
                     }}
                   />
-                  <button className="edit-save" onClick={() => handleEdit(m.id)}>✓</button>
-                  <button className="edit-cancel" onClick={() => setEditingId(null)}>✕</button>
+                  <button className="edit-save" onClick={() => handleEdit(m.id)}><Check size={16} /></button>
+                  <button className="edit-cancel" onClick={() => setEditingId(null)}><X size={16} /></button>
                 </div>
               ) : (
                 <>
@@ -452,7 +533,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                         <img src={m.attachment_url} alt={m.attachment_name} />
                       ) : m.attachment_name?.toLowerCase().endsWith(".pdf") ? (
                         <a className="file-attachment" href={m.attachment_url} target="_blank" rel="noreferrer">
-                          <span className="file-icon">📄</span>
+                          <span className="file-icon"><FileText size={20} /></span>
                           <div>
                             <div className="file-name">{m.attachment_name}</div>
                             <div className="file-size">{formatSize(m.attachment_size)} · PDF</div>
@@ -460,7 +541,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                         </a>
                       ) : (
                         <a className="file-attachment" href={m.attachment_url} target="_blank" rel="noreferrer">
-                          <span className="file-icon">📎</span>
+                          <span className="file-icon"><Paperclip size={20} /></span>
                           <div>
                             <div className="file-name">{m.attachment_name}</div>
                             <div className="file-size">{formatSize(m.attachment_size)}</div>
@@ -474,7 +555,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                     <span className="msg-time">{formatTime(m.created_at)}</span>
                     {isMine && (
                       <span className={`msg-check ${m.is_read ? "read" : ""}`}>
-                        {m.is_read ? "✓✓" : "✓"}
+                        {m.is_read ? <CheckCheck size={15} /> : <Check size={15} />}
                       </span>
                     )}
                   </div>
@@ -521,21 +602,21 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           </div>
           {ctxMessage.sender_id === user?.id && (
             <button onClick={() => { setEditingId(ctxMsgId); setEditText(ctxMessage.text); setCtxMsgId(null); }}>
-              ✏️ Редактировать
+              <Pencil size={16} /> Редактировать
             </button>
           )}
           <button onClick={() => handleCopyText(ctxMessage.text)}>
-            📋 Копировать
+            <Copy size={16} /> Копировать
           </button>
           <button onClick={() => { alert("Пересылка будет позже"); setCtxMsgId(null); }}>
-            📤 Переслать
+            <Forward size={16} /> Переслать
           </button>
           <button onClick={() => { pinMessage(chat.id, ctxMsgId); setCtxMsgId(null); }}>
-            📌 Закрепить
+            <Pin size={16} /> Закрепить
           </button>
           {ctxMessage.sender_id === user?.id && (
             <button className="danger" onClick={() => handleDeleteMessage(ctxMsgId)}>
-              🗑️ Удалить
+              <Trash2 size={16} /> Удалить
             </button>
           )}
           <div className="ctx-divider" />
@@ -548,6 +629,6 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
       )}
 
       <MessageInput onSend={handleSend} />
-    </>
+    </div>
   );
 }

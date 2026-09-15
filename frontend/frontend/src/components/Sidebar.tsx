@@ -1,5 +1,6 @@
 import UserSearch from "./UserSearch";
 import MusicTab from "./MusicTab";
+import { Bot, MessageSquare, Music, Trash2 } from "lucide-react";
 import type { Chat, User } from "../types";
 
 interface Props {
@@ -76,13 +77,13 @@ export default function Sidebar({
           className={`sidebar-tab${activeTab === "chats" ? " active" : ""}`}
           onClick={() => onTabChange("chats")}
         >
-          💬 Чаты
+          <MessageSquare size={17} /> Чаты
         </button>
         <button
           className={`sidebar-tab${activeTab === "music" ? " active" : ""}`}
           onClick={() => onTabChange("music")}
         >
-          🎵 Музыка
+          <Music size={17} /> Музыка
         </button>
       </div>
 
@@ -96,7 +97,7 @@ export default function Sidebar({
               style={{ borderBottom: "1px solid #e8e8e8", cursor: "pointer" }}
               onClick={onStartAIChat}
             >
-              <div className="chat-item-avatar" style={{ background: "#7c4dff" }}>🤖</div>
+              <div className="chat-item-avatar" style={{ background: "#7c4dff" }}><Bot size={20} /></div>
               <div className="chat-item-content">
                 <div className="chat-item-name">Ассистент</div>
                 <div className="chat-item-preview">AI-помощник</div>
@@ -131,7 +132,7 @@ export default function Sidebar({
                   onClick={(e) => { e.stopPropagation(); onDeleteChat(c.id); }}
                   title="Удалить чат"
                 >
-                  🗑️
+                  <Trash2 size={14} />
                 </button>
               </div>
             ))}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apiRequest } from "../api/client";
+import { Search } from "lucide-react";
 import type { User } from "../types";
 
 interface Props {
@@ -22,6 +23,7 @@ export default function UserSearch({ onOpenProfile }: Props) {
 
   return (
     <div className="user-search" style={{ position: "relative" }}>
+      <Search className="search-icon" size={16} />
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
