@@ -1681,6 +1681,22 @@ body {
   z-index: 2;
 }
 
+.call-global-error {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(229,57,53,.95);
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+  z-index: 999;
+  max-width: 90vw;
+  text-align: center;
+}
+
 .call-controls {
   display: flex;
   align-items: center;

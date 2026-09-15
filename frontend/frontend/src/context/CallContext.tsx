@@ -58,6 +58,27 @@ interface CallCtx {
   remoteStream: MediaStream | null;
 }
 
+function mediaErrorMessage(err: unknown): string {
+  const name =
+    err instanceof DOMException ? err.name :
+    err instanceof Error ? err.name : "";
+  switch (name) {
+    case "NotAllowedError":
+      return "Доступ к микрофону запрещён. Разрешите в настройках сайта (нажмите 🔒 слева от адреса).";
+    case "NotFoundError":
+      return "Микрофон не найден на этом устройстве.";
+    case "NotReadableError":
+    case "OverconstrainedError":
+      return "Микрофон занят другой программой (вкладка/Zoom). Закройте её и повторите.";
+    case "SecurityError":
+      return "Нужен HTTPS для доступа к микрофону.";
+    case "AbortError":
+      return "Запрос прерван. Попробуйте ещё раз.";
+    default:
+      return `Не удалось получить доступ к микрофону: ${err instanceof Error ? err.message : name || "неизвестная ошибка"}.`;
+  }
+}
+
 const Ctx = createContext<CallCtx | null>(null);
 
 export const useCall = () => {
@@ -94,8 +115,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setError(null), 5000);
   }, []);
 
+  // Track the auth token (captured at mount) so the signaling socket is
+  // created with the correct identity. CallProvider remounts on login/logout,
+  // so the token read here always matches the current session.
+  const [token] = useState<string | null>(() => localStorage.getItem("token"));
+
   // Wire WebRTC -> signaling socket output once.
-  const sendRef = useRef<(msg: SignalingMessage) => void>(() => {});
+  const sendRef = useRef<(msg: SignalingMessage) => boolean>(() => false);
   const attachOutbound = useCallback(() => {
     webrtc.setOnLocalSdp((sdp) => {
       if (callIdRef.current != null) {
@@ -150,12 +176,16 @@ export function CallProvider({ children }: { children: ReactNode }) {
           break;
         }
         case "CALL_ENDED": {
+          const reason = String(p.end_reason ?? "");
           webrtc.close();
           setPeer(null);
           setCallSession(null);
           setPhase("idle");
           callIdRef.current = null;
           roleRef.current = null;
+          if (reason === "no_answer" || reason === "timeout" || reason === "unreachable") {
+            showError("Собеседник сейчас недоступен. Попробуйте позже.");
+          }
           break;
         }
         case "CALL_ERROR": {
@@ -191,7 +221,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   );
 
   // Start signal socket; forward outbound messages to it.
-  const signal = useCallSignaling(handleServerEvent);
+  const signal = useCallSignaling(handleServerEvent, token);
 
   useEffect(() => {
     sendRef.current = signal.send;
@@ -235,8 +265,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
       attachOutbound();
       try {
         await webrtc.startLocalMedia(type);
-      } catch {
-        showError("Нет доступа к камере/микрофону.");
+      } catch (e) {
+        showError(mediaErrorMessage(e));
         return;
       }
       setPeer(target);
@@ -245,7 +275,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
       roleRef.current = "caller";
       setCallSession(null);
       setPhase("outgoing");
-      send({ type: "CALL_INVITE", payload: { callee_id: target.userId, call_type: type } });
+      if (!send({ type: "CALL_INVITE", payload: { callee_id: target.userId, call_type: type } })) {
+        webrtc.close();
+        setPeer(null);
+        setPhase("idle");
+        roleRef.current = null;
+        showError("Нет соединения с сервером звонков. Попробуйте ещё раз.");
+      }
     },
     [supported, webrtc, attachOutbound, send, showError],
   );
@@ -255,11 +291,18 @@ export function CallProvider({ children }: { children: ReactNode }) {
     attachOutbound();
     try {
       await webrtc.startLocalMedia(callTypeRef.current);
-    } catch {
-      showError("Нет доступа к камере/микрофону.");
+    } catch (e) {
+      showError(mediaErrorMessage(e));
       return;
     }
-    send({ type: "CALL_ACCEPT", payload: { call_id: callIdRef.current } });
+    if (!send({ type: "CALL_ACCEPT", payload: { call_id: callIdRef.current } })) {
+      webrtc.close();
+      setPeer(null);
+      setPhase("idle");
+      roleRef.current = null;
+      showError("Нет соединения с сервером звонков. Попробуйте ещё раз.");
+      return;
+    }
     setDurationMs(0);
     setPhase("active");
   }, [webrtc, attachOutbound, send, showError]);
@@ -313,6 +356,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
+      {error && <div className="call-global-error">{error}</div>}
       {phase === "incoming" && peer && <IncomingCallModal peer={peer} />}
       {(phase === "outgoing" || phase === "active") && <CallScreen />}
     </Ctx.Provider>

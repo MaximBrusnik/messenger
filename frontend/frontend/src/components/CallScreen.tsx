@@ -15,7 +15,6 @@ export default function CallScreen() {
     phase,
     callType,
     peer,
-    error,
     durationMs,
     muted,
     videoEnabled,
@@ -73,8 +72,6 @@ export default function CallScreen() {
             {ringing ? "Вызов..." : phase === "active" ? formatDuration(durationMs) : ""}
           </div>
         </div>
-
-        {error && <div className="call-error">{error}</div>}
 
         <div className="call-controls">
           {isVideo && phase === "active" && (
