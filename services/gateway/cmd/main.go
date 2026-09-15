@@ -81,6 +81,7 @@ func main() {
 			protected.GET("/chats/:id/messages/:msgId/reactions", gw.GetReactions)
 			protected.POST("/chats/:id/messages/:msgId/reactions", gw.AddReaction)
 			protected.DELETE("/chats/:id/messages/:msgId/reactions", gw.RemoveReaction)
+			protected.POST("/chats/:id/messages/:msgId/forward", gw.ForwardMessage)
 
 			protected.Any("/music/upload", gw.MusicFileProxy)
 			protected.Any("/music/:id/stream", gw.MusicFileProxy)

@@ -22,6 +22,7 @@ service ChatService {
   rpc AddReaction(AddReactionRequest) returns (Reaction);
   rpc RemoveReaction(RemoveReactionRequest) returns (Empty);
   rpc GetReactions(GetReactionsRequest) returns (ReactionsResponse);
+  rpc ForwardMessage(ForwardMessageRequest) returns (Message);
 }
 
 message CreateChatRequest {
@@ -107,6 +108,12 @@ message RemoveReactionRequest {
   string reaction = 3;
 }
 
+message ForwardMessageRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+  uint64 message_id = 3;
+}
+
 message GetReactionsRequest {
   uint64 message_id = 1;
 }
@@ -160,6 +167,10 @@ message Message {
   repeated Reaction reactions = 13;
   google.protobuf.Timestamp read_at = 14;
   google.protobuf.Timestamp edited_at = 15;
+  bool is_forwarded = 16;
+  uint64 forwarded_from_sender_id = 17;
+  uint64 forwarded_from_chat_id = 18;
+  uint64 forwarded_from_message_id = 19;
 }
 
 message Reaction {

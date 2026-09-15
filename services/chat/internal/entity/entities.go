@@ -30,22 +30,26 @@ type ChatUser struct {
 
 // Message is a single chat message.
 type Message struct {
-	ID             uint           `gorm:"primarykey" json:"id"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
-	ChatID         uint           `gorm:"index;not null" json:"chat_id"`
-	SenderID       uint           `gorm:"index;not null" json:"sender_id"`
-	Text           string         `gorm:"type:text;not null" json:"text"`
-	IsRead         bool           `gorm:"default:false" json:"is_read"`
-	ReadAt         *time.Time     `json:"read_at,omitempty"`
-	Edited         bool           `gorm:"default:false" json:"edited"`
-	EditedAt       *time.Time     `json:"edited_at,omitempty"`
-	SystemType     string         `gorm:"size:20" json:"system_type,omitempty"`
-	AttachmentType string         `gorm:"size:50" json:"attachment_type,omitempty"`
-	AttachmentURL  string         `gorm:"size:500" json:"attachment_url,omitempty"`
-	AttachmentName string         `gorm:"size:255" json:"attachment_name,omitempty"`
-	AttachmentSize *int           `json:"attachment_size,omitempty"`
+	ID                     uint           `gorm:"primarykey" json:"id"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	DeletedAt              gorm.DeletedAt `gorm:"index" json:"-"`
+	ChatID                 uint           `gorm:"index;not null" json:"chat_id"`
+	SenderID               uint           `gorm:"index;not null" json:"sender_id"`
+	Text                   string         `gorm:"type:text;not null" json:"text"`
+	IsRead                 bool           `gorm:"default:false" json:"is_read"`
+	ReadAt                 *time.Time     `json:"read_at,omitempty"`
+	Edited                 bool           `gorm:"default:false" json:"edited"`
+	EditedAt               *time.Time     `json:"edited_at,omitempty"`
+	SystemType             string         `gorm:"size:20" json:"system_type,omitempty"`
+	AttachmentType         string         `gorm:"size:50" json:"attachment_type,omitempty"`
+	AttachmentURL          string         `gorm:"size:500" json:"attachment_url,omitempty"`
+	AttachmentName         string         `gorm:"size:255" json:"attachment_name,omitempty"`
+	AttachmentSize         *int           `json:"attachment_size,omitempty"`
+	IsForwarded            bool           `gorm:"default:false" json:"is_forwarded"`
+	ForwardedFromSenderID  uint           `json:"forwarded_from_sender_id,omitempty"`
+	ForwardedFromChatID    uint           `json:"forwarded_from_chat_id,omitempty"`
+	ForwardedFromMessageID uint           `json:"forwarded_from_message_id,omitempty"`
 }
 
 // MessageReaction has a composite primary key of message+user+reaction.

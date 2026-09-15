@@ -43,6 +43,13 @@ export interface Message {
   attachment_url?: string;
   attachment_name?: string;
   attachment_size?: number;
+  is_forwarded?: boolean;
+  forwarded_from?: {
+    id: number;
+    chat_id: number;
+    username?: string;
+    avatar?: string;
+  };
 }
 
 export interface Reaction {

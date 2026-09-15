@@ -24,6 +24,7 @@ import type { Chat, Message, Reaction } from "../types";
 import type { ChatAppearance } from "../utils/chatTheme";
 import { CHAT_COLORS, CHAT_WALLPAPERS } from "../utils/chatTheme";
 import { useAuth } from "../context/AuthContext";
+import ForwardPicker from "./ForwardPicker";
 import MessageInput from "./MessageInput";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { playNotificationSound } from "../utils/sound";
@@ -94,6 +95,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
   const [showMenu, setShowMenu] = useState(false);
   const [ctxMsgId, setCtxMsgId] = useState<number | null>(null);
   const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
@@ -522,6 +524,12 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
                 </div>
               ) : (
                 <>
+                  {m.is_forwarded && m.forwarded_from && (
+                    <div className="forward-header">
+                      <Forward size={13} />
+                      <span>Переслано от {m.forwarded_from.username ?? "Пользователь"}</span>
+                    </div>
+                  )}
                   <div className="msg-text">
                     {linkifyText(m.text)}
                     {m.edited && <span className="edited-mark"> edited</span>}
@@ -608,7 +616,7 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           <button onClick={() => handleCopyText(ctxMessage.text)}>
             <Copy size={16} /> Копировать
           </button>
-          <button onClick={() => { alert("Пересылка будет позже"); setCtxMsgId(null); }}>
+          <button onClick={() => { setForwardMsg(ctxMessage); setCtxMsgId(null); }}>
             <Forward size={16} /> Переслать
           </button>
           <button onClick={() => { pinMessage(chat.id, ctxMsgId); setCtxMsgId(null); }}>
@@ -629,6 +637,15 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
       )}
 
       <MessageInput onSend={handleSend} />
+
+      {forwardMsg && (
+        <ForwardPicker
+          message={forwardMsg}
+          excludeChatId={chat.id}
+          onClose={() => setForwardMsg(null)}
+          onForwarded={onMessage}
+        />
+      )}
     </div>
   );
 }

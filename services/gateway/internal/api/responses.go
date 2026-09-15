@@ -94,8 +94,12 @@ func reactionJSON(r *pbchat.Reaction, profiles map[uint64]*pbuser.UserProfile) g
 // messageJSON builds the full legacy MessageResponse, enriching the sender
 // and reaction usernames with profile data.
 func (g *Gateway) messageJSON(ctx context.Context, m *pbchat.Message) gin.H {
+	profileIDs := []uint64{m.SenderId}
+	if m.IsForwarded && m.ForwardedFromSenderId > 0 {
+		profileIDs = append(profileIDs, m.ForwardedFromSenderId)
+	}
+	profiles := g.profilesByID(ctx, profileIDs)
 	sender := gin.H{}
-	profiles := g.profilesByID(ctx, []uint64{m.SenderId})
 	if p, ok := profiles[m.SenderId]; ok {
 		sender = userJSON(p, p.Id == m.SenderId)
 	}
@@ -123,6 +127,18 @@ func (g *Gateway) messageJSON(ctx context.Context, m *pbchat.Message) gin.H {
 	}
 	if len(reactions) > 0 {
 		h["reactions"] = reactions
+	}
+	if m.IsForwarded {
+		h["is_forwarded"] = true
+		ff := gin.H{
+			"id":      m.ForwardedFromSenderId,
+			"chat_id": m.ForwardedFromChatId,
+		}
+		if p, ok := profiles[m.ForwardedFromSenderId]; ok {
+			ff["username"] = p.Username
+			ff["avatar"] = p.Avatar
+		}
+		h["forwarded_from"] = ff
 	}
 	if m.SystemType != "" {
 		h["system_type"] = m.SystemType

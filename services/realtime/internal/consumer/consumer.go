@@ -136,6 +136,18 @@ func (c *Consumer) messageJSON(dto nats.MessageDTO) gin.H {
 	if dto.SystemType != "" {
 		h["system_type"] = dto.SystemType
 	}
+	if dto.IsForwarded {
+		h["is_forwarded"] = true
+		ff := gin.H{
+			"id":      dto.ForwardedFromSenderID,
+			"chat_id": dto.ForwardedFromChatID,
+		}
+		if p, ok := profiles[uint64(dto.ForwardedFromSenderID)]; ok {
+			ff["username"] = p.Username
+			ff["avatar"] = p.Avatar
+		}
+		h["forwarded_from"] = ff
+	}
 	if dto.AttachmentType != "" {
 		h["attachment_type"] = dto.AttachmentType
 		h["attachment_url"] = dto.AttachmentURL
@@ -186,6 +198,9 @@ func (c *Consumer) messageUserIDs(dto nats.MessageDTO) []uint64 {
 		ids = append(ids, u)
 	}
 	add(dto.SenderID)
+	if dto.IsForwarded {
+		add(dto.ForwardedFromSenderID)
+	}
 	for _, r := range dto.Reactions {
 		add(r.UserID)
 	}

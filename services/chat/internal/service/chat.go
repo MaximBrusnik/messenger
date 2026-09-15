@@ -377,6 +377,38 @@ func (s *Server) RemoveReaction(ctx context.Context, req *pb.RemoveReactionReque
 	return &pb.Empty{}, nil
 }
 
+func (s *Server) ForwardMessage(ctx context.Context, req *pb.ForwardMessageRequest) (*pb.Message, error) {
+	src, err := s.messageRepo.FindByID(uint(req.MessageId))
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "сообщение не найдено")
+	}
+	if src.SystemType != "" {
+		return nil, status.Error(codes.InvalidArgument, "нельзя переслать системное сообщение")
+	}
+	if err := s.requireParticipant(uint(req.ChatId), uint(req.UserId)); err != nil {
+		return nil, err
+	}
+	msg := &entity.Message{
+		ChatID:                 uint(req.ChatId),
+		SenderID:               uint(req.UserId),
+		Text:                   src.Text,
+		AttachmentType:         src.AttachmentType,
+		AttachmentURL:          src.AttachmentURL,
+		AttachmentName:         src.AttachmentName,
+		AttachmentSize:         src.AttachmentSize,
+		IsForwarded:            true,
+		ForwardedFromSenderID:  src.SenderID,
+		ForwardedFromChatID:    src.ChatID,
+		ForwardedFromMessageID: src.ID,
+	}
+	if err := s.messageRepo.Create(msg); err != nil {
+		return nil, status.Error(codes.Internal, "не удалось сохранить сообщение")
+	}
+	m := toMessageProto(msg, nil)
+	s.publishCreated(uint(req.ChatId), m)
+	return m, nil
+}
+
 func (s *Server) GetReactions(ctx context.Context, req *pb.GetReactionsRequest) (*pb.ReactionsResponse, error) {
 	list, err := s.reactionRepo.FindByMessageID(uint(req.MessageId))
 	if err != nil {
@@ -488,20 +520,23 @@ func contains(ids []uint, id uint) bool {
 
 func toMessageDTO(m *pb.Message) nats.MessageDTO {
 	d := nats.MessageDTO{
-		ID:             int64(m.Id),
-		ChatID:         int64(m.ChatId),
-		SenderID:       int64(m.SenderId),
-		Text:           m.Text,
-		IsRead:         m.IsRead,
-		Edited:         m.Edited,
-		SystemType:     m.SystemType,
-		AttachmentType: m.AttachmentType,
-		AttachmentURL:  m.AttachmentUrl,
-		AttachmentName: m.AttachmentName,
-		AttachmentSize: m.AttachmentSize,
-		CreatedAtMs:    m.GetCreatedAt().GetSeconds() * 1000,
-		ReadAtMs:       m.GetReadAt().GetSeconds() * 1000,
-		EditedAtMs:     m.GetEditedAt().GetSeconds() * 1000,
+		ID:                    int64(m.Id),
+		ChatID:                int64(m.ChatId),
+		SenderID:              int64(m.SenderId),
+		Text:                  m.Text,
+		IsRead:                m.IsRead,
+		Edited:                m.Edited,
+		SystemType:            m.SystemType,
+		AttachmentType:        m.AttachmentType,
+		AttachmentURL:         m.AttachmentUrl,
+		AttachmentName:        m.AttachmentName,
+		AttachmentSize:        m.AttachmentSize,
+		CreatedAtMs:           m.GetCreatedAt().GetSeconds() * 1000,
+		ReadAtMs:              m.GetReadAt().GetSeconds() * 1000,
+		EditedAtMs:            m.GetEditedAt().GetSeconds() * 1000,
+		IsForwarded:           m.IsForwarded,
+		ForwardedFromSenderID: int64(m.ForwardedFromSenderId),
+		ForwardedFromChatID:   int64(m.ForwardedFromChatId),
 	}
 	for _, r := range m.Reactions {
 		d.Reactions = append(d.Reactions, nats.ReactionDTO{
@@ -528,6 +563,16 @@ func toMessageProto(m *entity.Message, reactions []entity.MessageReaction) *pb.M
 		AttachmentUrl:  m.AttachmentURL,
 		AttachmentName: m.AttachmentName,
 		CreatedAt:      timestamppb.New(m.CreatedAt),
+		IsForwarded:    m.IsForwarded,
+	}
+	if m.ForwardedFromSenderID > 0 {
+		res.ForwardedFromSenderId = uint64(m.ForwardedFromSenderID)
+	}
+	if m.ForwardedFromChatID > 0 {
+		res.ForwardedFromChatId = uint64(m.ForwardedFromChatID)
+	}
+	if m.ForwardedFromMessageID > 0 {
+		res.ForwardedFromMessageId = uint64(m.ForwardedFromMessageID)
 	}
 	if m.ReadAt != nil {
 		res.ReadAt = timestamppb.New(*m.ReadAt)

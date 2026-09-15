@@ -232,6 +232,27 @@ func (g *Gateway) DeleteChat(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Чат удалён"})
 }
 
+func (g *Gateway) ForwardMessage(c *gin.Context) {
+	chatID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID чата"})
+		return
+	}
+	msgID, err := parseID(c, "msgId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID сообщения"})
+		return
+	}
+	resp, err := g.chat.ForwardMessage(ctx(), &pb.ForwardMessageRequest{
+		UserId: userID(c), ChatId: chatID, MessageId: msgID,
+	})
+	if err != nil {
+		HTTPError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Сообщение переслано", "data": g.messageJSON(ctx(), resp)})
+}
+
 func (g *Gateway) GetOrCreateAIChat(c *gin.Context) {
 	resp, err := g.chat.GetOrCreateAIChat(ctx(), &pb.GetOrCreateAIChatRequest{UserId: userID(c)})
 	if err != nil {
