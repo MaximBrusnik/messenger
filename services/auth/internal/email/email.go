@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/smtp"
+	"strings"
 )
 
 // Service sends verification emails over SMTP.
@@ -39,7 +40,7 @@ func (s *Service) SendVerificationEmail(to string, token string) {
 		return
 	}
 	subject := "Subject: Подтверждение почты MessangerMax\r\n"
-	body := fmt.Sprintf("Перейдите по ссылке для подтверждения:\r\n%s/api/v1/auth/verify-email?token=%s\r\n", s.appURL, token)
+	body := fmt.Sprintf("Перейдите по ссылке для подтверждения:\r\n%s/api/v1/auth/verify-email?token=%s\r\n", strings.TrimRight(s.appURL, "/"), token)
 	msg := []byte(subject + "MIME-version: 1.0;\r\nContent-Type: text/plain; charset=\"UTF-8\";\r\n\r\n" + body)
 	addr := net.JoinHostPort(s.host, s.port)
 	var err error
@@ -59,7 +60,7 @@ func sendMailSSL(addr string, auth smtp.Auth, from string, to []string, msg []by
 	if err != nil {
 		return err
 	}
-	c, err := smtp.NewClient(conn, addr)
+	c, err := smtp.NewClient(conn, host)
 	if err != nil {
 		return err
 	}

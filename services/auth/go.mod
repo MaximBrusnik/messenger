@@ -5,7 +5,7 @@ go 1.22
 require (
 	golang.org/x/crypto v0.24.0
 	google.golang.org/grpc v1.64.1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.2
 	gorm.io/gorm v1.25.10
 )
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"messengermax/pkg/config"
 	"messengermax/pkg/grpcsrv"
 	pbauth "messengermax/proto/gen/auth"
+	pbcalls "messengermax/proto/gen/calls"
 	pbchat "messengermax/proto/gen/chat"
 	pbmusic "messengermax/proto/gen/music"
 	pbpush "messengermax/proto/gen/push"
@@ -22,12 +24,13 @@ import (
 )
 
 type Gateway struct {
-	cfg  *config.Config
-	auth pbauth.AuthServiceClient
-	usr  pbuser.UserServiceClient
-	chat pbchat.ChatServiceClient
-	psh  pbpush.PushServiceClient
-	mus  pbmusic.MusicServiceClient
+	cfg   *config.Config
+	auth  pbauth.AuthServiceClient
+	usr   pbuser.UserServiceClient
+	chat  pbchat.ChatServiceClient
+	psh   pbpush.PushServiceClient
+	mus   pbmusic.MusicServiceClient
+	calls pbcalls.CallServiceClient
 }
 
 func NewGateway(cfg *config.Config) (*Gateway, error) {
@@ -86,6 +89,15 @@ func NewGateway(cfg *config.Config) (*Gateway, error) {
 	}
 	conns = append(conns, cc3)
 	g.psh = pbpush.NewPushServiceClient(cc3)
+
+	// Calls are best-effort; if the service is unavailable we degrade
+	// gracefully by not proxying call endpoints rather than refusing to boot.
+	if cc4, err := grpcsrv.Dial(cfg.Services.CallsAddr); err == nil {
+		conns = append(conns, cc4)
+		g.calls = pbcalls.NewCallServiceClient(cc4)
+	} else {
+		log.Printf("gateway: calls-service unreachable at %s: %v", cfg.Services.CallsAddr, err)
+	}
 
 	return g, nil
 }

@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import MessageInput from "./MessageInput";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { playNotificationSound } from "../utils/sound";
+import { useCall } from "../context/CallContext";
 
 const emojis = [
   "👍", "❤️", "🔥", "😂", "😮", "😢", "🙏",
@@ -59,6 +60,7 @@ function formatSize(bytes?: number): string {
 
 export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile, onDeleteChat }: Props) {
   const { user } = useAuth();
+  const { startCall } = useCall();
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -344,13 +346,33 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
           <div className="chat-header-name">{partner?.username ?? chat.name}</div>
           <div className="chat-header-status">{partner?.is_bot ? "AI-ассистент" : lastSeenLabel(partner?.last_login)}</div>
         </div>
-        <div className="chat-menu-container" ref={menuRef}>
-          <button className="chat-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
-          {showMenu && (
-            <div className="chat-menu-dropdown">
-              <button onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>Удалить чат</button>
-            </div>
+        <div className="chat-header-actions">
+          {partner && !partner.is_bot && (
+            <>
+              <button
+                className="chat-call-btn"
+                title="Аудиозвонок"
+                onClick={() => startCall({ userId: partner.id, username: partner.username }, "audio")}
+              >
+                📞
+              </button>
+              <button
+                className="chat-call-btn"
+                title="Видеозвонок"
+                onClick={() => startCall({ userId: partner.id, username: partner.username }, "video")}
+              >
+                🎥
+              </button>
+            </>
           )}
+          <div className="chat-menu-container" ref={menuRef}>
+            <button className="chat-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+            {showMenu && (
+              <div className="chat-menu-dropdown">
+                <button onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>Удалить чат</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

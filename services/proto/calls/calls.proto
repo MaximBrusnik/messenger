@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package messengermax.calls.v1;
+
+option go_package = "messengermax/proto/gen/calls;pbcalls";
+
+message Empty {}
+
+enum CallType {
+  CALL_TYPE_UNSPECIFIED = 0;
+  CALL_TYPE_AUDIO = 1;
+  CALL_TYPE_VIDEO = 2;
+}
+
+enum CallStatus {
+  CALL_STATUS_UNSPECIFIED = 0;
+  CALL_STATUS_RINGING = 1;
+  CALL_STATUS_ACTIVE = 2;
+  CALL_STATUS_ENDED = 3;
+  CALL_STATUS_MISSED = 4;
+  CALL_STATUS_REJECTED = 5;
+  CALL_STATUS_CANCELLED = 6;
+}
+
+service CallService {
+  rpc StartCall(StartCallRequest) returns (CallSession);
+  rpc AcceptCall(AcceptCallRequest) returns (CallSession);
+  rpc EndCall(EndCallRequest) returns (CallSession);
+  rpc GetActiveCall(GetActiveCallRequest) returns (CallSession);
+  rpc GetCallHistory(GetCallHistoryRequest) returns (CallsResponse);
+}
+
+message StartCallRequest {
+  uint64 caller_id = 1;
+  uint64 callee_id = 2;
+  CallType call_type = 3;
+}
+
+message AcceptCallRequest {
+  uint64 call_id = 1;
+  uint64 user_id = 2;
+}
+
+message EndCallRequest {
+  uint64 call_id = 1;
+  uint64 user_id = 2;
+  string reason = 3; // "normal" | "cancelled" | "rejected" | "timeout" | "error"
+}
+
+message GetActiveCallRequest {
+  uint64 user_id = 1;
+}
+
+message GetCallHistoryRequest {
+  uint64 user_id = 1;
+  uint32 limit = 2;
+  uint32 offset = 3;
+}
+
+message CallsResponse {
+  repeated CallSession calls = 1;
+}
+
+message CallSession {
+  uint64 id = 1;
+  uint64 caller_id = 2;
+  uint64 callee_id = 3;
+  CallType call_type = 4;
+  CallStatus status = 5;
+  int64 started_at_ms = 6;
+  int64 accepted_at_ms = 7;
+  int64 ended_at_ms = 8;
+  int64 duration_ms = 9;
+  string end_reason = 10;
+}

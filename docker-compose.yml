@@ -206,6 +206,31 @@ services:
       chat-service:
         condition: service_started
 
+  calls-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: calls
+    container_name: mm-calls
+    env_file:
+      - .env
+    environment:
+      GRPC_PORT: "9000"
+      HTTP_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: calls
+      SERVICE_CALLS_WS_ADDR: calls-service:8080
+      SERVICE_CALLS_ADDR: calls-service:9000
+      REDIS_ADDR: redis:6379
+      CALLS_STUN: stun:stun.l.google.com:19302
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   gateway:
     build:
       context: .
@@ -228,6 +253,8 @@ services:
       SERVICE_REALTIME_WS_ADDR: realtime-service:8080
       SERVICE_MUSIC_HTTP_ADDR: music-service:8080
       SERVICE_PUSH_ADDR: push-service:9000
+      SERVICE_CALLS_ADDR: calls-service:9000
+      SERVICE_CALLS_WS_ADDR: calls-service:8080
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -240,6 +267,8 @@ services:
       music-service:
         condition: service_started
       realtime-service:
+        condition: service_started
+      calls-service:
         condition: service_started
       push-service:
         condition: service_started

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "./api/client";
 import type { User } from "./types";
 import { AuthProvider } from "./context/AuthContext";
+import { CallProvider } from "./context/CallContext";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import AuthPage from "./components/AuthPage";
 import ChatApp from "./components/ChatApp";
@@ -31,7 +32,13 @@ export default function App() {
 
   return (
     <AuthProvider value={{ user, setUser }}>
-      {user ? <ChatApp /> : <AuthPage />}
+      {user ? (
+        <CallProvider>
+          <ChatApp />
+        </CallProvider>
+      ) : (
+        <AuthPage />
+      )}
     </AuthProvider>
   );
 }

@@ -1,4 +1,5 @@
 import type { MusicTrack, User } from "../types";
+import type { CallSession, IceConfig } from "../types/call";
 
 const API_URL = "/api/v1";
 
@@ -110,4 +111,16 @@ export async function uploadFile(file: File) {
 
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+export function getCallConfig() {
+  return apiRequest<{ data: IceConfig }>("/calls/config");
+}
+
+export async function getActiveCall() {
+  return apiRequest<{ data: CallSession | null }>("/calls/active");
+}
+
+export async function getCallHistory() {
+  return apiRequest<{ data: CallSession[] }>("/calls/history");
 }

@@ -101,10 +101,16 @@ func main() {
 				admin.PUT("/music/:id/approve", gw.MusicApprove)
 				admin.PUT("/music/:id/reject", gw.MusicReject)
 			}
+
+			protected.GET("/calls/history", gw.GetCallHistory)
+			protected.GET("/calls/config", gw.GetCallConfig)
+			protected.GET("/calls/:id", gw.GetCall)
+			protected.GET("/calls/active", gw.GetActiveCall)
 		}
 	}
 
 	router.Any("/ws", gw.WSProxy)
+	router.Any("/ws/call", gw.CallWSProxy)
 	router.NoRoute(func(c *gin.Context) {
 		c.File("./dist/index.html")
 	})

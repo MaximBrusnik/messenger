@@ -23,6 +23,7 @@ type Config struct {
 	AIConfig        AI
 	PushConfig      Push
 	Services        ServiceAddrs
+	Calls           CallBackend
 	FileStorageDir  string
 	MusicStorageDir string
 	MusicHTTPAddr   string
@@ -38,6 +39,22 @@ type ServiceAddrs struct {
 	AIAddr       string
 	PushAddr     string
 	RealtimeWS   string
+	CallsAddr    string
+	CallsWS      string
+}
+
+// CallBackend provides the ICE server configuration handed to clients so
+// they can punch through NAT when establishing WebRTC peer connections.
+type CallBackend struct {
+	StunServers []string
+	TurnServers []TurnServer
+}
+
+// TurnServer describes a single TURN relay endpoint + credentials.
+type TurnServer struct {
+	URLs       []string `json:"urls"`
+	Username   string   `json:"username,omitempty"`
+	Credential string   `json:"credential,omitempty"`
 }
 
 // Postgres holds connection settings for each service's own database.
@@ -150,6 +167,11 @@ func Load() *Config {
 			AIAddr:       getEnv("SERVICE_AI_ADDR", "ai-service:9000"),
 			PushAddr:     getEnv("SERVICE_PUSH_ADDR", "push-service:9000"),
 			RealtimeWS:   getEnv("SERVICE_REALTIME_WS_ADDR", "realtime-service:8080"),
+			CallsAddr:    getEnv("SERVICE_CALLS_ADDR", "calls-service:9000"),
+			CallsWS:      getEnv("SERVICE_CALLS_WS_ADDR", "calls-service:8080"),
+		},
+		Calls: CallBackend{
+			StunServers: []string{getEnv("CALLS_STUN", "stun:stun.l.google.com:19302")},
 		},
 		FileStorageDir:  getEnv("FILE_STORAGE_DIR", "uploads"),
 		MusicStorageDir: getEnv("MUSIC_STORAGE_DIR", "music"),

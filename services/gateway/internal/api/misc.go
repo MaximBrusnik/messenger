@@ -77,6 +77,28 @@ func (g *Gateway) WSProxy(c *gin.Context) {
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
+// CallWSProxy forwards the WebSocket connection to call-service, which
+// validates the JWT and relays WebRTC signaling between peers.
+func (g *Gateway) CallWSProxy(c *gin.Context) {
+	target, err := url.Parse("http://" + g.cfg.Services.CallsWS)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "calls-service недоступен"})
+		return
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Director = func(r *http.Request) {
+		r.URL.Scheme = "http"
+		r.URL.Host = target.Host
+		r.URL.Path = "/ws"
+		r.Host = target.Host
+		if r.Header.Get("Upgrade") == "websocket" {
+			r.Header.Set("Connection", "Upgrade")
+			r.Header.Set("Upgrade", "websocket")
+		}
+	}
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
 // fileType matches an extension to the legacy upload `type`.
 func fileType(ext string) string {
 	switch ext {
