@@ -9,11 +9,12 @@ RUN --mount=type=cache,target=/root/.npm npm run build
 # ---- Stage 2: Go build ----
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
-COPY go.work ./
+COPY go.work go.work.sum ./
+COPY vendor/ ./vendor/
 COPY services/ ./services/
 ARG SERVICE
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+ENV GOFLAGS=-mod=vendor
+RUN --mount=type=cache,target=/root/.cache/go-build \
     cd services/${SERVICE} && CGO_ENABLED=0 go build -o /app/service ./cmd/
 
 # ---- Stage 3a: Runtime (default) ----
