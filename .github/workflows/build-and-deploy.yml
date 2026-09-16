@@ -90,14 +90,18 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
-          envs: PROD_ENV
+          envs: PROD_ENV,GHCR_USER,GHCR_TOKEN
           script: |
+            set -e
             mkdir -p /opt/messenger
             cd /opt/messenger
             echo "$PROD_ENV" > .env
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker compose pull
             docker compose up -d
             docker image prune -f
             docker system df
         env:
           PROD_ENV: ${{ secrets.PROD_ENV }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
