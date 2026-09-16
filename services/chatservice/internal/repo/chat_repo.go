@@ -106,13 +106,15 @@ func (r *chatRepository) FindFavoritesChat(userID uint) (*entity.Chat, error) {
 	err := r.db.Raw(`
 		SELECT c.* FROM chats c
 		WHERE c.type = 'private' AND c.deleted_at IS NULL
-		AND c.id IN (
-			SELECT cu.chat_id FROM chat_users cu
-			WHERE cu.user_id = ? AND cu.is_archived = ?
-			GROUP BY cu.chat_id
-			HAVING COUNT(DISTINCT cu.user_id) = 1
+		AND EXISTS (
+			SELECT 1 FROM chat_users a
+			WHERE a.chat_id = c.id AND a.user_id = ?
 		)
-	`, userID, false).Scan(&chat).Error
+		AND NOT EXISTS (
+			SELECT 1 FROM chat_users b
+			WHERE b.chat_id = c.id AND b.user_id <> ?
+		)
+	`, userID, userID).Scan(&chat).Error
 	if err != nil {
 		return nil, err
 	}
