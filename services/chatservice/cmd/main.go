@@ -67,7 +67,7 @@ func resolveBotID(cfg *config.Config) uint {
 	client := pbuser.NewUserServiceClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 3_000_000_000)
 	defer cancel()
-	resp, err := client.ResolveUserByName(ctx, &pbuser.ResolveUserByNameRequest{Username: "Р С’РЎРѓРЎРѓР С‘РЎРѓРЎвЂљР ВµР Р…РЎвЂљ"})
+	resp, err := client.ResolveUserByName(ctx, &pbuser.ResolveUserByNameRequest{Username: service.BotUsername})
 	if err != nil || resp.GetFound() == false {
 		log.Printf("chat: AI assistant not found, AI disabled")
 		return 0
