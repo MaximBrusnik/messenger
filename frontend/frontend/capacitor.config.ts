@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'MessangerMax',
   webDir: 'dist',
   server: {
-    url: 'http://37.112.108.28:8080',
+    url: 'http://216.162.44.70:8080',
     cleartext: true,
   },
 };
