@@ -25,7 +25,7 @@ func (r *deviceTokenRepository) Add(token *entity.DeviceToken) error {
 	return r.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "token"}},
 		Where: clause.Where{
-			Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}},
+			Exprs: []clause.Expression{clause.Expr{SQL: "device_tokens.deleted_at IS NULL"}},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{"user_id", "platform", "deleted_at", "updated_at"}),
 	}).Create(token).Error

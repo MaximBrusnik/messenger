@@ -81,7 +81,7 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
           <span style={{ fontWeight: 600, fontSize: 15 }}>Моя музыка</span>
           <label className="music-upload-btn">
             + Загрузить
-            <input ref={fileRef} type="file" accept=".mp3,audio/*" onChange={handleUpload} hidden />
+            <input ref={fileRef} type="file" accept=".mp3,audio/*" onChange={handleUpload} className="file-input-hidden" />
           </label>
         </div>
 
@@ -183,7 +183,7 @@ export default function MusicTab({ onPlay, activeTrackId, isAdmin }: Props) {
         <span style={{ fontWeight: 600, fontSize: 15 }}>Моя музыка</span>
         <label className="music-upload-btn">
           + Загрузить
-          <input ref={fileRef} type="file" accept=".mp3,audio/*" onChange={handleUpload} hidden />
+          <input ref={fileRef} type="file" accept=".mp3,audio/*" onChange={handleUpload} className="file-input-hidden" />
         </label>
       </div>
 

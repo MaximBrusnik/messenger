@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type PointerEvent,
   type ReactNode,
   type TouchEvent,
 } from "react";
@@ -33,7 +34,6 @@ interface Props {
   archivedChats: Chat[];
   activeChat: Chat | null;
   activeTab: TabId;
-  isMobile: boolean;
   activeTrackId: number | null;
   onSelectChat: (chat: Chat) => void;
   onOpenUserProfile: (userId: number) => void;
@@ -247,7 +247,7 @@ function SwipeableChatItem({
 }
 
 export default function Sidebar({
-  user, chats, archivedChats, activeChat, activeTab, isMobile, activeTrackId,
+  user, chats, archivedChats, activeChat, activeTab, activeTrackId,
   onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat,
   onArchiveChat, onUnarchiveChat, onStartAIChat, onStartFavoritesChat,
   onTabChange, onPlayTrack,
@@ -260,7 +260,7 @@ export default function Sidebar({
   const [dragging, setDragging] = useState(false);
   const [pageIndex, setPageIndex] = useState(activeIndex);
   const [targetTab, setTargetTab] = useState<TabId | null>(null);
-  const touchRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const draggingRef = useRef(false);
   const pendingCommitRef = useRef<TabId | null>(null);
   const commitTimer = useRef<number | null>(null);
@@ -275,23 +275,29 @@ export default function Sidebar({
     setDragX(0);
   }, [activeIndex, pageIndex]);
 
-  function tabTouchStart(e: TouchEvent) {
-    if (!isMobile || pendingCommitRef.current) return;
-    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  const tabPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (pendingCommitRef.current) return;
+    const target = e.target as HTMLElement;
+    if (target.closest(".chat-item-swipe") || target.closest(".chat-item-actions")) return;
+    pointerRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
     draggingRef.current = false;
     setDragging(false);
     setDragX(0);
     setTargetTab(null);
-  }
+  };
 
-  function tabTouchMove(e: TouchEvent) {
-    if (!isMobile || !touchRef.current) return;
-    const dx = e.touches[0].clientX - touchRef.current.x;
-    const dy = e.touches[0].clientY - touchRef.current.y;
+  const tabPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const start = pointerRef.current;
+    if (!start || e.pointerId !== start.pointerId) return;
+    if (pendingCommitRef.current) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
     if (!draggingRef.current) {
       if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return;
       draggingRef.current = true;
       setDragging(true);
+      try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
+      if (/touch/gi.test(e.pointerType)) e.preventDefault();
     }
     const boundary =
       (pageIndex === 0 && dx > 0) ||
@@ -300,17 +306,34 @@ export default function Sidebar({
     setTargetTab(Math.abs(dx) >= 20 && !boundary
       ? (TAB_ORDER[pageIndex + (dx < 0 ? 1 : -1)] ?? null)
       : null);
-  }
+  };
 
-  function tabTouchEnd(e: TouchEvent) {
-    if (!isMobile || !touchRef.current) return;
-    const start = touchRef.current;
-    touchRef.current = null;
+  const tabPointerEnd = (e: PointerEvent<HTMLDivElement>) => {
+    const start = pointerRef.current;
+    if (!start || e.pointerId !== start.pointerId) return;
+    finishTabDrag(e);
+  };
+
+  const tabPointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+    const start = pointerRef.current;
+    if (!start || e.pointerId !== start.pointerId) return;
+    draggingRef.current = false;
+    pointerRef.current = null;
+    setDragging(false);
+    setDragX(0);
+    setTargetTab(null);
+  };
+
+  const finishTabDrag = (e: PointerEvent<HTMLDivElement>) => {
+    const start = pointerRef.current;
+    if (!start) return;
+    pointerRef.current = null;
     const wasDragging = draggingRef.current;
     draggingRef.current = false;
     setDragging(false);
+    try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
     if (!wasDragging) { setTargetTab(null); return; }
-    const dx = e.changedTouches[0].clientX - start.x;
+    const dx = e.clientX - start.x;
     if (Math.abs(dx) >= TAB_SWIPE_THRESHOLD) {
       const dir = dx < 0 ? 1 : -1;
       const nextIndex = pageIndex + dir;
@@ -332,7 +355,7 @@ export default function Sidebar({
     }
     setDragX(0);
     setTargetTab(null);
-  }
+  };
 
   const renderChatsTab = (
     <>
@@ -498,10 +521,10 @@ export default function Sidebar({
       <div
         className={`sidebar-content${dragging ? " dragging" : ""}`}
         style={{ transform: `translateX(calc(${-pageIndex * 100}% + ${dragX}px))` }}
-        onTouchStart={isMobile ? tabTouchStart : undefined}
-        onTouchMove={isMobile ? tabTouchMove : undefined}
-        onTouchEnd={isMobile ? tabTouchEnd : undefined}
-        onTouchCancel={isMobile ? tabTouchEnd : undefined}
+        onPointerDown={tabPointerDown}
+        onPointerMove={tabPointerMove}
+        onPointerUp={tabPointerEnd}
+        onPointerCancel={tabPointerCancel}
       >
         <div className="tab-page">{renderChatsTab}</div>
         <div className="tab-page">{renderArchivedTab}</div>

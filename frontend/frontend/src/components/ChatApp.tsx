@@ -250,7 +250,6 @@ export default function ChatApp() {
           archivedChats={archivedChats}
           activeChat={activeChat}
           activeTab={activeTab}
-          isMobile={isMobile}
           activeTrackId={selectedTrack?.id ?? null}
           onSelectChat={openChat}
           onOpenUserProfile={handleOpenUserProfile}

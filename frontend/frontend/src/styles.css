@@ -2038,6 +2038,9 @@ select {
 }
 
 .music-upload-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
   padding: 8px 14px;
   background: var(--brand-gradient);
   color: #fff;
