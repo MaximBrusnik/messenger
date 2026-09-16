@@ -15,7 +15,8 @@ import (
 	pb "messengermax/proto/gen/push"
 
 	"messengermax/pushservice/internal/entity"
-	"messengermax/pushservice/internal/fcm"
+	handlergrpc "messengermax/pushservice/internal/handler/grpc"
+	"messengermax/pushservice/internal/integration/fcm"
 	"messengermax/pushservice/internal/repo"
 	"messengermax/pushservice/internal/service"
 )
@@ -48,7 +49,7 @@ func main() {
 	go consumer.Run(ctx)
 
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-		pb.RegisterPushServiceServer(s, service.NewServer(deviceRepo))
+		pb.RegisterPushServiceServer(s, handlergrpc.NewServer(service.NewServer(deviceRepo)))
 	}); err != nil {
 		log.Fatal("push: ", err)
 	}

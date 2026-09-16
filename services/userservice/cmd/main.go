@@ -12,6 +12,7 @@ import (
 	pb "messengermax/proto/gen/user"
 
 	"messengermax/userservice/internal/entity"
+	handlergrpc "messengermax/userservice/internal/handler/grpc"
 	"messengermax/userservice/internal/repo"
 	"messengermax/userservice/internal/service"
 )
@@ -33,7 +34,7 @@ func main() {
 	server := service.NewServer(profileRepo, redisClient)
 
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-		pb.RegisterUserServiceServer(s, server)
+		pb.RegisterUserServiceServer(s, handlergrpc.NewServer(server))
 	}); err != nil {
 		log.Fatal("user: ", err)
 	}

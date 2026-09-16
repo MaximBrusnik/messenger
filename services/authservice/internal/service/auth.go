@@ -6,20 +6,14 @@ import (
 	"log"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"messengermax/authservice/internal/email"
 	"messengermax/authservice/internal/entity"
+	"messengermax/authservice/internal/integration/email"
 	"messengermax/authservice/internal/repo"
 	"messengermax/pkg/jwt"
-	pb "messengermax/proto/gen/auth"
 	pbuser "messengermax/proto/gen/user"
 )
 
 type Server struct {
-	pb.UnimplementedAuthServiceServer
 	userRepo                 repo.UserRepository
 	jwtManager               *jwt.Manager
 	emailSvc                 *email.Service
@@ -37,124 +31,124 @@ func NewServer(userRepo repo.UserRepository, jwtManager *jwt.Manager, emailSvc *
 	}
 }
 
-func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.AuthResponse, error) {
-	if req.Username == "" || req.Email == "" || req.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "все поля обязательны")
+func (s *Server) Register(ctx context.Context, username, emailAddr, password string) (*AuthResult, error) {
+	if username == "" || emailAddr == "" || password == "" {
+		return nil, errInvalid("все поля обязательны")
 	}
-	if _, err := s.userRepo.FindByUsername(req.Username); err == nil {
-		return nil, status.Error(codes.AlreadyExists, "имя пользователя занято")
+	if _, err := s.userRepo.FindByUsername(username); err == nil {
+		return nil, errAlreadyExists("имя пользователя занято")
 	}
-	if _, err := s.userRepo.FindByEmail(req.Email); err == nil {
-		return nil, status.Error(codes.AlreadyExists, "почта уже зарегистрирована")
+	if _, err := s.userRepo.FindByEmail(emailAddr); err == nil {
+		return nil, errAlreadyExists("почта уже зарегистрирована")
 	}
 
-	user := &entity.User{Username: req.Username, Email: req.Email}
-	if err := user.HashPassword(req.Password); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось сохранить пароль")
+	user := &entity.User{Username: username, Email: emailAddr}
+	if err := user.HashPassword(password); err != nil {
+		return nil, errInternal("не удалось сохранить пароль")
 	}
 	user.VerificationToken = email.GenerateVerificationToken()
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось создать пользователя")
+		return nil, errInternal("не удалось создать пользователя")
 	}
 
 	s.emailSvc.SendVerificationEmail(user.Email, user.VerificationToken)
 
 	s.syncProfile(user)
-	return s.buildAuthResponse(ctx, user)
+	return s.buildAuthResult(ctx, user)
 }
 
-func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
-	user, err := s.userRepo.FindByUsername(req.Username)
+func (s *Server) Login(ctx context.Context, username, password string) (*AuthResult, error) {
+	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			// fell back to email lookup
-			user, err = s.userRepo.FindByEmail(req.Username)
+			user, err = s.userRepo.FindByEmail(username)
 		}
 	}
 	if err != nil || user == nil {
-		return nil, status.Error(codes.Unauthenticated, "неверное имя пользователя или пароль")
+		return nil, errUnauthenticated("неверное имя пользователя или пароль")
 	}
 	if !user.IsActive {
-		return nil, status.Error(codes.Unauthenticated, "аккаунт заблокирован")
+		return nil, errUnauthenticated("аккаунт заблокирован")
 	}
-	if err := user.CheckPassword(req.Password); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "неверное имя пользователя или пароль")
+	if err := user.CheckPassword(password); err != nil {
+		return nil, errUnauthenticated("неверное имя пользователя или пароль")
 	}
 	if s.requireEmailVerification && !user.EmailVerified {
-		return nil, status.Error(codes.PermissionDenied, "подтвердите почту")
+		return nil, errPermissionDenied("подтвердите почту")
 	}
 	if err := s.userRepo.UpdateLastLogin(user.ID, time.Now()); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось обновить время входа")
+		return nil, errInternal("не удалось обновить время входа")
 	}
-	return s.buildAuthResponse(ctx, user)
+	return s.buildAuthResult(ctx, user)
 }
 
-func (s *Server) VerifyEmail(ctx context.Context, req *pb.VerifyEmailRequest) (*pb.AuthResponse, error) {
-	user, err := s.userRepo.FindByVerificationToken(req.Token)
+func (s *Server) VerifyEmail(ctx context.Context, token string) (*AuthResult, error) {
+	user, err := s.userRepo.FindByVerificationToken(token)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "неверный или истёкший токен")
+		return nil, errInvalid("неверный или истёкший токен")
 	}
 	user.EmailVerified = true
 	user.VerificationToken = ""
 	if err := s.userRepo.Update(user); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось подтвердить почту")
+		return nil, errInternal("не удалось подтвердить почту")
 	}
-	return s.buildAuthResponse(ctx, user)
+	return s.buildAuthResult(ctx, user)
 }
 
-func (s *Server) ResendVerification(ctx context.Context, req *pb.ResendVerificationRequest) (*pb.Empty, error) {
-	user, err := s.userRepo.FindByID(uint(req.UserId))
+func (s *Server) ResendVerification(ctx context.Context, userID uint) error {
+	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, "пользователь не найден")
+		return errNotFound("пользователь не найден")
 	}
 	user.VerificationToken = email.GenerateVerificationToken()
 	if err := s.userRepo.Update(user); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось обновить токен")
+		return errInternal("не удалось обновить токен")
 	}
 	s.emailSvc.SendVerificationEmail(user.Email, user.VerificationToken)
-	return &pb.Empty{}, nil
+	return nil
 }
 
-func (s *Server) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.Empty, error) {
+func (s *Server) Logout(ctx context.Context, userID uint) error {
 	// No server-side JWT storage; logout is handled by the realtime service
 	// disconnecting the WebSocket. Auth service has nothing to invalidate.
-	return &pb.Empty{}, nil
+	return nil
 }
 
-func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*pb.Empty, error) {
-	if len(req.NewPassword) < 6 {
-		return nil, status.Error(codes.InvalidArgument, "пароль слишком короткий")
+func (s *Server) ChangePassword(ctx context.Context, userID uint, oldPassword, newPassword string) error {
+	if len(newPassword) < 6 {
+		return errInvalid("пароль слишком короткий")
 	}
-	user, err := s.userRepo.FindByID(uint(req.UserId))
+	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, "пользователь не найден")
+		return errNotFound("пользователь не найден")
 	}
-	if err := user.CheckPassword(req.OldPassword); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "неверный старый пароль")
+	if err := user.CheckPassword(oldPassword); err != nil {
+		return errInvalid("неверный старый пароль")
 	}
-	if err := user.HashPassword(req.NewPassword); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось сохранить пароль")
+	if err := user.HashPassword(newPassword); err != nil {
+		return errInternal("не удалось сохранить пароль")
 	}
 	if err := s.userRepo.UpdatePassword(user.ID, user.Password); err != nil {
-		return nil, status.Error(codes.Internal, "не удалось сохранить пароль")
+		return errInternal("не удалось сохранить пароль")
 	}
-	return &pb.Empty{}, nil
+	return nil
 }
 
-func (s *Server) buildAuthResponse(ctx context.Context, user *entity.User) (*pb.AuthResponse, error) {
+func (s *Server) buildAuthResult(ctx context.Context, user *entity.User) (*AuthResult, error) {
 	if s.requireEmailVerification && !user.EmailVerified {
-		return &pb.AuthResponse{
+		return &AuthResult{
 			EmailVerificationRequired: true,
-			User:                      toProto(user),
+			User:                      user,
 		}, nil
 	}
 	token, err := s.jwtManager.GenerateToken(user.ID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "не удалось выдать токен")
+		return nil, errInternal("не удалось выдать токен")
 	}
-	return &pb.AuthResponse{
+	return &AuthResult{
 		Token: token,
-		User:  toProto(user),
+		User:  user,
 	}, nil
 }
 
@@ -178,26 +172,4 @@ func (s *Server) syncProfile(user *entity.User) {
 	if err != nil {
 		log.Printf("auth: sync profile for %d failed: %v", user.ID, err)
 	}
-}
-
-func toProto(u *entity.User) *pb.User {
-	return &pb.User{
-		Id:            uint64(u.ID),
-		Username:      u.Username,
-		Email:         u.Email,
-		EmailVerified: u.EmailVerified,
-		IsBot:         u.IsBot,
-		IsAdmin:       u.IsAdmin,
-		Status:        u.Status,
-		Avatar:        u.Avatar,
-		CreatedAt:     timestamppb.New(u.CreatedAt),
-		LastLogin:     timestampOrNil(u.LastLogin),
-	}
-}
-
-func timestampOrNil(t time.Time) *timestamppb.Timestamp {
-	if t.IsZero() {
-		return nil
-	}
-	return timestamppb.New(t)
 }

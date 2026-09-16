@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"messengermax/gatewayservice/internal/api"
+	"messengermax/gatewayservice/internal/handler/rest"
 	"messengermax/gatewayservice/internal/middleware"
 	"messengermax/pkg/config"
 	"messengermax/pkg/jwt"
@@ -16,7 +16,7 @@ func main() {
 	cfg := config.Load()
 	cfg.ServiceName = "gatewayservice"
 
-	gw, err := api.NewGateway(cfg)
+	gw, err := rest.NewGateway(cfg)
 	if err != nil {
 		log.Fatal("gateway: dial services: ", err)
 	}

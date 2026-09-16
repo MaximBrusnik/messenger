@@ -9,10 +9,10 @@ import (
 	"google.golang.org/grpc"
 
 	"messengermax/callsservice/internal/entity"
-	"messengermax/callsservice/internal/hub"
+	handlergrpc "messengermax/callsservice/internal/handler/grpc"
+	"messengermax/callsservice/internal/handler/ws"
 	"messengermax/callsservice/internal/repo"
 	"messengermax/callsservice/internal/service"
-	"messengermax/callsservice/internal/ws"
 	"messengermax/pkg/config"
 	"messengermax/pkg/grpcsrv"
 	"messengermax/pkg/jwt"
@@ -35,7 +35,7 @@ func main() {
 
 	callRepo := repo.NewCallRepository(db)
 	jwtManager := jwt.NewManager(cfg.JWTSecret)
-	hubInstance := hub.New()
+	hubInstance := ws.New()
 	producer := nats.NewProducer(cfg.NATS.URL)
 	defer producer.Close()
 	srv := service.NewServer(callRepo, producer)
@@ -50,7 +50,7 @@ func main() {
 	grpcErr := make(chan error, 1)
 	go func() {
 		grpcErr <- grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-			pbcalls.RegisterCallServiceServer(s, srv)
+			pbcalls.RegisterCallServiceServer(s, handlergrpc.NewServer(srv))
 		})
 	}()
 

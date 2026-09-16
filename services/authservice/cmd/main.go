@@ -7,8 +7,9 @@ import (
 
 	"google.golang.org/grpc"
 
-	"messengermax/authservice/internal/email"
 	"messengermax/authservice/internal/entity"
+	handlergrpc "messengermax/authservice/internal/handler/grpc"
+	"messengermax/authservice/internal/integration/email"
 	"messengermax/authservice/internal/repo"
 	"messengermax/authservice/internal/service"
 	"messengermax/pkg/config"
@@ -51,7 +52,7 @@ func main() {
 	}
 
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-		pbauth.RegisterAuthServiceServer(s, server)
+		pbauth.RegisterAuthServiceServer(s, handlergrpc.NewServer(server))
 	}); err != nil {
 		log.Fatal("auth: ", err)
 	}

@@ -8,10 +8,11 @@ import (
 	"google.golang.org/grpc"
 
 	"messengermax/musicservice/internal/entity"
-	"messengermax/musicservice/internal/httpapi"
+	handlergrpc "messengermax/musicservice/internal/handler/grpc"
+	"messengermax/musicservice/internal/handler/rest"
+	"messengermax/musicservice/internal/integration/filestore"
 	"messengermax/musicservice/internal/repo"
 	"messengermax/musicservice/internal/service"
-	"messengermax/musicservice/internal/store"
 	"messengermax/pkg/config"
 	"messengermax/pkg/grpcsrv"
 	"messengermax/pkg/postgres"
@@ -30,7 +31,7 @@ func main() {
 		log.Fatal("music: migrate: ", err)
 	}
 
-	st, err := store.New(cfg.MusicStorageDir)
+	st, err := filestore.New(cfg.MusicStorageDir)
 	if err != nil {
 		log.Fatal("music: store: ", err)
 	}
@@ -38,7 +39,7 @@ func main() {
 
 	go func() {
 		if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-			pb.RegisterMusicServiceServer(s, service.NewServer(musicRepo, st))
+			pb.RegisterMusicServiceServer(s, handlergrpc.NewServer(service.NewServer(musicRepo, st)))
 		}); err != nil {
 			log.Fatal("music: grpc: ", err)
 		}
@@ -47,9 +48,9 @@ func main() {
 
 	app := gin.New()
 	app.Use(gin.Recovery())
-	handler := httpapi.NewHandler(musicRepo, st)
+	handler := rest.NewHandler(musicRepo, st)
 	// file endpoints are fronted by the api-gateway, which injects identity headers
-	app.Use(httpapi.GatewayIdentity())
+	app.Use(rest.GatewayIdentity())
 	app.POST("/music/upload", handler.Upload)
 	app.GET("/music/:id/stream", handler.Stream)
 	app.GET("/music/:id/download", handler.Download)

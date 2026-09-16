@@ -16,9 +16,9 @@ import (
 	pbuser "messengermax/proto/gen/user"
 
 	"messengermax/realtimeservice/internal/consumer"
-	"messengermax/realtimeservice/internal/hub"
+	handlergrpc "messengermax/realtimeservice/internal/handler/grpc"
+	"messengermax/realtimeservice/internal/handler/ws"
 	"messengermax/realtimeservice/internal/service"
-	"messengermax/realtimeservice/internal/ws"
 )
 
 func main() {
@@ -26,19 +26,19 @@ func main() {
 	cfg.ServiceName = "realtimeservice"
 
 	redisClient := sharedredis.New(cfg.Redis.Addr, cfg.Redis.Pass)
-	hubInstance := hub.New(redisClient)
+	hubInstance := ws.New(redisClient)
 	jwtManager := jwt.NewManager(cfg.JWTSecret)
 	producer := nats.NewProducer(cfg.NATS.URL)
 	defer producer.Close()
 
 	wsCtrl := ws.NewController(jwtManager, hubInstance, redisClient, producer)
-	srv := service.NewServer(redisClient, wsCtrl)
+	biz := service.NewServer(redisClient, wsCtrl)
 
 	// start gRPC service in the background
 	grpcErr := make(chan error, 1)
 	go func() {
 		grpcErr <- grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-			pbrealtime.RegisterRealtimeServiceServer(s, srv)
+			pbrealtime.RegisterRealtimeServiceServer(s, handlergrpc.NewServer(biz))
 		})
 	}()
 

@@ -12,18 +12,18 @@ import (
 	"messengermax/pkg/nats"
 	"messengermax/pkg/redis"
 	pbuser "messengermax/proto/gen/user"
-	"messengermax/realtimeservice/internal/hub"
+	"messengermax/realtimeservice/internal/handler/ws"
 )
 
 // Consumer translates Kafka chat events into WebSocket pushes.
 type Consumer struct {
-	hub     *hub.Hub
+	hub     *ws.Hub
 	rc      *redis.Client
 	users   pbuser.UserServiceClient
 	timeout time.Duration
 }
 
-func New(h *hub.Hub, rc *redis.Client, users pbuser.UserServiceClient) *Consumer {
+func New(h *ws.Hub, rc *redis.Client, users pbuser.UserServiceClient) *Consumer {
 	return &Consumer{hub: h, rc: rc, users: users, timeout: 2 * time.Second}
 }
 
@@ -50,63 +50,63 @@ func (c *Consumer) Handle(topic string, key string, value []byte) {
 			return
 		}
 		ids := uintIDs(e.Participants)
-		c.hub.SendToUsers(ids, hub.WSMessage{Type: "NEW_MESSAGE", Payload: gin.H{"message": c.messageJSON(e.Message)}})
+		c.hub.SendToUsers(ids, ws.WSMessage{Type: "NEW_MESSAGE", Payload: gin.H{"message": c.messageJSON(e.Message)}})
 
 	case nats.TopicMessageEdited:
 		var e nats.EventMessageEdited
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "MESSAGE_EDITED", Payload: gin.H{"message": c.messageJSON(e.Message)}})
+		c.hub.Broadcast(ws.WSMessage{Type: "MESSAGE_EDITED", Payload: gin.H{"message": c.messageJSON(e.Message)}})
 
 	case nats.TopicMessageDeleted:
 		var e nats.EventMessageDeleted
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "MESSAGE_DELETED", Payload: e})
+		c.hub.Broadcast(ws.WSMessage{Type: "MESSAGE_DELETED", Payload: e})
 
 	case nats.TopicMessagePinned:
 		var e nats.EventMessagePinned
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "MESSAGE_PINNED", Payload: gin.H{"chat_id": e.ChatID, "message": c.messageJSON(e.Message)}})
+		c.hub.Broadcast(ws.WSMessage{Type: "MESSAGE_PINNED", Payload: gin.H{"chat_id": e.ChatID, "message": c.messageJSON(e.Message)}})
 
 	case nats.TopicMessageUnpinned:
 		var e nats.EventMessagePinned
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "MESSAGE_UNPINNED", Payload: e})
+		c.hub.Broadcast(ws.WSMessage{Type: "MESSAGE_UNPINNED", Payload: e})
 
 	case nats.TopicReactionAdded:
 		var e nats.EventReactionAdded
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "REACTION_ADDED", Payload: gin.H{"chat_id": e.ChatID, "message_id": e.MessageID, "reaction": e.Reaction}})
+		c.hub.Broadcast(ws.WSMessage{Type: "REACTION_ADDED", Payload: gin.H{"chat_id": e.ChatID, "message_id": e.MessageID, "reaction": e.Reaction}})
 
 	case nats.TopicReactionRemoved:
 		var e nats.EventReactionRemoved
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "REACTION_REMOVED", Payload: e})
+		c.hub.Broadcast(ws.WSMessage{Type: "REACTION_REMOVED", Payload: e})
 
 	case nats.TopicReadReceived:
 		var e nats.EventMessagesRead
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "MESSAGES_READ", Payload: e})
+		c.hub.Broadcast(ws.WSMessage{Type: "MESSAGES_READ", Payload: e})
 
 	case nats.TopicChatDeleted:
 		var e nats.EventChatDeleted
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "CHAT_DELETED", Payload: e})
+		c.hub.Broadcast(ws.WSMessage{Type: "CHAT_DELETED", Payload: e})
 	}
 }
 

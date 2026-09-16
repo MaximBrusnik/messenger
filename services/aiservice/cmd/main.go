@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"messengermax/aiservice/internal/gemini"
+	"messengermax/aiservice/internal/integration/gemini"
 	"messengermax/pkg/config"
 	"messengermax/pkg/grpcsrv"
 	"messengermax/pkg/nats"

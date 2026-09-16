@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 
 	"messengermax/chatservice/internal/entity"
+	handlergrpc "messengermax/chatservice/internal/handler/grpc"
 	"messengermax/chatservice/internal/repo"
 	"messengermax/chatservice/internal/service"
 	"messengermax/pkg/config"
@@ -48,7 +49,7 @@ func main() {
 	go consumer.Run(ctx)
 
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-		pbchat.RegisterChatServiceServer(s, server)
+		pbchat.RegisterChatServiceServer(s, handlergrpc.NewServer(server))
 	}); err != nil {
 		log.Fatal("chat: ", err)
 	}
