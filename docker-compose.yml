@@ -42,13 +42,13 @@ services:
   # ================================================================
   #  Application services
   # ================================================================
-  auth-service:
+  authservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: auth
-    container_name: mm-auth
+        SERVICE: authservice
+    container_name: mm-authservice
     env_file:
       - .env
     environment:
@@ -57,21 +57,21 @@ services:
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_NAME: auth
-      SERVICE_USER_ADDR: user-service:9000
-      SERVICE_CHAT_ADDR: chat-service:9000
-      SERVICE_AUTH_ADDR: auth-service:9000
+      DB_NAME: authservice
+      SERVICE_USER_ADDR: userservice:9000
+      SERVICE_CHAT_ADDR: chatservice:9000
+      SERVICE_AUTH_ADDR: authservice:9000
     depends_on:
       postgres:
         condition: service_healthy
 
-  user-service:
+  userservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: user
-    container_name: mm-user
+        SERVICE: userservice
+    container_name: mm-userservice
     env_file:
       - .env
     environment:
@@ -80,20 +80,20 @@ services:
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_NAME: user
-      SERVICE_USER_ADDR: user-service:9000
+      DB_NAME: userservice
+      SERVICE_USER_ADDR: userservice:9000
       REDIS_ADDR: redis:6379
     depends_on:
       postgres:
         condition: service_healthy
 
-  chat-service:
+  chatservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: chat
-    container_name: mm-chat
+        SERVICE: chatservice
+    container_name: mm-chatservice
     env_file:
       - .env
     environment:
@@ -102,25 +102,25 @@ services:
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_NAME: chat
-      SERVICE_USER_ADDR: user-service:9000
-      SERVICE_CHAT_ADDR: chat-service:9000
+      DB_NAME: chatservice
+      SERVICE_USER_ADDR: userservice:9000
+      SERVICE_CHAT_ADDR: chatservice:9000
       NATS_URL: nats://nats:4222
     depends_on:
       postgres:
         condition: service_healthy
       nats:
         condition: service_healthy
-      user-service:
+      userservice:
         condition: service_started
 
-  music-service:
+  musicservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: music
-    container_name: mm-music
+        SERVICE: musicservice
+    container_name: mm-musicservice
     env_file:
       - .env
     environment:
@@ -130,22 +130,22 @@ services:
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_NAME: music
+      DB_NAME: musicservice
       MUSIC_STORAGE_DIR: /app/music
-      SERVICE_MUSIC_HTTP_ADDR: music-service:8080
+      SERVICE_MUSIC_HTTP_ADDR: musicservice:8080
     volumes:
       - music-data:/app/music
     depends_on:
       postgres:
         condition: service_healthy
 
-  push-service:
+  pushservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: push
-    container_name: mm-push
+        SERVICE: pushservice
+    container_name: mm-pushservice
     env_file:
       - .env
     environment:
@@ -154,8 +154,8 @@ services:
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_NAME: push
-      SERVICE_PUSH_ADDR: push-service:9000
+      DB_NAME: pushservice
+      SERVICE_PUSH_ADDR: pushservice:9000
       NATS_URL: nats://nats:4222
       REDIS_ADDR: redis:6379
     depends_on:
@@ -164,20 +164,20 @@ services:
       nats:
         condition: service_healthy
 
-  realtime-service:
+  realtimeservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: realtime
-    container_name: mm-realtime
+        SERVICE: realtimeservice
+    container_name: mm-realtimeservice
     env_file:
       - .env
     environment:
       GRPC_PORT: "9000"
       HTTP_PORT: "8080"
-      SERVICE_USER_ADDR: user-service:9000
-      SERVICE_REALTIME_WS_ADDR: realtime-service:8080
+      SERVICE_USER_ADDR: userservice:9000
+      SERVICE_REALTIME_WS_ADDR: realtimeservice:8080
       NATS_URL: nats://nats:4222
       REDIS_ADDR: redis:6379
     depends_on:
@@ -185,34 +185,34 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      user-service:
+      userservice:
         condition: service_started
 
-  ai-service:
+  aiservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: ai
-    container_name: mm-ai
+        SERVICE: aiservice
+    container_name: mm-aiservice
     env_file:
       - .env
     environment:
-      SERVICE_CHAT_ADDR: chat-service:9000
+      SERVICE_CHAT_ADDR: chatservice:9000
       NATS_URL: nats://nats:4222
     depends_on:
       nats:
         condition: service_healthy
-      chat-service:
+      chatservice:
         condition: service_started
 
-  calls-service:
+  callsservice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: calls
-    container_name: mm-calls
+        SERVICE: callsservice
+    container_name: mm-callsservice
     env_file:
       - .env
     environment:
@@ -222,9 +222,9 @@ services:
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_NAME: calls
-      SERVICE_CALLS_WS_ADDR: calls-service:8080
-      SERVICE_CALLS_ADDR: calls-service:9000
+      DB_NAME: callsservice
+      SERVICE_CALLS_WS_ADDR: callsservice:8080
+      SERVICE_CALLS_ADDR: callsservice:9000
       NATS_URL: nats://nats:4222
       REDIS_ADDR: redis:6379
       CALLS_STUN: stun:stun.l.google.com:19302
@@ -234,14 +234,14 @@ services:
       nats:
         condition: service_healthy
 
-  gateway:
+  gatewayservice:
     build:
       context: .
       dockerfile: Dockerfile
       target: runtime-gateway
       args:
-        SERVICE: gateway
-    container_name: mm-gateway
+        SERVICE: gatewayservice
+    container_name: mm-gatewayservice
     ports:
       - "8080:8080"
     env_file:
@@ -250,30 +250,30 @@ services:
       SERVER_PORT: "8080"
       ENV: production
       FILE_STORAGE_DIR: /app/uploads
-      SERVICE_USER_ADDR: user-service:9000
-      SERVICE_CHAT_ADDR: chat-service:9000
-      SERVICE_AUTH_ADDR: auth-service:9000
-      SERVICE_REALTIME_WS_ADDR: realtime-service:8080
-      SERVICE_MUSIC_HTTP_ADDR: music-service:8080
-      SERVICE_PUSH_ADDR: push-service:9000
-      SERVICE_CALLS_ADDR: calls-service:9000
-      SERVICE_CALLS_WS_ADDR: calls-service:8080
+      SERVICE_USER_ADDR: userservice:9000
+      SERVICE_CHAT_ADDR: chatservice:9000
+      SERVICE_AUTH_ADDR: authservice:9000
+      SERVICE_REALTIME_WS_ADDR: realtimeservice:8080
+      SERVICE_MUSIC_HTTP_ADDR: musicservice:8080
+      SERVICE_PUSH_ADDR: pushservice:9000
+      SERVICE_CALLS_ADDR: callsservice:9000
+      SERVICE_CALLS_WS_ADDR: callsservice:8080
     volumes:
       - uploads:/app/uploads
     depends_on:
-      auth-service:
+      authservice:
         condition: service_started
-      user-service:
+      userservice:
         condition: service_started
-      chat-service:
+      chatservice:
         condition: service_started
-      music-service:
+      musicservice:
         condition: service_started
-      realtime-service:
+      realtimeservice:
         condition: service_started
-      calls-service:
+      callsservice:
         condition: service_started
-      push-service:
+      pushservice:
         condition: service_started
 
 volumes:

@@ -1,15 +1,15 @@
 go 1.22.0
 
 use (
-	./services/ai
-	./services/auth
-	./services/calls
-	./services/chat
-	./services/gateway
-	./services/music
+	./services/aiservice
+	./services/authservice
+	./services/callsservice
+	./services/chatservice
+	./services/gatewayservice
+	./services/musicservice
 	./services/pkg
 	./services/proto
-	./services/push
-	./services/realtime
-	./services/user
+	./services/pushservice
+	./services/realtimeservice
+	./services/userservice
 )

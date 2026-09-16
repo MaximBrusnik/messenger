@@ -1,83 +1,83 @@
 services:
-  postgres-auth:
+  postgres-authservice:
     image: postgres:15-alpine
-    container_name: mm-postgres-auth
+    container_name: mm-postgres-authservice
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: auth
+      POSTGRES_DB: authservice
     ports:
       - "5431:5432"
     volumes:
-      - pg-auth:/var/lib/postgresql/data
+      - pg-authservice:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  postgres-user:
+  postgres-userservice:
     image: postgres:15-alpine
-    container_name: mm-postgres-user
+    container_name: mm-postgres-userservice
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: user
+      POSTGRES_DB: userservice
     ports:
       - "5432:5432"
     volumes:
-      - pg-user:/var/lib/postgresql/data
+      - pg-userservice:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  postgres-chat:
+  postgres-chatservice:
     image: postgres:15-alpine
-    container_name: mm-postgres-chat
+    container_name: mm-postgres-chatservice
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: chat
+      POSTGRES_DB: chatservice
     ports:
       - "5433:5432"
     volumes:
-      - pg-chat:/var/lib/postgresql/data
+      - pg-chatservice:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  postgres-music:
+  postgres-musicservice:
     image: postgres:15-alpine
-    container_name: mm-postgres-music
+    container_name: mm-postgres-musicservice
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: music
+      POSTGRES_DB: musicservice
     ports:
       - "5434:5432"
     volumes:
-      - pg-music:/var/lib/postgresql/data
+      - pg-musicservice:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  postgres-push:
+  postgres-pushservice:
     image: postgres:15-alpine
-    container_name: mm-postgres-push
+    container_name: mm-postgres-pushservice
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: push
+      POSTGRES_DB: pushservice
     ports:
       - "5435:5432"
     volumes:
-      - pg-push:/var/lib/postgresql/data
+      - pg-pushservice:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -111,9 +111,9 @@ services:
       retries: 10
 
 volumes:
-  pg-auth:
-  pg-user:
-  pg-chat:
-  pg-music:
-  pg-push:
+  pg-authservice:
+  pg-userservice:
+  pg-chatservice:
+  pg-musicservice:
+  pg-pushservice:
   nats-data:
