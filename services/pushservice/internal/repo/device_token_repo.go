@@ -2,6 +2,7 @@ package repo
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"messengermax/pushservice/internal/entity"
 )
@@ -21,7 +22,13 @@ func NewDeviceTokenRepository(db *gorm.DB) DeviceTokenRepository {
 }
 
 func (r *deviceTokenRepository) Add(token *entity.DeviceToken) error {
-	return r.db.Create(token).Error
+	return r.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "token"}},
+		Where: clause.Where{
+			Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}},
+		},
+		DoUpdates: clause.AssignmentColumns([]string{"user_id", "platform", "deleted_at", "updated_at"}),
+	}).Create(token).Error
 }
 
 func (r *deviceTokenRepository) DeleteByToken(token string) error {

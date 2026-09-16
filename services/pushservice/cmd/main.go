@@ -32,6 +32,14 @@ func main() {
 	if err := db.AutoMigrate(&entity.DeviceToken{}); err != nil {
 		log.Fatal("push: migrate: ", err)
 	}
+	// Replace the full unique index on device_tokens.token with a partial one
+	// that only covers rows where deleted_at IS NULL.
+	if err := db.Exec(`DROP INDEX IF EXISTS idx_device_tokens_token`).Error; err != nil {
+		log.Fatal("push: migrate: drop index: ", err)
+	}
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_device_tokens_token ON device_tokens (token) WHERE deleted_at IS NULL`).Error; err != nil {
+		log.Fatal("push: migrate: create index: ", err)
+	}
 
 	deviceRepo := repo.NewDeviceTokenRepository(db)
 	redisClient := sharedredis.New(cfg.Redis.Addr, cfg.Redis.Pass)
