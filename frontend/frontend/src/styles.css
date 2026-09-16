@@ -1011,6 +1011,10 @@ select {
   color: color-mix(in srgb, var(--bubble-mine-text) 72%, transparent);
 }
 
+.msg.mine .forward-header {
+  color: var(--bubble-mine-text);
+}
+
 .edit-inline {
   display: flex;
   gap: 6px;
