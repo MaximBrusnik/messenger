@@ -26,7 +26,7 @@ import { CHAT_COLORS, CHAT_WALLPAPERS } from "../utils/chatTheme";
 import { useAuth } from "../context/AuthContext";
 import ForwardPicker from "./ForwardPicker";
 import MessageInput from "./MessageInput";
-import { useWebSocket } from "../hooks/useWebSocket";
+import type { ChatLiveHandlers } from "../hooks/useGlobalWebSocket";
 import { playNotificationSound } from "../utils/sound";
 import { useCall } from "../context/CallContext";
 
@@ -40,11 +40,12 @@ interface Props {
   chat: Chat;
   onBack?: () => void;
   onMessage?: () => void;
-  onUserStatus?: (userId: number, status: string) => void;
   onOpenUserProfile?: (userId: number) => void;
   onDeleteChat?: (chatId: number) => void;
   appearance?: ChatAppearance;
   onAppearanceChange?: (patch: ChatAppearance) => void;
+  registerLiveHandlers?: (chatId: number, handlers: ChatLiveHandlers) => void;
+  unregisterLiveHandlers?: (chatId: number) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -83,7 +84,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpenUserProfile, onDeleteChat, appearance, onAppearanceChange }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, onDeleteChat, appearance, onAppearanceChange, registerLiveHandlers, unregisterLiveHandlers }: Props) {
   const { user } = useAuth();
   const { startCall } = useCall();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -164,12 +165,6 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     setMessages((prev) => prev.filter((m) => m.id !== msgId));
   }, []);
 
-  const onChatDeleted = useCallback((deletedChatId: number) => {
-    if (deletedChatId === chat.id) {
-      onDeleteChat?.(deletedChatId);
-    }
-  }, [chat.id, onDeleteChat]);
-
   const onMessagesRead = useCallback((chatId: number, messageIds: number[]) => {
     if (chatId !== chat.id) return;
     setMessages((prev) =>
@@ -189,7 +184,19 @@ export default function ChatArea({ chat, onBack, onMessage, onUserStatus, onOpen
     setPinnedMessage(undefined);
   }, [chat.id]);
 
-  useWebSocket(chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessage, onUserStatus, onMessageDeleted, onChatDeleted, onMessagesRead, onMessagePinned, onMessageUnpinned);
+  useEffect(() => {
+    if (!registerLiveHandlers || !unregisterLiveHandlers) return;
+    registerLiveHandlers(chat.id, {
+      onNewMessage,
+      onMessageEdited,
+      onReactionChange,
+      onMessageDeleted,
+      onMessagesRead: (messageIds) => onMessagesRead(chat.id, messageIds),
+      onMessagePinned: (msg) => onMessagePinned(chat.id, msg),
+      onMessageUnpinned: () => onMessageUnpinned(chat.id),
+    });
+    return () => unregisterLiveHandlers(chat.id);
+  }, [chat.id, onNewMessage, onMessageEdited, onReactionChange, onMessageDeleted, onMessagesRead, onMessagePinned, onMessageUnpinned, registerLiveHandlers, unregisterLiveHandlers]);
 
   useEffect(() => {
     setPinnedMessage(chat.pinned_message);

@@ -88,6 +88,12 @@ func (s *Server) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRequest
 			Username: req.Username,
 			Email:    req.Email,
 		}
+		if req.IsAdmin != nil {
+			p.IsAdmin = *req.IsAdmin
+		}
+		if req.IsBot != nil {
+			p.IsBot = *req.IsBot
+		}
 		if p.Username == "" {
 			p.Username = fmt.Sprintf("user_%d", req.UserId)
 		}
@@ -122,6 +128,14 @@ func (s *Server) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRequest
 		if t, err := time.Parse("2006-01-02", req.DateOfBirth); err == nil {
 			p.DateOfBirth = &t
 		}
+	}
+	// Admin/bot flags are mirrored from the auth service (internal sync only;
+	// the gateway never sends these from client input).
+	if req.IsAdmin != nil {
+		p.IsAdmin = *req.IsAdmin
+	}
+	if req.IsBot != nil {
+		p.IsBot = *req.IsBot
 	}
 	if err := s.profileRepo.Update(p); err != nil {
 		return nil, status.Error(codes.Internal, "update failed")

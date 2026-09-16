@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { MessagesSquare } from "lucide-react";
 import { apiRequest, deleteChat, getMusic } from "../api/client";
-import type { Chat, MusicTrack } from "../types";
+import type { Chat, MusicTrack, User } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useGlobalWebSocket, type ChatLiveHandlers } from "../hooks/useGlobalWebSocket";
 import { loadChatAppearance, saveChatAppearance, type ChatAppearance } from "../utils/chatTheme";
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
@@ -131,6 +132,40 @@ export default function ChatApp() {
     }
   }, [user, setUser]);
 
+  const liveHandlersRef = useRef<Record<number, ChatLiveHandlers>>({});
+
+  const registerLiveHandlers = useCallback((chatId: number, handlers: ChatLiveHandlers) => {
+    liveHandlersRef.current[chatId] = handlers;
+  }, []);
+
+  const unregisterLiveHandlers = useCallback((chatId: number) => {
+    delete liveHandlersRef.current[chatId];
+  }, []);
+
+  const routeToChat = useCallback((chatId: number, fn: (handlers: ChatLiveHandlers) => void) => {
+    const handlers = liveHandlersRef.current[chatId];
+    if (handlers) fn(handlers);
+  }, []);
+
+  // The WebSocket is opened once at the app level so the user is considered
+  // online from the moment the app loads (even with no chat open). After the
+  // socket connects, refresh the profile so the status flips to online.
+  useGlobalWebSocket({
+    onConnected: async () => {
+      try {
+        const res = await apiRequest<{ data: User }>("/auth/profile");
+        if (res?.data) setUser(res.data);
+      } catch { /* keep current profile */ }
+    },
+    onAnyMessage: loadChats,
+    onUserStatus: handleUserStatus,
+    onChatDeleted: (chatId) => {
+      setChats((prev) => prev.filter((c) => c.id !== chatId));
+      if (activeChat?.id === chatId) setActiveChat(null);
+    },
+    route: routeToChat,
+  });
+
   const mobileClass = isMobile
     ? `mobile-view${mobileChat || (activeTab === "music" && mobilePlayer) ? " show-chat" : ""}`
     : "";
@@ -159,7 +194,7 @@ export default function ChatApp() {
             onBack={isMobile ? handleMusicBack : undefined}
           />
         ) : activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onUserStatus={handleUserStatus} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon"><MessagesSquare size={30} /></div>

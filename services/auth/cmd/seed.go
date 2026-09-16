@@ -46,10 +46,14 @@ func seedIfMissing(userRepo repo.UserRepository, userClient pbuser.UserServiceCl
 	if userClient != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
+		isAdmin := user.IsAdmin
+		isBot := user.IsBot
 		if _, err := userClient.UpdateProfile(ctx, &pbuser.UpdateProfileRequest{
 			UserId:   uint64(user.ID),
 			Username: user.Username,
 			Email:    user.Email,
+			IsAdmin:  &isAdmin,
+			IsBot:    &isBot,
 		}); err != nil {
 			log.Printf("auth: seed sync %q failed: %v", username, err)
 		}

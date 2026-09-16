@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -20,10 +21,23 @@ func (g *Gateway) MusicFileProxy(c *gin.Context) {
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
-	req := c.Request
-	req.Header.Set("X-User-Id", itoa(userID(c)))
-	req.Header.Set("X-Is-Admin", boolToStr(g.IsAdmin(c)))
-	proxy.ServeHTTP(c.Writer, req)
+	uidHeader := itoa(userID(c))
+	adminHeader := boolToStr(g.IsAdmin(c))
+	// Strip the /api/v1 prefix: the music service registers its routes at the
+	// root (/music/upload, /music/:id/stream, ...), while the public API is
+	// exposed under /api/v1/music/*.
+	proxy.Director = func(r *http.Request) {
+		r.URL.Scheme = "http"
+		r.URL.Host = target.Host
+		r.Host = target.Host
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/api/v1")
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		r.Header.Set("X-User-Id", uidHeader)
+		r.Header.Set("X-Is-Admin", adminHeader)
+	}
+	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
 func (g *Gateway) IsAdmin(c *gin.Context) bool {

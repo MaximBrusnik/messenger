@@ -113,6 +113,13 @@ func (c *Controller) readLoop(conn *websocket.Conn, userID uint, cancel context.
 	cancel()
 	c.hub.Unregister(userID, conn)
 	_ = conn.Close()
+	// The connection may have been replaced by a newer one (e.g. a refresh or
+	// reconnect that registered a new socket for the same user before this
+	// cleanup ran). In that case the user is still online — don't clear the
+	// Redis marker or broadcast an offline event.
+	if c.hub.IsOnline(userID) {
+		return
+	}
 	hctx, cc := context.WithTimeout(context.Background(), time.Second)
 	defer cc()
 	_ = c.redis.SetOffline(hctx, userID)

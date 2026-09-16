@@ -85,7 +85,7 @@ func (c *Consumer) Handle(topic string, key string, value []byte) {
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		c.hub.Broadcast(hub.WSMessage{Type: "REACTION_ADDED", Payload: e.Reaction})
+		c.hub.Broadcast(hub.WSMessage{Type: "REACTION_ADDED", Payload: gin.H{"chat_id": e.ChatID, "message_id": e.MessageID, "reaction": e.Reaction}})
 
 	case nats.TopicReactionRemoved:
 		var e nats.EventReactionRemoved

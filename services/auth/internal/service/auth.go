@@ -166,10 +166,14 @@ func (s *Server) syncProfile(user *entity.User) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	isAdmin := user.IsAdmin
+	isBot := user.IsBot
 	_, err := s.userClient.UpdateProfile(ctx, &pbuser.UpdateProfileRequest{
 		UserId:   uint64(user.ID),
 		Username: user.Username,
 		Email:    user.Email,
+		IsAdmin:  &isAdmin,
+		IsBot:    &isBot,
 	})
 	if err != nil {
 		log.Printf("auth: sync profile for %d failed: %v", user.ID, err)

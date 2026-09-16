@@ -78,6 +78,10 @@ message UpdateProfileRequest {
   string bio = 5;
   string date_of_birth = 6;
   bool clear_avatar = 7;
+  // Auth-service only: mirrored flags. The gateway never sets these from
+  // client input, so a user cannot self-promote.
+  optional bool is_admin = 8;
+  optional bool is_bot = 9;
 }
 
 message ChangePasswordRequest {
