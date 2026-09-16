@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.env
+secrets/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.test
+dist/
+
+# Runtime data
+music/
+uploads/
+
+# Go
+*.cov
+coverage.out

@@ -49,6 +49,7 @@ services:
       args:
         SERVICE: authservice
     container_name: mm-authservice
+    image: ghcr.io/maximbrusnik/mm-authservice
     env_file:
       - .env
     environment:
@@ -72,6 +73,7 @@ services:
       args:
         SERVICE: userservice
     container_name: mm-userservice
+    image: ghcr.io/maximbrusnik/mm-userservice
     env_file:
       - .env
     environment:
@@ -94,6 +96,7 @@ services:
       args:
         SERVICE: chatservice
     container_name: mm-chatservice
+    image: ghcr.io/maximbrusnik/mm-chatservice
     env_file:
       - .env
     environment:
@@ -121,6 +124,7 @@ services:
       args:
         SERVICE: musicservice
     container_name: mm-musicservice
+    image: ghcr.io/maximbrusnik/mm-musicservice
     env_file:
       - .env
     environment:
@@ -146,6 +150,7 @@ services:
       args:
         SERVICE: pushservice
     container_name: mm-pushservice
+    image: ghcr.io/maximbrusnik/mm-pushservice
     env_file:
       - .env
     environment:
@@ -171,6 +176,7 @@ services:
       args:
         SERVICE: realtimeservice
     container_name: mm-realtimeservice
+    image: ghcr.io/maximbrusnik/mm-realtimeservice
     env_file:
       - .env
     environment:
@@ -195,6 +201,7 @@ services:
       args:
         SERVICE: aiservice
     container_name: mm-aiservice
+    image: ghcr.io/maximbrusnik/mm-aiservice
     env_file:
       - .env
     environment:
@@ -213,6 +220,7 @@ services:
       args:
         SERVICE: callsservice
     container_name: mm-callsservice
+    image: ghcr.io/maximbrusnik/mm-callsservice
     env_file:
       - .env
     environment:
@@ -242,6 +250,7 @@ services:
       args:
         SERVICE: gatewayservice
     container_name: mm-gatewayservice
+    image: ghcr.io/maximbrusnik/mm-gatewayservice
     ports:
       - "8080:8080"
     env_file:

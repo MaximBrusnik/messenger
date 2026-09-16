@@ -2,9 +2,9 @@
 FROM node:20-alpine AS frontend
 WORKDIR /app
 COPY frontend/frontend/package.json frontend/frontend/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
 COPY frontend/frontend/ ./
-RUN npm run build
+RUN --mount=type=cache,target=/root/.npm npm run build
 
 # ---- Stage 2: Go build ----
 FROM golang:1.22-alpine AS builder
@@ -12,7 +12,9 @@ WORKDIR /app
 COPY go.work ./
 COPY services/ ./services/
 ARG SERVICE
-RUN cd services/${SERVICE} && CGO_ENABLED=0 go build -o /app/service ./cmd/
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    cd services/${SERVICE} && CGO_ENABLED=0 go build -o /app/service ./cmd/
 
 # ---- Stage 3a: Runtime (default) ----
 FROM alpine:3.19 AS runtime
