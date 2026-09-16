@@ -28,6 +28,7 @@ import type { ChatAppearance } from "../utils/chatTheme";
 import { CHAT_COLORS, CHAT_WALLPAPERS } from "../utils/chatTheme";
 import { useAuth } from "../context/AuthContext";
 import ForwardPicker from "./ForwardPicker";
+import ImageModal from "./ImageModal";
 import MessageInput from "./MessageInput";
 import type { ChatLiveHandlers } from "../hooks/useGlobalWebSocket";
 import { playNotificationSound } from "../utils/sound";
@@ -102,6 +103,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   const [ctxMsgId, setCtxMsgId] = useState<number | null>(null);
   const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
@@ -569,7 +571,12 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
                   {m.attachment_url && (
                     <div className="msg-attachment">
                       {m.attachment_type === "image" ? (
-                        <img src={m.attachment_url} alt={m.attachment_name} />
+                        <img
+                          src={m.attachment_url}
+                          alt={m.attachment_name}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => setSelectedImage({ url: m.attachment_url!, name: m.attachment_name })}
+                        />
                       ) : m.attachment_name?.toLowerCase().endsWith(".pdf") ? (
                         <a className="file-attachment" href={m.attachment_url} target="_blank" rel="noreferrer">
                           <span className="file-icon"><FileText size={20} /></span>
@@ -675,6 +682,14 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
           excludeChatId={chat.id}
           onClose={() => setForwardMsg(null)}
           onForwarded={onMessage}
+        />
+      )}
+
+      {selectedImage && (
+        <ImageModal
+          url={selectedImage.url}
+          name={selectedImage.name}
+          onClose={() => setSelectedImage(null)}
         />
       )}
     </div>

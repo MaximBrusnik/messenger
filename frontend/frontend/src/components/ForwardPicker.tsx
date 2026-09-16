@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
-import { apiRequest } from "../api/client";
+import { Bookmark, X } from "lucide-react";
+import { apiRequest, getFavoritesChat } from "../api/client";
 import type { Chat, Message } from "../types";
 
 interface Props {
@@ -14,19 +14,24 @@ const initial = (name: string) => name.charAt(0).toUpperCase();
 
 export default function ForwardPicker({ message, excludeChatId, onClose, onForwarded }: Props) {
   const [chats, setChats] = useState<Chat[]>([]);
+  const [favoritesChat, setFavoritesChat] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiRequest<{ data: Chat[] }>("/chats")
-      .then((res) => {
-        const list = (res?.data ?? []).filter(
-          (c) => c.id !== excludeChatId && !c.participants?.[0]?.is_bot
-        );
-        setChats(list);
-      })
-      .catch(() => setError("Не удалось загрузить чаты"))
+    Promise.all([
+      apiRequest<{ data: Chat[] }>("/chats").catch(() => ({ data: [] as Chat[] })),
+      getFavoritesChat().catch(() => ({ data: null as Chat | null })),
+    ]).then(([chatsRes, favRes]) => {
+      const list = (chatsRes?.data ?? []).filter(
+        (c) => c.id !== excludeChatId && !c.participants?.[0]?.is_bot && !c.is_favorites
+      );
+      setChats(list);
+      if (favRes?.data && favRes.data.id !== excludeChatId) {
+        setFavoritesChat(favRes.data);
+      }
+    }).catch(() => setError("Не удалось загрузить чаты"))
       .finally(() => setLoading(false));
   }, [excludeChatId]);
 
@@ -61,25 +66,40 @@ export default function ForwardPicker({ message, excludeChatId, onClose, onForwa
         <div className="forward-list">
           {loading ? (
             <div className="forward-empty">Загрузка...</div>
-          ) : chats.length === 0 ? (
-            <div className="forward-empty">Нет доступных чатов</div>
           ) : (
-            chats.map((c) => (
-              <div
-                key={c.id}
-                className={`forward-item${sendingId === c.id ? " sending" : ""}`}
-                onClick={() => handleForward(c)}
-              >
-                <div className="forward-item-avatar">
-                  {c.participants?.[0]?.avatar ? (
-                    <img src={c.participants[0].avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                  ) : c.participants?.[0]?.username ? initial(c.participants[0].username) : "#"}
+            <>
+              {favoritesChat && (
+                <div
+                  className={`forward-item${sendingId === favoritesChat.id ? " sending" : ""}`}
+                  onClick={() => handleForward(favoritesChat)}
+                >
+                  <div className="forward-item-avatar favorites-avatar"><Bookmark size={18} /></div>
+                  <div className="forward-item-content">
+                    <div className="forward-item-name">Избранное</div>
+                  </div>
                 </div>
-                <div className="forward-item-content">
-                  <div className="forward-item-name">{c.name}</div>
-                </div>
-              </div>
-            ))
+              )}
+              {chats.length === 0 && !favoritesChat ? (
+                <div className="forward-empty">Нет доступных чатов</div>
+              ) : (
+                chats.map((c) => (
+                  <div
+                    key={c.id}
+                    className={`forward-item${sendingId === c.id ? " sending" : ""}`}
+                    onClick={() => handleForward(c)}
+                  >
+                    <div className="forward-item-avatar">
+                      {c.participants?.[0]?.avatar ? (
+                        <img src={c.participants[0].avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                      ) : c.participants?.[0]?.username ? initial(c.participants[0].username) : "#"}
+                    </div>
+                    <div className="forward-item-content">
+                      <div className="forward-item-name">{c.name}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </>
           )}
         </div>
       </div>
