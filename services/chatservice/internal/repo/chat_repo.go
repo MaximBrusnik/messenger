@@ -15,7 +15,9 @@ type ChatRepository interface {
 	Create(chat *entity.Chat, participantIDs []uint) error
 	FindByID(id uint) (*entity.Chat, error)
 	FindByUserID(userID uint) ([]entity.Chat, error)
+	FindByUserIDArchived(userID uint) ([]entity.Chat, error)
 	FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error)
+	FindFavoritesChat(userID uint) (*entity.Chat, error)
 	GetParticipantIDs(chatID uint) ([]uint, error)
 	GetCommonChatIDs(userID1, userID2 uint) ([]uint, error)
 	UpdateLastRead(chatID, userID uint) error
@@ -23,6 +25,8 @@ type ChatRepository interface {
 	AddUserToChat(chatID, userID uint) error
 	RemoveUserFromChat(chatID, userID uint) error
 	IsParticipant(chatID, userID uint) (bool, error)
+	ArchiveChat(chatID, userID uint) error
+	UnarchiveChat(chatID, userID uint) error
 	PinMessage(chatID, messageID uint) error
 	UnpinMessage(chatID uint) error
 	Delete(chatID uint) error
@@ -70,6 +74,16 @@ func (r *chatRepository) FindByUserID(userID uint) ([]entity.Chat, error) {
 	return chats, err
 }
 
+func (r *chatRepository) FindByUserIDArchived(userID uint) ([]entity.Chat, error) {
+	var chats []entity.Chat
+	err := r.db.
+		Joins("JOIN chat_users ON chat_users.chat_id = chats.id AND chat_users.user_id = ?", userID).
+		Where("chats.deleted_at IS NULL AND chat_users.is_archived = ?", true).
+		Order("chats.updated_at DESC").
+		Find(&chats).Error
+	return chats, err
+}
+
 func (r *chatRepository) FindPrivateChat(userID1, userID2 uint) (*entity.Chat, error) {
 	var chat entity.Chat
 	err := r.db.Raw(`
@@ -78,6 +92,27 @@ func (r *chatRepository) FindPrivateChat(userID1, userID2 uint) (*entity.Chat, e
 		AND EXISTS (SELECT 1 FROM chat_users a WHERE a.chat_id = c.id AND a.user_id = ?)
 		AND EXISTS (SELECT 1 FROM chat_users b WHERE b.chat_id = c.id AND b.user_id = ?)
 	`, userID1, userID2).Scan(&chat).Error
+	if err != nil {
+		return nil, err
+	}
+	if chat.ID == 0 {
+		return nil, ErrNotFound
+	}
+	return &chat, nil
+}
+
+func (r *chatRepository) FindFavoritesChat(userID uint) (*entity.Chat, error) {
+	var chat entity.Chat
+	err := r.db.Raw(`
+		SELECT c.* FROM chats c
+		WHERE c.type = 'private' AND c.deleted_at IS NULL
+		AND c.id IN (
+			SELECT cu.chat_id FROM chat_users cu
+			WHERE cu.user_id = ? AND cu.is_archived = ?
+			GROUP BY cu.chat_id
+			HAVING COUNT(DISTINCT cu.user_id) = 1
+		)
+	`, userID, false).Scan(&chat).Error
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +166,14 @@ func (r *chatRepository) IsParticipant(chatID, userID uint) (bool, error) {
 	var count int64
 	err := r.db.Table("chat_users").Where("chat_id = ? AND user_id = ?", chatID, userID).Count(&count).Error
 	return count > 0, err
+}
+
+func (r *chatRepository) ArchiveChat(chatID, userID uint) error {
+	return r.db.Table("chat_users").Where("chat_id = ? AND user_id = ?", chatID, userID).Update("is_archived", true).Error
+}
+
+func (r *chatRepository) UnarchiveChat(chatID, userID uint) error {
+	return r.db.Table("chat_users").Where("chat_id = ? AND user_id = ?", chatID, userID).Update("is_archived", false).Error
 }
 
 func (r *chatRepository) PinMessage(chatID, messageID uint) error {

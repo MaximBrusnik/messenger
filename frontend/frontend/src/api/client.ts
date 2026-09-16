@@ -1,4 +1,4 @@
-import type { MusicTrack, User } from "../types";
+import type { Chat, MusicTrack, User } from "../types";
 import type { CallSession, IceConfig } from "../types/call";
 
 const API_URL = "/api/v1";
@@ -33,6 +33,22 @@ export async function getUserProfile(id: number) {
 
 export async function deleteChat(chatId: number) {
   return apiRequest(`/chats/${chatId}`, "DELETE");
+}
+
+export async function getFavoritesChat() {
+  return apiRequest<{ data: Chat }>("/favorites/chat");
+}
+
+export async function getArchivedChats() {
+  return apiRequest<{ data: Chat[] }>("/chats/archived");
+}
+
+export async function archiveChat(chatId: number) {
+  return apiRequest(`/chats/${chatId}/archive`, "PUT");
+}
+
+export async function unarchiveChat(chatId: number) {
+  return apiRequest(`/chats/${chatId}/archive`, "DELETE");
 }
 
 export async function deleteMessage(chatId: number, msgId: number) {

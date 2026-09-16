@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MessagesSquare } from "lucide-react";
-import { apiRequest, deleteChat, getMusic } from "../api/client";
+import { apiRequest, archiveChat as apiArchiveChat, deleteChat, getArchivedChats, getFavoritesChat, getMusic, unarchiveChat as apiUnarchiveChat } from "../api/client";
 import type { Chat, MusicTrack, User } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useGlobalWebSocket, type ChatLiveHandlers } from "../hooks/useGlobalWebSocket";
@@ -15,10 +15,11 @@ import UserProfileModal from "./UserProfileModal";
 export default function ChatApp() {
   const { user, setUser } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
+  const [archivedChats, setArchivedChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"chats" | "music">("chats");
+  const [activeTab, setActiveTab] = useState<"chats" | "music" | "archived">("chats");
   const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
   const [chatAppearance, setChatAppearance] = useState<Record<number, ChatAppearance>>(loadChatAppearance);
 
@@ -43,13 +44,19 @@ export default function ChatApp() {
     setChats(res?.data || []);
   }, []);
 
+  const loadArchivedChats = useCallback(async () => {
+    const res = await getArchivedChats();
+    setArchivedChats(res?.data || []);
+  }, []);
+
   useEffect(() => {
     loadChats();
-  }, [loadChats]);
+    loadArchivedChats();
+  }, [loadChats, loadArchivedChats]);
 
   async function openChat(chat: Chat) {
     setActiveChat(chat);
-    setActiveTab("chats");
+    setActiveTab(chat.is_archived ? "archived" : "chats");
     if (isMobile) setMobileChat(true);
     await apiRequest(`/chats/${chat.id}/read`, "POST");
   }
@@ -59,6 +66,12 @@ export default function ChatApp() {
       if (prev.some((c) => c.id === chat.id)) return prev;
       return [chat, ...prev];
     });
+    if (chat.is_archived) {
+      setArchivedChats((prev) => {
+        if (prev.some((c) => c.id === chat.id)) return prev;
+        return [chat, ...prev];
+      });
+    }
     setActiveChat(chat);
     if (isMobile) setMobileChat(true);
   }
@@ -71,7 +84,31 @@ export default function ChatApp() {
     if (!confirm("Удалить чат?")) return;
     await deleteChat(chatId);
     setChats((prev) => prev.filter((c) => c.id !== chatId));
+    setArchivedChats((prev) => prev.filter((c) => c.id !== chatId));
     if (activeChat?.id === chatId) setActiveChat(null);
+  }
+
+  async function handleArchiveChat(chatId: number) {
+    const chat = chats.find((c) => c.id === chatId);
+    if (!chat) return;
+    await apiArchiveChat(chatId);
+    setChats((prev) => prev.filter((c) => c.id !== chatId));
+    setArchivedChats((prev) => {
+      if (prev.some((c) => c.id === chatId)) return prev;
+      return [{ ...chat, is_archived: true }, ...prev];
+    });
+    if (activeChat?.id === chatId) setActiveChat(null);
+  }
+
+  async function handleUnarchiveChat(chatId: number) {
+    const chat = archivedChats.find((c) => c.id === chatId);
+    if (!chat) return;
+    await apiUnarchiveChat(chatId);
+    setArchivedChats((prev) => prev.filter((c) => c.id !== chatId));
+    setChats((prev) => {
+      if (prev.some((c) => c.id === chatId)) return prev;
+      return [{ ...chat, is_archived: false }, ...prev];
+    });
   }
 
   function handleOpenUserProfile(userId: number) {
@@ -86,6 +123,15 @@ export default function ChatApp() {
 
   async function handleStartAIChat() {
     const res = await apiRequest<{ data: Chat }>("/ai/chat");
+    if (res?.data) {
+      setActiveChat(res.data);
+      setActiveTab("chats");
+      if (isMobile) setMobileChat(true);
+    }
+  }
+
+  async function handleStartFavoritesChat() {
+    const res = await getFavoritesChat();
     if (res?.data) {
       setActiveChat(res.data);
       setActiveTab("chats");
@@ -109,7 +155,7 @@ export default function ChatApp() {
     setSelectedTrack(null);
   }
 
-  function handleTabChange(tab: "chats" | "music") {
+  function handleTabChange(tab: "chats" | "music" | "archived") {
     setActiveTab(tab);
     if (tab !== "music") setSelectedTrack(null);
     if (isMobile && tab === "chats") {
@@ -157,10 +203,14 @@ export default function ChatApp() {
         if (res?.data) setUser(res.data);
       } catch { /* keep current profile */ }
     },
-    onAnyMessage: loadChats,
+    onAnyMessage: () => {
+      loadChats();
+      loadArchivedChats();
+    },
     onUserStatus: handleUserStatus,
     onChatDeleted: (chatId) => {
       setChats((prev) => prev.filter((c) => c.id !== chatId));
+      setArchivedChats((prev) => prev.filter((c) => c.id !== chatId));
       if (activeChat?.id === chatId) setActiveChat(null);
     },
     route: routeToChat,
@@ -175,6 +225,7 @@ export default function ChatApp() {
       <Sidebar
           user={user!}
           chats={chats}
+          archivedChats={archivedChats}
           activeChat={activeChat}
           activeTab={activeTab}
           activeTrackId={selectedTrack?.id ?? null}
@@ -182,7 +233,10 @@ export default function ChatApp() {
           onOpenUserProfile={handleOpenUserProfile}
           onOpenProfile={() => setShowProfile(true)}
           onDeleteChat={handleDeleteChat}
+          onArchiveChat={handleArchiveChat}
+          onUnarchiveChat={handleUnarchiveChat}
           onStartAIChat={handleStartAIChat}
+          onStartFavoritesChat={handleStartFavoritesChat}
           onTabChange={handleTabChange}
           onPlayTrack={handlePlayTrack}
         />
@@ -194,7 +248,7 @@ export default function ChatApp() {
             onBack={isMobile ? handleMusicBack : undefined}
           />
         ) : activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} onArchiveChat={handleArchiveChat} onUnarchiveChat={handleUnarchiveChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon"><MessagesSquare size={30} /></div>

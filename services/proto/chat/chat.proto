@@ -23,6 +23,10 @@ service ChatService {
   rpc RemoveReaction(RemoveReactionRequest) returns (Empty);
   rpc GetReactions(GetReactionsRequest) returns (ReactionsResponse);
   rpc ForwardMessage(ForwardMessageRequest) returns (Message);
+  rpc GetOrCreateFavoritesChat(GetOrCreateFavoritesChatRequest) returns (Chat);
+  rpc ArchiveChat(ArchiveChatRequest) returns (Empty);
+  rpc UnarchiveChat(UnarchiveChatRequest) returns (Empty);
+  rpc GetUserArchivedChats(GetUserChatsRequest) returns (ChatsResponse);
 }
 
 message CreateChatRequest {
@@ -118,6 +122,20 @@ message GetReactionsRequest {
   uint64 message_id = 1;
 }
 
+message GetOrCreateFavoritesChatRequest {
+  uint64 user_id = 1;
+}
+
+message ArchiveChatRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+}
+
+message UnarchiveChatRequest {
+  uint64 user_id = 1;
+  uint64 chat_id = 2;
+}
+
 message ChatsResponse {
   repeated Chat chats = 1;
 }
@@ -142,6 +160,7 @@ message Chat {
   Message pinned_message = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  bool is_favorites = 12;
 }
 
 message ChatUser {

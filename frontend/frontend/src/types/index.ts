@@ -24,6 +24,8 @@ export interface Chat {
   last_message?: Message;
   unread?: number;
   pinned_message?: Message;
+  is_favorites?: boolean;
+  is_archived?: boolean;
 }
 
 export interface Message {

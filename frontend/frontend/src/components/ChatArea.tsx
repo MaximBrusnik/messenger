@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import type { CSSProperties } from "react";
 import {
+  Archive,
+  ArchiveRestore,
   Bot,
+  Bookmark,
   Check,
   CheckCheck,
   ChevronLeft,
@@ -42,6 +45,8 @@ interface Props {
   onMessage?: () => void;
   onOpenUserProfile?: (userId: number) => void;
   onDeleteChat?: (chatId: number) => void;
+  onArchiveChat?: (chatId: number) => void;
+  onUnarchiveChat?: (chatId: number) => void;
   appearance?: ChatAppearance;
   onAppearanceChange?: (patch: ChatAppearance) => void;
   registerLiveHandlers?: (chatId: number, handlers: ChatLiveHandlers) => void;
@@ -84,7 +89,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, onDeleteChat, appearance, onAppearanceChange, registerLiveHandlers, unregisterLiveHandlers }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, onDeleteChat, onArchiveChat, onUnarchiveChat, appearance, onAppearanceChange, registerLiveHandlers, unregisterLiveHandlers }: Props) {
   const { user } = useAuth();
   const { startCall } = useCall();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -380,14 +385,16 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
     <div style={accentStyle}>
       <div className="chat-header">
         {onBack && <button className="back-btn" onClick={onBack}><ChevronLeft size={22} /></button>}
-        <div className="chat-header-avatar" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default", background: partner?.is_bot ? "#7c4dff" : undefined }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
-          {partner?.avatar ? (
+        <div className="chat-header-avatar" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default", background: partner?.is_bot ? "#7c4dff" : chat.is_favorites ? "#ff9800" : undefined }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
+          {chat.is_favorites ? (
+            <Bookmark size={22} />
+          ) : partner?.avatar ? (
             <img src={partner.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           ) : partner?.is_bot ? <Bot size={22} /> : partner ? partner.username.charAt(0).toUpperCase() : "#"}
         </div>
         <div className="chat-header-info" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default" }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
-          <div className="chat-header-name">{partner?.username ?? chat.name}</div>
-          <div className="chat-header-status">{partner?.is_bot ? "AI-ассистент" : lastSeenLabel(partner?.last_login)}</div>
+          <div className="chat-header-name">{chat.is_favorites ? "Избранное" : partner?.username ?? chat.name}</div>
+          <div className="chat-header-status">{chat.is_favorites ? "Сохранённые сообщения" : partner?.is_bot ? "AI-ассистент" : lastSeenLabel(partner?.last_login)}</div>
         </div>
         <div className="chat-header-actions">
           {partner && !partner.is_bot && (
@@ -448,11 +455,28 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
                     ))}
                   </div>
                 </div>
-                <div className="chat-menu-section">
-                  <button className="plain danger" onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>
-                    <Trash2 size={16} /> Удалить чат
-                  </button>
-                </div>
+                {!chat.is_favorites && (
+                  <div className="chat-menu-section">
+                    {chat.is_archived
+                      ? onUnarchiveChat && (
+                          <button className="plain" onClick={() => { onUnarchiveChat?.(chat.id); setShowMenu(false); }}>
+                            <ArchiveRestore size={16} /> Разархивировать
+                          </button>
+                        )
+                      : onArchiveChat && (
+                          <button className="plain" onClick={() => { onArchiveChat?.(chat.id); setShowMenu(false); }}>
+                            <Archive size={16} /> Архивировать
+                          </button>
+                        )}
+                  </div>
+                )}
+                {!chat.is_favorites && (
+                  <div className="chat-menu-section">
+                    <button className="plain danger" onClick={() => { onDeleteChat?.(chat.id); setShowMenu(false); }}>
+                      <Trash2 size={16} /> Удалить чат
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

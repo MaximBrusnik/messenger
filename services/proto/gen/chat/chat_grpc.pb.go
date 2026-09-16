@@ -19,22 +19,26 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	ChatService_CreateChat_FullMethodName        = "/messengermax.chat.v1.ChatService/CreateChat"
-	ChatService_GetUserChats_FullMethodName      = "/messengermax.chat.v1.ChatService/GetUserChats"
-	ChatService_GetChatByID_FullMethodName       = "/messengermax.chat.v1.ChatService/GetChatByID"
-	ChatService_SendMessage_FullMethodName       = "/messengermax.chat.v1.ChatService/SendMessage"
-	ChatService_GetMessages_FullMethodName       = "/messengermax.chat.v1.ChatService/GetMessages"
-	ChatService_EditMessage_FullMethodName       = "/messengermax.chat.v1.ChatService/EditMessage"
-	ChatService_DeleteMessage_FullMethodName     = "/messengermax.chat.v1.ChatService/DeleteMessage"
-	ChatService_MarkAsRead_FullMethodName        = "/messengermax.chat.v1.ChatService/MarkAsRead"
-	ChatService_PinMessage_FullMethodName        = "/messengermax.chat.v1.ChatService/PinMessage"
-	ChatService_UnpinMessage_FullMethodName      = "/messengermax.chat.v1.ChatService/UnpinMessage"
-	ChatService_DeleteChat_FullMethodName        = "/messengermax.chat.v1.ChatService/DeleteChat"
-	ChatService_GetOrCreateAIChat_FullMethodName = "/messengermax.chat.v1.ChatService/GetOrCreateAIChat"
-	ChatService_AddReaction_FullMethodName       = "/messengermax.chat.v1.ChatService/AddReaction"
-	ChatService_RemoveReaction_FullMethodName    = "/messengermax.chat.v1.ChatService/RemoveReaction"
-	ChatService_GetReactions_FullMethodName      = "/messengermax.chat.v1.ChatService/GetReactions"
-	ChatService_ForwardMessage_FullMethodName    = "/messengermax.chat.v1.ChatService/ForwardMessage"
+	ChatService_CreateChat_FullMethodName               = "/messengermax.chat.v1.ChatService/CreateChat"
+	ChatService_GetUserChats_FullMethodName             = "/messengermax.chat.v1.ChatService/GetUserChats"
+	ChatService_GetChatByID_FullMethodName              = "/messengermax.chat.v1.ChatService/GetChatByID"
+	ChatService_SendMessage_FullMethodName              = "/messengermax.chat.v1.ChatService/SendMessage"
+	ChatService_GetMessages_FullMethodName              = "/messengermax.chat.v1.ChatService/GetMessages"
+	ChatService_EditMessage_FullMethodName              = "/messengermax.chat.v1.ChatService/EditMessage"
+	ChatService_DeleteMessage_FullMethodName            = "/messengermax.chat.v1.ChatService/DeleteMessage"
+	ChatService_MarkAsRead_FullMethodName               = "/messengermax.chat.v1.ChatService/MarkAsRead"
+	ChatService_PinMessage_FullMethodName               = "/messengermax.chat.v1.ChatService/PinMessage"
+	ChatService_UnpinMessage_FullMethodName             = "/messengermax.chat.v1.ChatService/UnpinMessage"
+	ChatService_DeleteChat_FullMethodName               = "/messengermax.chat.v1.ChatService/DeleteChat"
+	ChatService_GetOrCreateAIChat_FullMethodName        = "/messengermax.chat.v1.ChatService/GetOrCreateAIChat"
+	ChatService_AddReaction_FullMethodName              = "/messengermax.chat.v1.ChatService/AddReaction"
+	ChatService_RemoveReaction_FullMethodName           = "/messengermax.chat.v1.ChatService/RemoveReaction"
+	ChatService_GetReactions_FullMethodName             = "/messengermax.chat.v1.ChatService/GetReactions"
+	ChatService_ForwardMessage_FullMethodName           = "/messengermax.chat.v1.ChatService/ForwardMessage"
+	ChatService_GetOrCreateFavoritesChat_FullMethodName = "/messengermax.chat.v1.ChatService/GetOrCreateFavoritesChat"
+	ChatService_ArchiveChat_FullMethodName              = "/messengermax.chat.v1.ChatService/ArchiveChat"
+	ChatService_UnarchiveChat_FullMethodName            = "/messengermax.chat.v1.ChatService/UnarchiveChat"
+	ChatService_GetUserArchivedChats_FullMethodName     = "/messengermax.chat.v1.ChatService/GetUserArchivedChats"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -57,6 +61,10 @@ type ChatServiceClient interface {
 	RemoveReaction(ctx context.Context, in *RemoveReactionRequest, opts ...grpc.CallOption) (*Empty, error)
 	GetReactions(ctx context.Context, in *GetReactionsRequest, opts ...grpc.CallOption) (*ReactionsResponse, error)
 	ForwardMessage(ctx context.Context, in *ForwardMessageRequest, opts ...grpc.CallOption) (*Message, error)
+	GetOrCreateFavoritesChat(ctx context.Context, in *GetOrCreateFavoritesChatRequest, opts ...grpc.CallOption) (*Chat, error)
+	ArchiveChat(ctx context.Context, in *ArchiveChatRequest, opts ...grpc.CallOption) (*Empty, error)
+	UnarchiveChat(ctx context.Context, in *UnarchiveChatRequest, opts ...grpc.CallOption) (*Empty, error)
+	GetUserArchivedChats(ctx context.Context, in *GetUserChatsRequest, opts ...grpc.CallOption) (*ChatsResponse, error)
 }
 
 type chatServiceClient struct {
@@ -227,6 +235,46 @@ func (c *chatServiceClient) ForwardMessage(ctx context.Context, in *ForwardMessa
 	return out, nil
 }
 
+func (c *chatServiceClient) GetOrCreateFavoritesChat(ctx context.Context, in *GetOrCreateFavoritesChatRequest, opts ...grpc.CallOption) (*Chat, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Chat)
+	err := c.cc.Invoke(ctx, ChatService_GetOrCreateFavoritesChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) ArchiveChat(ctx context.Context, in *ArchiveChatRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, ChatService_ArchiveChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UnarchiveChat(ctx context.Context, in *UnarchiveChatRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, ChatService_UnarchiveChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) GetUserArchivedChats(ctx context.Context, in *GetUserChatsRequest, opts ...grpc.CallOption) (*ChatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChatsResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetUserArchivedChats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility
@@ -247,6 +295,10 @@ type ChatServiceServer interface {
 	RemoveReaction(context.Context, *RemoveReactionRequest) (*Empty, error)
 	GetReactions(context.Context, *GetReactionsRequest) (*ReactionsResponse, error)
 	ForwardMessage(context.Context, *ForwardMessageRequest) (*Message, error)
+	GetOrCreateFavoritesChat(context.Context, *GetOrCreateFavoritesChatRequest) (*Chat, error)
+	ArchiveChat(context.Context, *ArchiveChatRequest) (*Empty, error)
+	UnarchiveChat(context.Context, *UnarchiveChatRequest) (*Empty, error)
+	GetUserArchivedChats(context.Context, *GetUserChatsRequest) (*ChatsResponse, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -301,6 +353,18 @@ func (UnimplementedChatServiceServer) GetReactions(context.Context, *GetReaction
 }
 func (UnimplementedChatServiceServer) ForwardMessage(context.Context, *ForwardMessageRequest) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardMessage not implemented")
+}
+func (UnimplementedChatServiceServer) GetOrCreateFavoritesChat(context.Context, *GetOrCreateFavoritesChatRequest) (*Chat, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrCreateFavoritesChat not implemented")
+}
+func (UnimplementedChatServiceServer) ArchiveChat(context.Context, *ArchiveChatRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ArchiveChat not implemented")
+}
+func (UnimplementedChatServiceServer) UnarchiveChat(context.Context, *UnarchiveChatRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnarchiveChat not implemented")
+}
+func (UnimplementedChatServiceServer) GetUserArchivedChats(context.Context, *GetUserChatsRequest) (*ChatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserArchivedChats not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 
@@ -603,6 +667,78 @@ func _ChatService_ForwardMessage_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_GetOrCreateFavoritesChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrCreateFavoritesChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetOrCreateFavoritesChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetOrCreateFavoritesChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetOrCreateFavoritesChat(ctx, req.(*GetOrCreateFavoritesChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_ArchiveChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArchiveChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ArchiveChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ArchiveChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ArchiveChat(ctx, req.(*ArchiveChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UnarchiveChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnarchiveChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UnarchiveChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UnarchiveChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UnarchiveChat(ctx, req.(*UnarchiveChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_GetUserArchivedChats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserChatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetUserArchivedChats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetUserArchivedChats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetUserArchivedChats(ctx, req.(*GetUserChatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -673,6 +809,22 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ForwardMessage",
 			Handler:    _ChatService_ForwardMessage_Handler,
+		},
+		{
+			MethodName: "GetOrCreateFavoritesChat",
+			Handler:    _ChatService_GetOrCreateFavoritesChat_Handler,
+		},
+		{
+			MethodName: "ArchiveChat",
+			Handler:    _ChatService_ArchiveChat_Handler,
+		},
+		{
+			MethodName: "UnarchiveChat",
+			Handler:    _ChatService_UnarchiveChat_Handler,
+		},
+		{
+			MethodName: "GetUserArchivedChats",
+			Handler:    _ChatService_GetUserArchivedChats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

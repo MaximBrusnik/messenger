@@ -56,6 +56,7 @@ func main() {
 
 			protected.GET("/chats", gw.GetChats)
 			protected.POST("/chats", gw.CreateChat)
+			protected.GET("/chats/archived", gw.GetArchivedChats)
 			protected.GET("/chats/:id", gw.GetChat)
 			protected.GET("/chats/:id/messages", gw.GetMessages)
 			protected.POST("/chats/:id/messages", gw.SendMessage)
@@ -64,8 +65,11 @@ func main() {
 			protected.POST("/chats/:id/read", gw.MarkAsRead)
 			protected.PUT("/chats/:id/pin/:msgId", gw.PinMessage)
 			protected.DELETE("/chats/:id/pin", gw.UnpinMessage)
+			protected.PUT("/chats/:id/archive", gw.ArchiveChat)
+			protected.DELETE("/chats/:id/archive", gw.UnarchiveChat)
 			protected.DELETE("/chats/:id", gw.DeleteChat)
 			protected.GET("/ai/chat", gw.GetOrCreateAIChat)
+			protected.GET("/favorites/chat", gw.GetOrCreateFavoritesChat)
 
 			protected.GET("/users", gw.GetAllUsers)
 			protected.GET("/users/search", gw.SearchUsers)

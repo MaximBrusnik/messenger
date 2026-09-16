@@ -174,7 +174,10 @@ func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) g
 
 	name := c.Name
 	avatar := c.Avatar
-	if c.Type == "private" && len(profiles) > 0 {
+	if c.IsFavorites {
+		name = "Избранное"
+		avatar = ""
+	} else if c.Type == "private" && len(profiles) > 0 {
 		var other *pbuser.UserProfile
 		for _, p := range profiles {
 			if p.Id != viewer {
@@ -189,11 +192,12 @@ func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) g
 	}
 
 	h := gin.H{
-		"id":         c.Id,
-		"name":       name,
-		"type":       c.Type,
-		"created_at": ts(c.CreatedAt),
-		"updated_at": ts(c.UpdatedAt),
+		"id":           c.Id,
+		"name":         name,
+		"type":         c.Type,
+		"created_at":   ts(c.CreatedAt),
+		"updated_at":   ts(c.UpdatedAt),
+		"is_favorites": c.IsFavorites,
 	}
 	if avatar != "" {
 		h["avatar"] = avatar

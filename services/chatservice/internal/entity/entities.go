@@ -21,11 +21,12 @@ type Chat struct {
 
 // ChatUser is the many-to-many join between chats and users.
 type ChatUser struct {
-	ChatID   uint      `gorm:"primaryKey" json:"chat_id"`
-	UserID   uint      `gorm:"primaryKey" json:"user_id"`
-	JoinedAt time.Time `json:"joined_at"`
-	IsAdmin  bool      `gorm:"default:false" json:"is_admin"`
-	LastRead time.Time `json:"last_read,omitempty"`
+	ChatID     uint      `gorm:"primaryKey" json:"chat_id"`
+	UserID     uint      `gorm:"primaryKey" json:"user_id"`
+	JoinedAt   time.Time `json:"joined_at"`
+	IsAdmin    bool      `gorm:"default:false" json:"is_admin"`
+	IsArchived bool      `gorm:"default:false" json:"is_archived"`
+	LastRead   time.Time `json:"last_read,omitempty"`
 }
 
 // Message is a single chat message.

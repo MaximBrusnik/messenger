@@ -87,6 +87,10 @@ func (s *Server) GetUserChats(ctx context.Context, req *pb.GetUserChatsRequest) 
 		if len(ids) == 2 && contains(ids, s.botID) {
 			continue
 		}
+		// skip user's own favorites (self) chat from the main list
+		if isSelfChat(ids, uint(req.UserId)) {
+			continue
+		}
 		pc, err := s.loadChatResponse(ctx, c.ID, uint(req.UserId))
 		if err != nil {
 			continue
@@ -340,6 +344,68 @@ func (s *Server) GetOrCreateAIChat(ctx context.Context, req *pb.GetOrCreateAICha
 	return s.loadChatResponse(ctx, chat.ID, uint(req.UserId))
 }
 
+func (s *Server) GetOrCreateFavoritesChat(ctx context.Context, req *pb.GetOrCreateFavoritesChatRequest) (*pb.Chat, error) {
+	uid := uint(req.UserId)
+	if existing, err := s.chatRepo.FindFavoritesChat(uid); err == nil {
+		return s.loadChatResponse(ctx, existing.ID, uid)
+	}
+	chat := &entity.Chat{Type: "private"}
+	if err := s.chatRepo.Create(chat, []uint{uid}); err != nil {
+		return nil, status.Error(codes.Internal, "не удалось создать чат «Избранное»")
+	}
+	return s.loadChatResponse(ctx, chat.ID, uid)
+}
+
+func (s *Server) ArchiveChat(ctx context.Context, req *pb.ArchiveChatRequest) (*pb.Empty, error) {
+	if err := s.requireParticipant(uint(req.ChatId), uint(req.UserId)); err != nil {
+		return nil, err
+	}
+	ids, _ := s.chatRepo.GetParticipantIDs(uint(req.ChatId))
+	if isSelfChat(ids, uint(req.UserId)) {
+		return nil, status.Error(codes.InvalidArgument, "нельзя архивировать чат «Избранное»")
+	}
+	if err := s.chatRepo.ArchiveChat(uint(req.ChatId), uint(req.UserId)); err != nil {
+		return nil, status.Error(codes.Internal, "не удалось архивировать чат")
+	}
+	return &pb.Empty{}, nil
+}
+
+func (s *Server) UnarchiveChat(ctx context.Context, req *pb.UnarchiveChatRequest) (*pb.Empty, error) {
+	if err := s.requireParticipant(uint(req.ChatId), uint(req.UserId)); err != nil {
+		return nil, err
+	}
+	if err := s.chatRepo.UnarchiveChat(uint(req.ChatId), uint(req.UserId)); err != nil {
+		return nil, status.Error(codes.Internal, "не удалось разархивировать чат")
+	}
+	return &pb.Empty{}, nil
+}
+
+func (s *Server) GetUserArchivedChats(ctx context.Context, req *pb.GetUserChatsRequest) (*pb.ChatsResponse, error) {
+	chats, err := s.chatRepo.FindByUserIDArchived(uint(req.UserId))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "не удалось получить архивные чаты")
+	}
+	var res []*pb.Chat
+	for _, c := range chats {
+		ids, err := s.chatRepo.GetParticipantIDs(c.ID)
+		if err != nil {
+			continue
+		}
+		if len(ids) == 2 && contains(ids, s.botID) {
+			continue
+		}
+		if isSelfChat(ids, uint(req.UserId)) {
+			continue
+		}
+		pc, err := s.loadChatResponse(ctx, c.ID, uint(req.UserId))
+		if err != nil {
+			continue
+		}
+		res = append(res, pc)
+	}
+	return &pb.ChatsResponse{Chats: res}, nil
+}
+
 func (s *Server) AddReaction(ctx context.Context, req *pb.AddReactionRequest) (*pb.Reaction, error) {
 	msg, err := s.messageRepo.FindByID(uint(req.MessageId))
 	if err != nil {
@@ -468,6 +534,7 @@ func (s *Server) loadChatResponse(ctx context.Context, chatID, viewerID uint) (*
 		Unread:          int32(unread),
 		CreatedAt:       timestamppb.New(chat.CreatedAt),
 		UpdatedAt:       timestamppb.New(chat.UpdatedAt),
+		IsFavorites:     isSelfChat(pids, viewerID),
 	}
 	if last != nil {
 		reactions, _ := s.reactionRepo.FindByMessageID(last.ID)
@@ -516,6 +583,20 @@ func contains(ids []uint, id uint) bool {
 		}
 	}
 	return false
+}
+
+// isSelfChat reports whether a chat has only the given user as a participant
+// (i.e. the user's own "Избранное" saved-messages chat).
+func isSelfChat(ids []uint, userID uint) bool {
+	if len(ids) == 0 {
+		return false
+	}
+	for _, id := range ids {
+		if id != userID {
+			return false
+		}
+	}
+	return true
 }
 
 func toMessageDTO(m *pb.Message) nats.MessageDTO {

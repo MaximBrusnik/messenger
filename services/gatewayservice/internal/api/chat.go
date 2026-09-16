@@ -262,6 +262,56 @@ func (g *Gateway) GetOrCreateAIChat(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": g.chatJSON(ctx(), userID(c), resp)})
 }
 
+func (g *Gateway) GetOrCreateFavoritesChat(c *gin.Context) {
+	resp, err := g.chat.GetOrCreateFavoritesChat(ctx(), &pb.GetOrCreateFavoritesChatRequest{UserId: userID(c)})
+	if err != nil {
+		HTTPError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": g.chatJSON(ctx(), userID(c), resp)})
+}
+
+func (g *Gateway) ArchiveChat(c *gin.Context) {
+	chatID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID чата"})
+		return
+	}
+	_, err = g.chat.ArchiveChat(ctx(), &pb.ArchiveChatRequest{UserId: userID(c), ChatId: chatID})
+	if err != nil {
+		HTTPError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Чат архивирован"})
+}
+
+func (g *Gateway) UnarchiveChat(c *gin.Context) {
+	chatID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID чата"})
+		return
+	}
+	_, err = g.chat.UnarchiveChat(ctx(), &pb.UnarchiveChatRequest{UserId: userID(c), ChatId: chatID})
+	if err != nil {
+		HTTPError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Чат разархивирован"})
+}
+
+func (g *Gateway) GetArchivedChats(c *gin.Context) {
+	resp, err := g.chat.GetUserArchivedChats(ctx(), &pb.GetUserChatsRequest{UserId: userID(c)})
+	if err != nil {
+		HTTPError(c, err)
+		return
+	}
+	out := make([]gin.H, 0, len(resp.Chats))
+	for _, ch := range resp.Chats {
+		out = append(out, g.chatJSON(ctx(), userID(c), ch))
+	}
+	c.JSON(http.StatusOK, gin.H{"data": out})
+}
+
 func (g *Gateway) GetReactions(c *gin.Context) {
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
