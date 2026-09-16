@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import { MessagesSquare } from "lucide-react";
 import { apiRequest, archiveChat as apiArchiveChat, deleteChat, getArchivedChats, getFavoritesChat, getMusic, unarchiveChat as apiUnarchiveChat } from "../api/client";
 import type { Chat, MusicTrack, User } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useCall } from "../context/CallContext";
 import { useGlobalWebSocket, type ChatLiveHandlers } from "../hooks/useGlobalWebSocket";
 import { loadChatAppearance, saveChatAppearance, type ChatAppearance } from "../utils/chatTheme";
 import Sidebar from "./Sidebar";
@@ -14,6 +17,7 @@ import UserProfileModal from "./UserProfileModal";
 
 export default function ChatApp() {
   const { user, setUser } = useAuth();
+  const { phase: callPhase, rejectCall, endCall } = useCall();
   const [chats, setChats] = useState<Chat[]>([]);
   const [archivedChats, setArchivedChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
@@ -38,6 +42,24 @@ export default function ChatApp() {
   useEffect(() => {
     if (!isMobile) { setMobileChat(false); setMobilePlayer(false); }
   }, [isMobile]);
+
+  // Handle the Android system back button inside the SPA instead of leaving the app.
+  const backState = useRef({ mobileChat, mobilePlayer, activeTab, showProfile, profileUserId, selectedTrack });
+  backState.current = { mobileChat, mobilePlayer, activeTab, showProfile, profileUserId, selectedTrack };
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = App.addListener("backButton", () => {
+      const s = backState.current;
+      if (s.showProfile) { setShowProfile(false); return; }
+      if (s.profileUserId !== null) { setProfileUserId(null); return; }
+      if (s.mobilePlayer) { handleMusicBack(); return; }
+      if (s.mobileChat) { setMobileChat(false); return; }
+      if (callPhase === "incoming") { rejectCall(); return; }
+      if (callPhase === "outgoing" || callPhase === "active") { endCall(); return; }
+      void App.exitApp();
+    });
+    return () => { void listener.then((l) => l.remove()); };
+  }, [callPhase, rejectCall, endCall]);
 
   const loadChats = useCallback(async () => {
     const res = await apiRequest<{ data: Chat[] }>("/chats");

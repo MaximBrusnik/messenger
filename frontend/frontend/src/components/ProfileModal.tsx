@@ -69,6 +69,7 @@ export default function ProfileModal({ onClose }: Props) {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fileRef.current) fileRef.current.value = "";
     try {
       const data = await uploadFile(file);
       const res = await apiRequest<{ data: User }>("/auth/profile", "PUT", { avatar: data.url });
@@ -159,7 +160,7 @@ export default function ProfileModal({ onClose }: Props) {
           {tab === "profile" && (
             <>
               <div className="avatar-section">
-                <div className="avatar-large" onClick={() => fileRef.current?.click()}>
+                <label className="avatar-large" title="Сменить аватар">
                   {user?.avatar ? (
                     <img src={user.avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
@@ -167,7 +168,7 @@ export default function ProfileModal({ onClose }: Props) {
                   )}
                   <div className="avatar-overlay">Сменить</div>
                   <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarUpload} />
-                </div>
+                </label>
                 {user?.avatar && (
                   <button
                     onClick={handleDeleteAvatar}

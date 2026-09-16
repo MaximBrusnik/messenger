@@ -72,10 +72,10 @@ export default function MessageInput({ onSend }: Props) {
         placeholder={uploading ? "Загрузка..." : "Сообщение..."}
         disabled={uploading}
       />
-      <input ref={fileRef} type="file" style={{ display: "none" }} onChange={handleFile} />
-      <button className="input-btn" onClick={() => fileRef.current?.click()} title="Прикрепить файл" disabled={uploading}>
+      <label className="input-btn" title="Прикрепить файл" style={uploading ? { pointerEvents: "none", opacity: 0.5 } : undefined}>
         <Paperclip size={20} />
-      </button>
+        <input ref={fileRef} type="file" style={{ display: "none" }} onChange={handleFile} />
+      </label>
       <button className="input-btn send" onClick={handleSend} disabled={uploading || !text.trim()}>
         <Send size={20} />
       </button>
