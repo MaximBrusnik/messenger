@@ -163,6 +163,8 @@ services:
       SERVICE_PUSH_ADDR: pushservice:9000
       NATS_URL: nats://nats:4222
       REDIS_ADDR: redis:6379
+    volumes:
+      - ./secrets/firebase-creds.json:/app/secrets/firebase-creds.json:ro
     depends_on:
       postgres:
         condition: service_healthy

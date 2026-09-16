@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -56,23 +57,27 @@ func New(credentialsPath string, tokenRepo repo.DeviceTokenRepository) *Sender {
 }
 
 // SendPush delivers a title/body notification to all of the user's devices.
-func (s *Sender) SendPush(ctx context.Context, userID uint, title, body string) {
+// The chatID is embedded in the message data so clients can deep-link to the chat.
+func (s *Sender) SendPush(ctx context.Context, userID uint, chatID int64, title, body string) {
 	tokens, err := s.tokenRepo.FindByUserID(userID)
 	if err != nil || len(tokens) == 0 {
 		return
 	}
 	for i := range tokens {
 		t := &tokens[i]
-		go s.sendToToken(t, title, body)
+		go s.sendToToken(t, chatID, title, body)
 	}
 }
 
-func (s *Sender) sendToToken(token *entity.DeviceToken, title, body string) {
+func (s *Sender) sendToToken(token *entity.DeviceToken, chatID int64, title, body string) {
 	msg := fcmV1Message{
 		Message: fcmMessage{
 			Token:        token.Token,
 			Notification: fcmNotification{Title: title, Body: body},
-			Data:         map[string]string{"type": "new_message"},
+			Data: map[string]string{
+				"type":    "new_message",
+				"chat_id": strconv.FormatInt(chatID, 10),
+			},
 		},
 	}
 	data, err := json.Marshal(msg)

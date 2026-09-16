@@ -71,7 +71,7 @@ func handleMessageEvent(ctx context.Context, redisClient *sharedredis.Client, se
 				continue
 			}
 			if !redisClient.IsOnline(ctx, uint(pid)) {
-				sender.SendPush(ctx, uint(pid), "Р СњР С•Р Р†Р С•Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ", truncate(e.Message.Text, 80))
+				sender.SendPush(ctx, uint(pid), e.ChatID, "Новое сообщение", truncate(e.Message.Text, 80))
 			}
 		}
 	case nats.TopicMessageEdited:
@@ -87,5 +87,5 @@ func truncate(s string, n int) string {
 	if len(runes) <= n {
 		return s
 	}
-	return string(runes[:n]) + "РІР‚В¦"
+	return string(runes[:n]) + "…"
 }
