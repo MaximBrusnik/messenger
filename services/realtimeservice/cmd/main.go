@@ -80,7 +80,9 @@ func main() {
 	router.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
 	httpErr := make(chan error, 1)
-	go func() { httpErr <- router.Run(":" + cfg.HTTPPort) }()
+	go func() {
+		httpErr <- router.Run(":" + cfg.HTTPPort)
+	}()
 
 	log.Printf("realtime: ws on :%s, grpc on :%s", cfg.HTTPPort, cfg.GRPCPort)
 

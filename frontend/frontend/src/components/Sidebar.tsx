@@ -3,8 +3,6 @@ import {
   useRef,
   useState,
   type PointerEvent,
-  type ReactNode,
-  type TouchEvent,
 } from "react";
 import UserSearch from "./UserSearch";
 import MusicTab from "./MusicTab";
@@ -24,9 +22,6 @@ const TAB_ORDER: TabId[] = ["chats", "archived", "music"];
 
 const TAB_SWIPE_THRESHOLD = 80;
 const TAB_FLIGHT_MS = 190;
-const REVEAL_WIDTH = 76;
-const REVEAL_TRIGGER = 44;
-const ARCHIVE_COMMIT = 120;
 
 interface Props {
   user: User;
@@ -92,160 +87,6 @@ function renderAvatar(c: Chat) {
   return c.participants?.[0] ? initial(c.participants[0].username) : "#";
 }
 
-interface SwipeableChatItemProps {
-  active: boolean;
-  onClick: () => void;
-  actionIcon: ReactNode;
-  actionColor: string;
-  actionLabel: string;
-  onAction: () => void;
-  children: ReactNode;
-}
-
-function SwipeableChatItem({
-  active,
-  onClick,
-  actionIcon,
-  actionColor,
-  actionLabel,
-  onAction,
-  children,
-}: SwipeableChatItemProps) {
-  const [offset, setOffset] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [elastic, setElastic] = useState(false);
-  const [flyout, setFlyout] = useState(false);
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-  const dragRef = useRef(false);
-  const didDragRef = useRef(false);
-  const rawRef = useRef(0);
-  const commitTimer = useRef<number | null>(null);
-  const elasticTimer = useRef<number | null>(null);
-  const elasticClearTimer = useRef<number | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      if (commitTimer.current) window.clearTimeout(commitTimer.current);
-      if (elasticTimer.current) window.clearTimeout(elasticTimer.current);
-      if (elasticClearTimer.current) window.clearTimeout(elasticClearTimer.current);
-    };
-  }, []);
-
-  function touchStart(e: TouchEvent) {
-    if (revealed) return;
-    startRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    dragRef.current = false;
-    rawRef.current = 0;
-    setElastic(false);
-    setFlyout(false);
-  }
-
-  function touchMove(e: TouchEvent) {
-    if (!startRef.current) {
-      if (revealed) e.stopPropagation();
-      return;
-    }
-    const dx = e.touches[0].clientX - startRef.current.x;
-    const dy = e.touches[0].clientY - startRef.current.y;
-    if (!dragRef.current) {
-      if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return;
-      dragRef.current = true;
-      setDragging(true);
-      e.stopPropagation();
-    } else {
-      e.stopPropagation();
-    }
-    rawRef.current = dx;
-    let o = dx;
-    if (o > 0) o *= 0.35;
-    if (o < -REVEAL_WIDTH) o = -(REVEAL_WIDTH + (o + REVEAL_WIDTH) * 0.35);
-    setOffset(o);
-  }
-
-  function touchEnd() {
-    if (!startRef.current) return;
-    startRef.current = null;
-    if (!dragRef.current) return;
-    dragRef.current = false;
-    setDragging(false);
-    const raw = rawRef.current;
-    if (raw <= -ARCHIVE_COMMIT) {
-      didDragRef.current = true;
-      setRevealed(false);
-      setFlyout(true);
-      setOffset(-560);
-      commitTimer.current = window.setTimeout(() => {
-        if (mountedRef.current) onAction();
-      }, 230);
-    } else if (raw <= -REVEAL_TRIGGER) {
-      didDragRef.current = true;
-      setElastic(true);
-      setRevealed(true);
-      setOffset(-REVEAL_WIDTH);
-      elasticClearTimer.current = window.setTimeout(() => setElastic(false), 320);
-    } else {
-      didDragRef.current = true;
-      setElastic(true);
-      setRevealed(false);
-      setOffset(14);
-      elasticTimer.current = window.setTimeout(() => {
-        setOffset(0);
-        elasticClearTimer.current = window.setTimeout(() => setElastic(false), 300);
-      }, 30);
-    }
-  }
-
-  function handleClick() {
-    if (didDragRef.current) {
-      didDragRef.current = false;
-      return;
-    }
-    if (revealed) {
-      if (elasticTimer.current) window.clearTimeout(elasticTimer.current);
-      if (elasticClearTimer.current) window.clearTimeout(elasticClearTimer.current);
-      setElastic(true);
-      setRevealed(false);
-      setOffset(14);
-      elasticTimer.current = window.setTimeout(() => {
-        setOffset(0);
-        elasticClearTimer.current = window.setTimeout(() => setElastic(false), 300);
-      }, 30);
-      return;
-    }
-    onClick();
-  }
-
-  return (
-    <div className="chat-item-swipe">
-      <div className="chat-item-swipe-bg" style={{ background: actionColor }}>
-        <button
-          type="button"
-          className="chat-item-swipe-action"
-          title={actionLabel}
-          onClick={(e) => { e.stopPropagation(); onAction(); }}
-        >
-          {actionIcon}
-        </button>
-      </div>
-      <div
-        className={`chat-item${active ? " active" : ""}${dragging ? " swiping" : ""}${revealed ? " revealed" : ""}${elastic ? " elastic" : ""}${flyout ? " flyout" : ""}`}
-        style={{ transform: `translateX(${offset}px)` }}
-        onClick={handleClick}
-        onTouchStart={touchStart}
-        onTouchMove={touchMove}
-        onTouchEnd={touchEnd}
-        onTouchCancel={touchEnd}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export default function Sidebar({
   user, chats, archivedChats, activeChat, activeTab, activeTrackId,
   onSelectChat, onOpenUserProfile, onOpenProfile, onDeleteChat,
@@ -294,7 +135,7 @@ export default function Sidebar({
   const tabPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (pendingCommitRef.current) return;
     const target = e.target as HTMLElement;
-    if (target.closest(".chat-item-swipe") || target.closest(".chat-item-actions")) return;
+    if (target.closest(".chat-item") || target.closest(".chat-item-actions")) return;
     pointerRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
     draggingRef.current = false;
     setDragging(false);
@@ -404,14 +245,10 @@ export default function Sidebar({
       )}
       <div className="chat-list">
         {chats.map((c) => (
-          <SwipeableChatItem
+          <div
             key={c.id}
-            active={activeChat?.id === c.id}
+            className={`chat-item${activeChat?.id === c.id ? " active" : ""}`}
             onClick={() => onSelectChat(c)}
-            actionIcon={<Archive size={18} />}
-            actionColor="var(--accent)"
-            actionLabel="Архивировать"
-            onAction={() => onArchiveChat(c.id)}
           >
             <div className="chat-item-avatar">{renderAvatar(c)}</div>
             <div className="chat-item-content">
@@ -442,7 +279,7 @@ export default function Sidebar({
                 <Trash2 size={14} />
               </button>
             </div>
-          </SwipeableChatItem>
+          </div>
         ))}
       </div>
     </>
@@ -459,14 +296,10 @@ export default function Sidebar({
           <div className="archive-empty">Нет архивированных чатов</div>
         )}
         {archivedChats.map((c) => (
-          <SwipeableChatItem
+          <div
             key={c.id}
-            active={activeChat?.id === c.id}
+            className={`chat-item${activeChat?.id === c.id ? " active" : ""}`}
             onClick={() => onSelectChat(c)}
-            actionIcon={<ArchiveRestore size={18} />}
-            actionColor="var(--success)"
-            actionLabel="Разархивировать"
-            onAction={() => onUnarchiveChat(c.id)}
           >
             <div className="chat-item-avatar">{renderAvatar(c)}</div>
             <div className="chat-item-content">
@@ -486,7 +319,7 @@ export default function Sidebar({
             >
               <ArchiveRestore size={14} />
             </button>
-          </SwipeableChatItem>
+          </div>
         ))}
       </div>
     </>
