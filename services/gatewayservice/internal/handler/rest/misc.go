@@ -15,18 +15,17 @@ import (
 	pbpush "messengermax/proto/gen/push"
 )
 
-// RegisterDevice proxies to pushservice.
 func (g *Gateway) RegisterDevice(c *gin.Context) {
 	var req struct {
 		Token    string `json:"token" binding:"required"`
 		Platform string `json:"platform" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	if req.Platform != "android" && req.Platform != "ios" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРёР·РІРµСЃС‚РЅР°СЏ РїР»Р°С‚С„РѕСЂРјР°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err := g.psh.RegisterDevice(ctx(), &pbpush.RegisterDeviceRequest{
@@ -36,7 +35,7 @@ func (g *Gateway) RegisterDevice(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЈСЃС‚СЂРѕР№СЃС‚РІРѕ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРѕ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 // UnregisterDevice proxies to pushservice.
@@ -45,7 +44,7 @@ func (g *Gateway) UnregisterDevice(c *gin.Context) {
 		Token string `json:"token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	_, err := g.psh.UnregisterDevice(ctx(), &pbpush.UnregisterDeviceRequest{Token: req.Token})
@@ -53,7 +52,7 @@ func (g *Gateway) UnregisterDevice(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЈСЃС‚СЂРѕР№СЃС‚РІРѕ РѕС‚СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРѕ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 // WSProxy forwards the WebSocket connection to realtimeservice, which
@@ -61,7 +60,7 @@ func (g *Gateway) UnregisterDevice(c *gin.Context) {
 func (g *Gateway) WSProxy(c *gin.Context) {
 	target, err := url.Parse("http://" + g.cfg.Services.RealtimeWS)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "realtimeservice РЅРµРґРѕСЃС‚СѓРїРµРЅ"})
+		c.JSON(http.StatusBadGateway, gin.H{"error": ""})
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -82,7 +81,7 @@ func (g *Gateway) WSProxy(c *gin.Context) {
 func (g *Gateway) CallWSProxy(c *gin.Context) {
 	target, err := url.Parse("http://" + g.cfg.Services.CallsWS)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "callsservice РЅРµРґРѕСЃС‚СѓРїРµРЅ"})
+		c.JSON(http.StatusBadGateway, gin.H{"error": "callsservice"})
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -117,13 +116,13 @@ func fileType(ext string) string {
 func (g *Gateway) Upload(c *gin.Context) {
 	dir := g.cfg.FileStorageDir
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "РЅРµ СѓРґР°Р»РѕСЃСЊ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°С‚СЊ С…СЂР°РЅРёР»РёС‰Рµ"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": ""})
 		return
 	}
 
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "С„Р°Р№Р» РЅРµ РЅР°Р№РґРµРЅ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	defer file.Close()
@@ -132,14 +131,14 @@ func (g *Gateway) Upload(c *gin.Context) {
 	dst := filepath.Join(dir, name)
 	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ С„Р°Р№Р»"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": ""})
 		return
 	}
 	size, err := io.Copy(out, file)
 	_ = out.Close()
 	if err != nil {
 		_ = os.Remove(dst)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ С„Р°Р№Р»"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": ""})
 		return
 	}
 

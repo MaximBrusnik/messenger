@@ -11,8 +11,6 @@ import (
 	pbuser "messengermax/proto/gen/user"
 )
 
-// userJSON renders a UserProfile as the legacy REST UserResponse.
-// self indicates the viewer is the owner (full fields are exposed).
 func userJSON(p *pbuser.UserProfile, self bool) gin.H {
 	h := gin.H{
 		"id":       p.Id,
@@ -46,7 +44,6 @@ func userJSON(p *pbuser.UserProfile, self bool) gin.H {
 	return h
 }
 
-// profilesByID fetches many profiles and indexes them by user id.
 func (g *Gateway) profilesByID(ctx context.Context, ids []uint64) map[uint64]*pbuser.UserProfile {
 	seen := make(map[uint64]bool)
 	var uniq []uint64
@@ -71,7 +68,6 @@ func (g *Gateway) profilesByID(ctx context.Context, ids []uint64) map[uint64]*pb
 	return out
 }
 
-// reactionJSON renders a chat reaction like the legacy API.
 func reactionJSON(r *pbchat.Reaction, profiles map[uint64]*pbuser.UserProfile) gin.H {
 	username := r.Username
 	if p, ok := profiles[r.UserId]; ok && username == "" {
@@ -91,8 +87,6 @@ func reactionJSON(r *pbchat.Reaction, profiles map[uint64]*pbuser.UserProfile) g
 	return h
 }
 
-// messageJSON builds the full legacy MessageResponse, enriching the sender
-// and reaction usernames with profile data.
 func (g *Gateway) messageJSON(ctx context.Context, m *pbchat.Message) gin.H {
 	profileIDs := []uint64{m.SenderId}
 	if m.IsForwarded && m.ForwardedFromSenderId > 0 {
@@ -156,8 +150,6 @@ func (g *Gateway) messageJSON(ctx context.Context, m *pbchat.Message) gin.H {
 	return h
 }
 
-// chatJSON builds the legacy ChatResponse. For private chats the display
-// name/avatar are taken from the other participant.
 func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) gin.H {
 	pids := make([]uint64, 0, len(c.Participants))
 	for _, p := range c.Participants {
@@ -217,7 +209,6 @@ func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) g
 	return h
 }
 
-// lastMessageJSON is the reduced message shape used by chat lists.
 func lastMessageJSON(m *pbchat.Message) gin.H {
 	h := gin.H{
 		"id":         m.Id,
@@ -237,7 +228,6 @@ func lastMessageJSON(m *pbchat.Message) gin.H {
 	return h
 }
 
-// sortReactions keeps output deterministic.
 func sortReactions(list []*pbchat.Reaction) {
 	sort.Slice(list, func(i, j int) bool {
 		if list[i].UserId != list[j].UserId {

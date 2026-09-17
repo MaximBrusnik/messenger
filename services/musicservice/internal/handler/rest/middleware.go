@@ -6,8 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GatewayIdentity injects the identity forwarded by the api-gateway. It must
-// only be exposed behind the gateway, never to the public internet.
 func GatewayIdentity() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if v := c.GetHeader("X-User-Id"); v != "" {

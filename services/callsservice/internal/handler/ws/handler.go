@@ -56,8 +56,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-// CallStateManager exposes the parts of the gRPC call service that the
-// signaling controller needs. It is implemented by service.Server.
 type CallStateManager interface {
 	StartCallForSignaling(ctx context.Context, callerID, calleeID uint, chatID uint, callType entity.CallType) (*entity.Call, error)
 	AcceptCallForSignaling(ctx context.Context, callID, userID uint) (*entity.Call, error)
@@ -71,8 +69,6 @@ type callRoom struct {
 	callee uint64
 }
 
-// Controller manages signaling connections: auth, upgrade, call-state
-// transitions and peer-to-peer message relay.
 type Controller struct {
 	jwtManager *jwt.Manager
 	hub        *Hub
@@ -86,7 +82,6 @@ func NewController(jwtManager *jwt.Manager, h *Hub, manager CallStateManager) *C
 	return &Controller{jwtManager: jwtManager, hub: h, manager: manager, rooms: make(map[uint64]*callRoom)}
 }
 
-// Handle upgrades the request and runs the connection's read loop.
 func (c *Controller) Handle(gctx *gin.Context) {
 	token := gctx.Query("token")
 	if token == "" {
@@ -142,7 +137,6 @@ func (c *Controller) readLoop(conn *websocket.Conn, userID uint) {
 	}
 	c.hub.Unregister(userID, conn)
 	_ = conn.Close()
-	// If the user was mid-call, tear the call down server-side.
 	c.cleanupOnDisconnect(userID)
 }
 
@@ -182,14 +176,13 @@ func (c *Controller) handleInvite(ctx context.Context, callerID uint, raw json.R
 	c.rooms[uint64(call.ID)] = &callRoom{callID: uint64(call.ID), caller: uint64(callerID), callee: p.CalleeID}
 	c.roomsMu.Unlock()
 
-	// Notify the caller that the call is now ringing.
 	c.hub.SendToUser(callerID, WSMessage{Type: "CALL_INVITE_ACK", Payload: callPayload(call)})
 
 	if !c.hub.IsOnline(uint(p.CalleeID)) {
 		c.failCall(ctx, call, "unreachable", callerID, uint(p.CalleeID))
 		return
 	}
-	// Ring the callee.
+
 	c.hub.SendToUser(uint(p.CalleeID), WSMessage{
 		Type: "CALL_RINGING",
 		Payload: gin.H{
@@ -246,8 +239,6 @@ func (c *Controller) handleEnd(ctx context.Context, userID uint, raw json.RawMes
 	c.removeRoom(uint64(call.ID))
 }
 
-// handleRelay forwards a signaling message (SDP offer/answer or ICE
-// candidate) from one peer to the other peer within the same call.
 func (c *Controller) handleRelay(userID uint, raw json.RawMessage) {
 	var p signalPayload
 	if err := json.Unmarshal(raw, &p); err != nil || p.CallID == 0 {
@@ -266,7 +257,7 @@ func (c *Controller) handleRelay(userID uint, raw json.RawMessage) {
 	default:
 		return
 	}
-	// Re-wrap the payload so the receiver gets the exact original message.
+
 	var full inbound
 	if err := json.Unmarshal(raw, &full); err != nil {
 		return
@@ -274,9 +265,7 @@ func (c *Controller) handleRelay(userID uint, raw json.RawMessage) {
 	c.hub.SendToUser(uint(target), WSMessage{Type: full.Type, Payload: full.Payload})
 }
 
-// failCall ends a ringing call that cannot be delivered (callee offline).
 func (c *Controller) failCall(ctx context.Context, call *entity.Call, reason string, callerID, calleeID uint) {
-	// End from the caller's side; the callee never saw the call.
 	endReason := reason
 	if endReason == "unreachable" {
 		endReason = "no_answer"
@@ -288,8 +277,6 @@ func (c *Controller) failCall(ctx context.Context, call *entity.Call, reason str
 	c.removeRoom(uint64(call.ID))
 }
 
-// cleanupOnDisconnect ends any active call the user is part of when their
-// signaling connection drops.
 func (c *Controller) cleanupOnDisconnect(userID uint) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -312,8 +299,6 @@ func (c *Controller) broadcastRoom(callID uint64, msg WSMessage) {
 	c.hub.SendToUsers([]uint{uint(room.caller), uint(room.callee)}, msg)
 }
 
-// NotifyCallEnded pushes an authoritative CALL_ENDED to both participants
-// (used by the ringing-timeout sweeper). The room is cleared as well.
 func (c *Controller) NotifyCallEnded(call *entity.Call) {
 	c.broadcastRoom(uint64(call.ID), WSMessage{Type: "CALL_ENDED", Payload: callPayload(call)})
 	c.removeRoom(uint64(call.ID))

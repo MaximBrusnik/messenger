@@ -15,7 +15,6 @@ import (
 	"messengermax/realtimeservice/internal/handler/ws"
 )
 
-// Consumer translates Kafka chat events into WebSocket pushes.
 type Consumer struct {
 	hub     *ws.Hub
 	rc      *redis.Client
@@ -27,8 +26,6 @@ func New(h *ws.Hub, rc *redis.Client, users pbuser.UserServiceClient) *Consumer 
 	return &Consumer{hub: h, rc: rc, users: users, timeout: 2 * time.Second}
 }
 
-// HandleUserEvent applies online/offline transitions published by any
-// realtime instance to the shared Redis state.
 func (c *Consumer) HandleUserEvent(ctx context.Context, value []byte) {
 	var e nats.EventUserStatus
 	if err := json.Unmarshal(value, &e); err != nil {
@@ -41,7 +38,6 @@ func (c *Consumer) HandleUserEvent(ctx context.Context, value []byte) {
 	}
 }
 
-// Handle is registered as the kafka consumer callback.
 func (c *Consumer) Handle(topic string, key string, value []byte) {
 	switch topic {
 	case nats.TopicMessageCreated:
@@ -110,8 +106,6 @@ func (c *Consumer) Handle(topic string, key string, value []byte) {
 	}
 }
 
-// messageJSON builds the full legacy-style message payload (same shape as
-// the REST gateway) so the frontend can render it without refetching.
 func (c *Consumer) messageJSON(dto nats.MessageDTO) gin.H {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()

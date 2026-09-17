@@ -34,7 +34,6 @@ func main() {
 	wsCtrl := ws.NewController(jwtManager, hubInstance, redisClient, producer)
 	biz := service.NewServer(redisClient, wsCtrl)
 
-	// start gRPC service in the background
 	grpcErr := make(chan error, 1)
 	go func() {
 		grpcErr <- grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
@@ -42,7 +41,6 @@ func main() {
 		})
 	}()
 
-	// clients used to enrich WebSocket payloads with sender profiles
 	var userClient pbuser.UserServiceClient
 	userConn, err := grpcsrv.Dial(cfg.Services.UserAddr)
 	if err != nil {
@@ -52,7 +50,7 @@ func main() {
 		userClient = pbuser.NewUserServiceClient(userConn)
 	}
 
-	// start Kafka consumers
+	// Kafka
 	cons := consumer.New(hubInstance, redisClient, userClient)
 	handle := func(topic, key string, value []byte) { cons.Handle(topic, key, value) }
 	ctx, cancel := context.WithCancel(context.Background())
@@ -74,7 +72,6 @@ func main() {
 	go c1.Run(ctx)
 	go c2.Run(ctx)
 
-	// HTTP server for the WebSocket endpoint
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}

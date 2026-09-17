@@ -29,7 +29,7 @@ func (g *Gateway) CreateChat(c *gin.Context) {
 		Type   string `json:"type"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РќРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	chatType := req.Type
@@ -46,13 +46,13 @@ func (g *Gateway) CreateChat(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Р§Р°С‚ СЃРѕР·РґР°РЅ", "data": g.chatJSON(ctx(), userID(c), resp)})
+	c.JSON(http.StatusCreated, gin.H{"message": "", "data": g.chatJSON(ctx(), userID(c), resp)})
 }
 
 func (g *Gateway) GetChat(c *gin.Context) {
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	resp, err := g.chat.GetChatByID(ctx(), &pb.GetChatRequest{UserId: userID(c), ChatId: id})
@@ -66,7 +66,7 @@ func (g *Gateway) GetChat(c *gin.Context) {
 func (g *Gateway) GetMessages(c *gin.Context) {
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
@@ -88,7 +88,7 @@ func (g *Gateway) GetMessages(c *gin.Context) {
 func (g *Gateway) SendMessage(c *gin.Context) {
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	var req struct {
@@ -99,11 +99,11 @@ func (g *Gateway) SendMessage(c *gin.Context) {
 		AttachmentSize *int64 `json:"attachment_size"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	if req.Content == "" && req.AttachmentURL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РёР»Рё РІР»РѕР¶РµРЅРёРµ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	size := int64(0)
@@ -119,25 +119,25 @@ func (g *Gateway) SendMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёРµ РѕС‚РїСЂР°РІР»РµРЅРѕ", "data": g.messageJSON(ctx(), resp)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), resp)})
 }
 
 func (g *Gateway) EditMessage(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID СЃРѕРѕР±С‰РµРЅРёСЏ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	var req struct {
 		Content string `json:"content" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РєРѕРЅС‚РµРЅС‚ РѕР±СЏР·Р°С‚РµР»РµРЅ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	resp, err := g.chat.EditMessage(ctx(), &pb.EditMessageRequest{
@@ -147,18 +147,18 @@ func (g *Gateway) EditMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёРµ РѕС‚СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРѕ", "data": g.messageJSON(ctx(), resp)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), resp)})
 }
 
 func (g *Gateway) DeleteMessage(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID СЃРѕРѕР±С‰РµРЅРёСЏ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.DeleteMessage(ctx(), &pb.DeleteMessageRequest{
@@ -168,13 +168,13 @@ func (g *Gateway) DeleteMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) MarkAsRead(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.MarkAsRead(ctx(), &pb.MarkAsReadRequest{UserId: userID(c), ChatId: chatID})
@@ -182,18 +182,18 @@ func (g *Gateway) MarkAsRead(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёСЏ РѕС‚РјРµС‡РµРЅС‹ РєР°Рє РїСЂРѕС‡РёС‚Р°РЅРЅС‹Рµ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) PinMessage(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID СЃРѕРѕР±С‰РµРЅРёСЏ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.PinMessage(ctx(), &pb.PinMessageRequest{UserId: userID(c), ChatId: chatID, MessageId: msgID})
@@ -201,13 +201,13 @@ func (g *Gateway) PinMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёРµ Р·Р°РєСЂРµРїР»РµРЅРѕ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) UnpinMessage(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.UnpinMessage(ctx(), &pb.UnpinMessageRequest{UserId: userID(c), ChatId: chatID})
@@ -215,13 +215,13 @@ func (g *Gateway) UnpinMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёРµ РѕС‚РєСЂРµРїР»РµРЅРѕ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) DeleteChat(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.DeleteChat(ctx(), &pb.DeleteChatRequest{UserId: userID(c), ChatId: chatID})
@@ -229,18 +229,18 @@ func (g *Gateway) DeleteChat(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Р§Р°С‚ СѓРґР°Р»С‘РЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) ForwardMessage(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID СЃРѕРѕР±С‰РµРЅРёСЏ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	resp, err := g.chat.ForwardMessage(ctx(), &pb.ForwardMessageRequest{
@@ -250,7 +250,7 @@ func (g *Gateway) ForwardMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РЎРѕРѕР±С‰РµРЅРёРµ РїРµСЂРµСЃР»Р°РЅРѕ", "data": g.messageJSON(ctx(), resp)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), resp)})
 }
 
 func (g *Gateway) GetOrCreateAIChat(c *gin.Context) {
@@ -274,7 +274,7 @@ func (g *Gateway) GetOrCreateFavoritesChat(c *gin.Context) {
 func (g *Gateway) ArchiveChat(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.ArchiveChat(ctx(), &pb.ArchiveChatRequest{UserId: userID(c), ChatId: chatID})
@@ -282,13 +282,13 @@ func (g *Gateway) ArchiveChat(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Р§Р°С‚ Р°СЂС…РёРІРёСЂРѕРІР°РЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) UnarchiveChat(c *gin.Context) {
 	chatID, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID С‡Р°С‚Р°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.UnarchiveChat(ctx(), &pb.UnarchiveChatRequest{UserId: userID(c), ChatId: chatID})
@@ -296,7 +296,7 @@ func (g *Gateway) UnarchiveChat(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Р§Р°С‚ СЂР°Р·Р°СЂС…РёРІРёСЂРѕРІР°РЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) GetArchivedChats(c *gin.Context) {
@@ -339,14 +339,14 @@ func (g *Gateway) GetReactions(c *gin.Context) {
 func (g *Gateway) AddReaction(c *gin.Context) {
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID СЃРѕРѕР±С‰РµРЅРёСЏ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "fail parseID"})
 		return
 	}
 	var req struct {
 		Reaction string `json:"reaction" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "СЂРµР°РєС†РёСЏ РѕР±СЏР·Р°С‚РµР»СЊРЅР°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	resp, err := g.chat.AddReaction(ctx(), &pb.AddReactionRequest{
@@ -356,18 +356,18 @@ func (g *Gateway) AddReaction(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Р РµР°РєС†РёСЏ РґРѕР±Р°РІР»РµРЅР°", "data": reactionJSON(resp, nil)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": reactionJSON(resp, nil)})
 }
 
 func (g *Gateway) RemoveReaction(c *gin.Context) {
 	msgID, err := parseID(c, "msgId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID СЃРѕРѕР±С‰РµРЅРёСЏ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	reaction := c.Query("reaction")
 	if reaction == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "СЂРµР°РєС†РёСЏ РѕР±СЏР·Р°С‚РµР»СЊРЅР°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	_, err = g.chat.RemoveReaction(ctx(), &pb.RemoveReactionRequest{
@@ -377,5 +377,5 @@ func (g *Gateway) RemoveReaction(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Р РµР°РєС†РёСЏ СѓРґР°Р»РµРЅР°"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }

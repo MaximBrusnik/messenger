@@ -42,7 +42,6 @@ func seedIfMissing(userRepo repo.UserRepository, userClient pbuser.UserServiceCl
 	}
 	log.Printf("auth: seeded %q", username)
 
-	// mirror the seeded user into userservice
 	if userClient != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()

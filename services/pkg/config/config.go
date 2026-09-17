@@ -1,5 +1,3 @@
-// Package config provides environment-based configuration loading shared
-// by all MessangerMax microservices.
 package config
 
 import (
@@ -7,7 +5,6 @@ import (
 	"strconv"
 )
 
-// Config holds all settings required to run any service.
 type Config struct {
 	Env             string
 	ServiceName     string
@@ -29,7 +26,6 @@ type Config struct {
 	MusicHTTPAddr   string
 }
 
-// ServiceAddrs holds the DNS/addresses used to reach peer services.
 type ServiceAddrs struct {
 	UserAddr     string
 	ChatAddr     string
@@ -43,8 +39,6 @@ type ServiceAddrs struct {
 	CallsWS      string
 }
 
-// CallBackend provides the ICE server configuration handed to clients so
-// they can punch through NAT when establishing WebRTC peer connections.
 type CallBackend struct {
 	StunServers []string
 	TurnServers []TurnServer
@@ -57,7 +51,6 @@ type TurnServer struct {
 	Credential string   `json:"credential,omitempty"`
 }
 
-// Postgres holds connection settings for each service's own database.
 type Postgres struct {
 	Host     string
 	Port     string
@@ -66,18 +59,15 @@ type Postgres struct {
 	Name     string
 }
 
-// Redis holds connection settings for caching/online-status.
 type Redis struct {
 	Addr string
 	Pass string
 }
 
-// NATS holds the event bus server URL.
 type NATS struct {
 	URL string
 }
 
-// SMTP holds email settings.
 type SMTP struct {
 	Host string
 	Port string
@@ -86,18 +76,17 @@ type SMTP struct {
 	From string
 }
 
-// App holds application-level settings.
 type App struct {
 	AppURL                   string
 	RequireEmailVerification bool
 }
 
-// AI holds Gemini API settings.
+// AI Gemini API settings.
 type AI struct {
 	GeminiAPIKey string
 }
 
-// Push holds FCM settings.
+// Push FCM settings.
 type Push struct {
 	FCMCredentials string
 }
@@ -118,7 +107,6 @@ func getEnvBool(key string, fallback bool) bool {
 	return fallback
 }
 
-// Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
 	return &Config{
 		Env:         getEnv("ENV", "development"),

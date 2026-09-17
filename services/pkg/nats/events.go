@@ -1,8 +1,5 @@
 package nats
 
-// EventCallEnded is published by the calls service whenever a call reaches a
-// terminal state (ended, missed, rejected, cancelled). The chat service
-// consumes it to write a system message into the originating chat.
 type EventCallEnded struct {
 	CallID      int64  `json:"call_id"`
 	ChatID      int64  `json:"chat_id"`

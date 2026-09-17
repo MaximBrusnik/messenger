@@ -1,5 +1,3 @@
-// Package observ provides minimal observability helpers (structured logging
-// and a placeholder metrics registry) shared by all services.
 package observ
 
 import (
@@ -9,13 +7,11 @@ import (
 	"time"
 )
 
-// Logger is a tiny structured logger suitable for the monorepo scope.
 type Logger struct {
 	service string
 	level   string
 }
 
-// NewLogger creates a logger bound to a service name.
 func NewLogger(service, level string) *Logger {
 	if level == "" {
 		level = "info"
@@ -42,26 +38,21 @@ func (l *Logger) Info(format string, args ...interface{})  { l.logf("info", form
 func (l *Logger) Warn(format string, args ...interface{})  { l.logf("warn", format, args...) }
 func (l *Logger) Error(format string, args ...interface{}) { l.logf("error", format, args...) }
 
-// Metrics is a minimal in-process counter registry. A production-grade
-// implementation (Prometheus) can replace this later.
 type Metrics struct {
 	mu     sync.Mutex
 	counts map[string]int64
 }
 
-// NewMetrics creates an empty metrics registry.
 func NewMetrics() *Metrics {
 	return &Metrics{counts: make(map[string]int64)}
 }
 
-// Inc increments a named counter.
 func (m *Metrics) Inc(name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.counts[name]++
 }
 
-// Snapshot returns a copy of all counters.
 func (m *Metrics) Snapshot() map[string]int64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()

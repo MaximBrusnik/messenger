@@ -152,8 +152,6 @@ func (s *Server) buildAuthResult(ctx context.Context, user *entity.User) (*AuthR
 	}, nil
 }
 
-// syncProfile mirrors a freshly created user into the userservice profile
-// store so the messenger can display it. Failures are non-fatal.
 func (s *Server) syncProfile(user *entity.User) {
 	if s.userClient == nil {
 		return

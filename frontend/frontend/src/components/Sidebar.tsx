@@ -270,10 +270,26 @@ export default function Sidebar({
   }, []);
 
   useEffect(() => {
-    if (activeIndex === pageIndex || draggingRef.current || pendingCommitRef.current) return;
+    if (activeIndex === pageIndex) return;
     setPageIndex(activeIndex);
     setDragX(0);
   }, [activeIndex, pageIndex]);
+
+  const handleTabClick = (tab: TabId) => {
+    const targetIndex = TAB_ORDER.indexOf(tab);
+    if (commitTimer.current) {
+      window.clearTimeout(commitTimer.current);
+      commitTimer.current = null;
+    }
+    pendingCommitRef.current = null;
+    draggingRef.current = false;
+    pointerRef.current = null;
+    setDragging(false);
+    setTargetTab(null);
+    setPageIndex(targetIndex);
+    setDragX(0);
+    onTabChange(tab);
+  };
 
   const tabPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (pendingCommitRef.current) return;
@@ -499,20 +515,20 @@ export default function Sidebar({
       <div className="sidebar-tabs">
         <button
           className={`sidebar-tab${activeTab === "chats" ? " active" : ""}${targetTab === "chats" ? " target" : ""}`}
-          onClick={() => onTabChange("chats")}
+          onClick={() => handleTabClick("chats")}
         >
           <MessageSquare size={17} /> Чаты
         </button>
         <button
           className={`sidebar-tab${activeTab === "archived" ? " active" : ""}${targetTab === "archived" ? " target" : ""}`}
-          onClick={() => onTabChange("archived")}
+          onClick={() => handleTabClick("archived")}
           title="Архив"
         >
           <Archive size={17} /> Архив
         </button>
         <button
           className={`sidebar-tab${activeTab === "music" ? " active" : ""}${targetTab === "music" ? " target" : ""}`}
-          onClick={() => onTabChange("music")}
+          onClick={() => handleTabClick("music")}
         >
           <Music size={17} /> Музыка
         </button>

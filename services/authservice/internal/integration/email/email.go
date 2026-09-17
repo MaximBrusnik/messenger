@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-// Service sends verification emails over SMTP.
 type Service struct {
 	host    string
 	port    string

@@ -60,11 +60,9 @@ func handleTrigger(ctx context.Context, chatClient pbchat.ChatServiceClient, gem
 		return
 	}
 
-	// brief backoff so the user message is readable before the reply
 	time.Sleep(500 * time.Millisecond)
 
 	history := make([]gemini.ChatMessage, 0, historyLimit)
-	// retry a few times because messages may still be in flight to chatservice
 	for attempt := 0; attempt < maxTryReads; attempt++ {
 		resp, err := chatClient.GetMessages(ctx, &pbchat.GetMessagesRequest{
 			UserId: botID,
@@ -100,7 +98,6 @@ func handleTrigger(ctx context.Context, chatClient pbchat.ChatServiceClient, gem
 		return
 	}
 
-	// post the assistant reply back into the same chat
 	_, err = chatClient.SendMessage(ctx, &pbchat.SendMessageRequest{
 		UserId:  botID,
 		ChatId:  uint64(e.ChatID),

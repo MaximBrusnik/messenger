@@ -12,20 +12,16 @@ import (
 	pbuser "messengermax/proto/gen/user"
 )
 
-// MusicFileProxy forwards upload/stream/download to the musicservice,
-// injecting the gateway's trusted identity headers.
 func (g *Gateway) MusicFileProxy(c *gin.Context) {
 	target, err := url.Parse("http://" + g.cfg.MusicHTTPAddr)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "musicservice РЅРµРґРѕСЃС‚СѓРїРµРЅ"})
+		c.JSON(http.StatusBadGateway, gin.H{"error": "musicservice"})
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	uidHeader := itoa(userID(c))
 	adminHeader := boolToStr(g.IsAdmin(c))
-	// Strip the /api/v1 prefix: the music service registers its routes at the
-	// root (/music/upload, /music/:id/stream, ...), while the public API is
-	// exposed under /api/v1/music/*.
+
 	proxy.Director = func(r *http.Request) {
 		r.URL.Scheme = "http"
 		r.URL.Host = target.Host
@@ -66,14 +62,14 @@ func (g *Gateway) MusicList(c *gin.Context) {
 func (g *Gateway) MusicDelete(c *gin.Context) {
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	if _, err := g.mus.Delete(ctx(), &pbmusic.GetMusicRequest{Id: id}); err != nil {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РўСЂРµРє СѓРґР°Р»С‘РЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) MusicPending(c *gin.Context) {
@@ -88,27 +84,27 @@ func (g *Gateway) MusicPending(c *gin.Context) {
 func (g *Gateway) MusicApprove(c *gin.Context) {
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	if _, err := g.mus.Approve(ctx(), &pbmusic.GetMusicRequest{Id: id}); err != nil {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РўСЂРµРє РѕРґРѕР±СЂРµРЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) MusicReject(c *gin.Context) {
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	if _, err := g.mus.Reject(ctx(), &pbmusic.GetMusicRequest{Id: id}); err != nil {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РўСЂРµРє РѕС‚РєР»РѕРЅС‘РЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func musicListJSON(items []*pbmusic.Music) []gin.H {

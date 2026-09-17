@@ -58,9 +58,6 @@ func main() {
 	}
 }
 
-// dialWithRetry keeps trying to reach a gRPC service until totalTimeout
-// elapses, sleeping interval between attempts. This avoids the race where
-// auth starts before userservice and silently skips seeding user profiles.
 func dialWithRetry(ctx context.Context, addr string, totalTimeout, interval time.Duration) (*grpc.ClientConn, error) {
 	deadline := time.Now().Add(totalTimeout)
 	for {

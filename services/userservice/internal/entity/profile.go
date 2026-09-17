@@ -6,8 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Profile is the user-owned public profile data, denormalized from the
-// auth service for display in the messenger.
 type Profile struct {
 	ID               uint           `gorm:"primarykey" json:"id"`
 	CreatedAt        time.Time      `json:"created_at"`
@@ -28,7 +26,6 @@ type Profile struct {
 	LastLogin        time.Time      `json:"last_login,omitempty"`
 }
 
-// Contact is the join entry for a user's contact list.
 type Contact struct {
 	UserID    uint      `gorm:"primaryKey" json:"user_id"`
 	ContactID uint      `gorm:"primaryKey" json:"contact_id"`

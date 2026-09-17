@@ -90,8 +90,6 @@ func NewGateway(cfg *config.Config) (*Gateway, error) {
 	conns = append(conns, cc3)
 	g.psh = pbpush.NewPushServiceClient(cc3)
 
-	// Calls are best-effort; if the service is unavailable we degrade
-	// gracefully by not proxying call endpoints rather than refusing to boot.
 	if cc4, err := grpcsrv.Dial(cfg.Services.CallsAddr); err == nil {
 		conns = append(conns, cc4)
 		g.calls = pbcalls.NewCallServiceClient(cc4)
@@ -106,7 +104,7 @@ func HTTPError(c *gin.Context, err error) {
 	st, _ := status.FromError(err)
 	msg := st.Message()
 	if msg == "" {
-		msg = "РІРЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР°"
+		msg = "default empty level°"
 	}
 	var code int
 	switch st.Code() {

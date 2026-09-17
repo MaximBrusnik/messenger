@@ -42,7 +42,6 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Write call-ended system messages into chats.
 	consumer := nats.NewConsumer(cfg.NATS.URL, "chatservice", []string{nats.TopicCallEnded}, func(topic, key string, value []byte) {
 		server.HandleCallEnded(value)
 	})
@@ -55,9 +54,6 @@ func main() {
 	}
 }
 
-// resolveBotID looks up the AI assistant user id from the userservice.
-// If userservice is unreachable or the bot is missing, chat runs without
-// AI support rather than failing to boot.
 func resolveBotID(cfg *config.Config) uint {
 	conn, err := grpcsrv.Dial(cfg.Services.UserAddr)
 	if err != nil {

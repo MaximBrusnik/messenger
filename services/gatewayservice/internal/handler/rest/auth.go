@@ -9,7 +9,6 @@ import (
 	pb "messengermax/proto/gen/user"
 )
 
-// authUserJSON maps the auth service user to the REST UserResponse.
 func authUserJSON(u *pbauth.User) gin.H {
 	h := gin.H{
 		"id":             u.Id,
@@ -33,7 +32,7 @@ func (g *Gateway) Register(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	resp, err := g.auth.Register(ctx(), &pbauth.RegisterRequest{
@@ -45,13 +44,13 @@ func (g *Gateway) Register(c *gin.Context) {
 	}
 	if resp.EmailVerificationRequired {
 		c.JSON(http.StatusCreated, gin.H{
-			"message":                     "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅ. РџСЂРѕРІРµСЂСЊС‚Рµ email РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ.",
+			"message":                     "",
 			"requires_email_verification": true,
 		})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅ. РџСЂРѕРІРµСЂСЊС‚Рµ email РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ.",
+		"message": "",
 		"token":   resp.Token,
 		"data":    authUserJSON(resp.User),
 	})
@@ -63,7 +62,7 @@ func (g *Gateway) Login(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	resp, err := g.auth.Login(ctx(), &pbauth.LoginRequest{
@@ -84,7 +83,7 @@ func (g *Gateway) Login(c *gin.Context) {
 func (g *Gateway) VerifyEmail(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "С‚РѕРєРµРЅ РЅРµ РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	resp, err := g.auth.VerifyEmail(ctx(), &pbauth.VerifyEmailRequest{Token: token})
@@ -95,7 +94,7 @@ func (g *Gateway) VerifyEmail(c *gin.Context) {
 	if resp.Token != "" {
 		c.SetCookie("access_token", resp.Token, 86400, "/", "", false, true)
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Email СѓСЃРїРµС€РЅРѕ РїРѕРґС‚РІРµСЂР¶РґС‘РЅ", "token": resp.Token})
+	c.JSON(http.StatusOK, gin.H{"message": "", "token": resp.Token})
 }
 
 func (g *Gateway) GetProfile(c *gin.Context) {
@@ -110,7 +109,7 @@ func (g *Gateway) GetProfile(c *gin.Context) {
 func (g *Gateway) Logout(c *gin.Context) {
 	_, _ = g.auth.Logout(ctx(), &pbauth.LogoutRequest{UserId: userID(c)})
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.JSON(http.StatusOK, gin.H{"message": "РЈСЃРїРµС€РЅС‹Р№ РІС‹С…РѕРґ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) ResendVerification(c *gin.Context) {
@@ -119,7 +118,7 @@ func (g *Gateway) ResendVerification(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РџРёСЃСЊРјРѕ РѕС‚РїСЂР°РІР»РµРЅРѕ РїРѕРІС‚РѕСЂРЅРѕ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) ChangePassword(c *gin.Context) {
@@ -128,7 +127,7 @@ func (g *Gateway) ChangePassword(c *gin.Context) {
 		NewPassword string `json:"new_password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	_, err := g.auth.ChangePassword(ctx(), &pbauth.ChangePasswordRequest{
@@ -138,7 +137,7 @@ func (g *Gateway) ChangePassword(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РџР°СЂРѕР»СЊ СѓСЃРїРµС€РЅРѕ РёР·РјРµРЅРµРЅ"})
+	c.JSON(http.StatusOK, gin.H{"message": ""})
 }
 
 func (g *Gateway) UpdateProfile(c *gin.Context) {
@@ -150,7 +149,7 @@ func (g *Gateway) UpdateProfile(c *gin.Context) {
 		DateOfBirth *string `json:"date_of_birth"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
 	r := &pb.UpdateProfileRequest{UserId: userID(c)}
@@ -178,5 +177,5 @@ func (g *Gateway) UpdateProfile(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "РџСЂРѕС„РёР»СЊ РѕР±РЅРѕРІР»РµРЅ", "data": userJSON(resp, true)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": userJSON(resp, true)})
 }

@@ -12,7 +12,6 @@ import (
 	"messengermax/pkg/nats"
 )
 
-// BotUsername is the well-known AI assistant username seeded in authservice.
 const BotUsername = "Ассистент"
 
 type Server struct {
@@ -496,8 +495,6 @@ func (s *Server) publishCreated(chatID uint, m *entity.Message, reactions []enti
 	}
 }
 
-// HandleCallEnded consumes calls.call.ended events and writes a system
-// message ("call") into the chat the call originated from.
 func (s *Server) HandleCallEnded(value []byte) {
 	var e nats.EventCallEnded
 	if err := json.Unmarshal(value, &e); err != nil {
@@ -565,8 +562,6 @@ func contains(ids []uint, id uint) bool {
 	return false
 }
 
-// isSelfChat reports whether a chat has only the given user as a participant
-// (i.e. the user's own "Избранное" saved-messages chat).
 func isSelfChat(ids []uint, userID uint) bool {
 	if len(ids) == 0 {
 		return false

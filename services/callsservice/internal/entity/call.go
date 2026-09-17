@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// CallStatus mirrors the gRPC CallStatus enum for DB storage.
 type CallStatus string
 
 const (
@@ -16,7 +15,6 @@ const (
 	CallStatusCancelled CallStatus = "cancelled"
 )
 
-// CallType mirrors the gRPC CallType enum for DB storage.
 type CallType string
 
 const (
@@ -24,7 +22,6 @@ const (
 	CallTypeVideo CallType = "video"
 )
 
-// Call records a single call session between two users.
 type Call struct {
 	ID           uint       `gorm:"primarykey" json:"id"`
 	CreatedAt    time.Time  `json:"created_at"`

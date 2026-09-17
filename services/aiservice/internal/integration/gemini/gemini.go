@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-// ChatMessage is a single turn in the conversation history.
 type ChatMessage struct {
 	Text  string `json:"text"`
 	IsBot bool   `json:"is_bot"`
@@ -39,7 +38,6 @@ type geminiResponse struct {
 	} `json:"error"`
 }
 
-// Client talks to the Google Generative Language API.
 type Client struct {
 	apiKey  string
 	httpCli *http.Client
@@ -55,7 +53,6 @@ func NewClient(apiKey string) *Client {
 	}
 }
 
-// GenerateResponse produces an assistant reply for the given history.
 func (c *Client) GenerateResponse(history []ChatMessage) (string, error) {
 	if c == nil {
 		return "", fmt.Errorf("gemini client is not configured")

@@ -18,7 +18,6 @@ import (
 	"messengermax/pushservice/internal/repo"
 )
 
-// Sender sends push notifications via FCM v1 HTTP API.
 type Sender struct {
 	credentialsPath string
 	tokenRepo       repo.DeviceTokenRepository
@@ -56,8 +55,6 @@ func New(credentialsPath string, tokenRepo repo.DeviceTokenRepository) *Sender {
 	}
 }
 
-// SendPush delivers a title/body notification to all of the user's devices.
-// The chatID is embedded in the message data so clients can deep-link to the chat.
 func (s *Sender) SendPush(ctx context.Context, userID uint, chatID int64, title, body string) {
 	tokens, err := s.tokenRepo.FindByUserID(userID)
 	if err != nil || len(tokens) == 0 {

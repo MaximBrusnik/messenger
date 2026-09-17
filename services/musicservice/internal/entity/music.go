@@ -12,7 +12,6 @@ const (
 	StatusRejected = "rejected"
 )
 
-// Music is a single moderated track.
 type Music struct {
 	ID           uint           `gorm:"primarykey" json:"id"`
 	CreatedAt    time.Time      `json:"created_at"`

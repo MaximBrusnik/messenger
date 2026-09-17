@@ -41,7 +41,6 @@ func main() {
 	srv := service.NewServer(callRepo, producer)
 	wsCtrl := ws.NewController(jwtManager, hubInstance, srv)
 
-	// expire ringing calls that nobody accepted
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go sweepMissedCalls(ctx, srv, wsCtrl)
@@ -75,8 +74,6 @@ func main() {
 	}
 }
 
-// sweepMissedCalls marks ringing calls that exceeded the ring timeout as
-// missed, notifying participants over the signaling channel.
 func sweepMissedCalls(ctx context.Context, srv *service.Server, ctrl *ws.Controller) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()

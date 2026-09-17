@@ -10,7 +10,6 @@ import (
 
 var ErrNotFound = errors.New("record not found")
 
-// UserRepository provides auth-scoped access to user credentials.
 type UserRepository interface {
 	Create(user *entity.User) error
 	FindByID(id uint) (*entity.User, error)

@@ -1,4 +1,3 @@
-// Package postgres provides a shared GORM Postgres connection with retries.
 package postgres
 
 import (
@@ -14,7 +13,6 @@ import (
 	"messengermax/pkg/config"
 )
 
-// New connects to Postgres with a bounded retry loop until the DB is reachable.
 func New(cfg config.Postgres) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable connect_timeout=5",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)

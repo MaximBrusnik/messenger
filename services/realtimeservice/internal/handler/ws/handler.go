@@ -68,8 +68,6 @@ func (c *Controller) Handle(gctx *gin.Context) {
 	c.readLoop(conn, userID, cancel)
 }
 
-// DisconnectUser programmatically tears down a user's connection and
-// publishes the offline status.
 func (c *Controller) DisconnectUser(ctx context.Context, userID uint) error {
 	conn := c.hub.Disconnect(userID)
 	if conn != nil {
@@ -111,10 +109,7 @@ func (c *Controller) readLoop(conn *websocket.Conn, userID uint, cancel context.
 	cancel()
 	c.hub.Unregister(userID, conn)
 	_ = conn.Close()
-	// The connection may have been replaced by a newer one (e.g. a refresh or
-	// reconnect that registered a new socket for the same user before this
-	// cleanup ran). In that case the user is still online — don't clear the
-	// Redis marker or broadcast an offline event.
+
 	if c.hub.IsOnline(userID) {
 		return
 	}

@@ -10,8 +10,6 @@ import (
 	"messengermax/pkg/nats"
 )
 
-// RingTimeout is how long a call may stay in "ringing" before the callee
-// is considered to have missed it.
 const RingTimeout = 30 * time.Second
 
 type Server struct {
@@ -67,7 +65,6 @@ func (s *Server) AcceptCall(ctx context.Context, callID, userID uint) (*entity.C
 	if call.Status != entity.CallStatusRinging {
 		return nil, errFailedPrecondition("звонок уже завершён")
 	}
-	// Only the callee may accept, but allow either participant for robustness.
 	call.Status = entity.CallStatusActive
 	if userID != 0 {
 		call.AcceptedAtMs = time.Now().UnixMilli()
@@ -98,7 +95,6 @@ func (s *Server) EndCall(ctx context.Context, callID, userID uint, reason string
 	if call.AcceptedAtMs > 0 {
 		call.DurationMs = now - call.AcceptedAtMs
 	} else {
-		// Ringing call that was never accepted: no duration.
 		call.DurationMs = 0
 	}
 
@@ -151,25 +147,18 @@ func (s *Server) EndCallForSignaling(ctx context.Context, callID, userID uint, r
 	return s.EndCall(ctx, callID, userID, reason)
 }
 
-// FindActiveForSignaling is used by the WebSocket controller to tear down a
-// call when a participant's signaling connection drops.
 func (s *Server) FindActiveForSignaling(ctx context.Context, userID uint) (*entity.Call, error) {
 	return s.GetActiveCall(ctx, userID)
 }
 
-// FindExpiredRinging returns ringing calls that exceeded their ring timeout.
 func (s *Server) FindExpiredRinging(nowMs int64) ([]entity.Call, error) {
 	return s.callRepo.FindExpiredRinging(nowMs)
 }
 
-// ExpireRingingCall ends a ringing call that nobody accepted (ring timeout).
-// It routes through EndCall so the call-ended event is published.
 func (s *Server) ExpireRingingCall(ctx context.Context, call *entity.Call) (*entity.Call, error) {
 	return s.EndCall(ctx, call.ID, call.CallerID, "timeout")
 }
 
-// publishCallEnded emits the call-ended event so the chat service can write
-// a system message into the originating chat.
 func (s *Server) publishCallEnded(call *entity.Call) {
 	if s.producer == nil || call.ChatID == 0 {
 		return

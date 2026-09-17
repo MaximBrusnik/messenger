@@ -6,8 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Chat represents a private or group conversation. Participants are stored
-// ONLY as user ids (no FK) — profile data belongs to the userservice.
 type Chat struct {
 	ID              uint           `gorm:"primarykey" json:"id"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -19,7 +17,6 @@ type Chat struct {
 	PinnedMessageID *uint          `gorm:"default:null" json:"pinned_message_id,omitempty"`
 }
 
-// ChatUser is the many-to-many join between chats and users.
 type ChatUser struct {
 	ChatID     uint      `gorm:"primaryKey" json:"chat_id"`
 	UserID     uint      `gorm:"primaryKey" json:"user_id"`
@@ -29,7 +26,6 @@ type ChatUser struct {
 	LastRead   time.Time `json:"last_read,omitempty"`
 }
 
-// Message is a single chat message.
 type Message struct {
 	ID                     uint           `gorm:"primarykey" json:"id"`
 	CreatedAt              time.Time      `json:"created_at"`
@@ -53,7 +49,6 @@ type Message struct {
 	ForwardedFromMessageID uint           `json:"forwarded_from_message_id,omitempty"`
 }
 
-// MessageReaction has a composite primary key of message+user+reaction.
 type MessageReaction struct {
 	MessageID uint      `gorm:"primaryKey" json:"message_id"`
 	UserID    uint      `gorm:"primaryKey" json:"user_id"`

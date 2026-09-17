@@ -8,15 +8,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// WSMessage is the JSON envelope exchanged through the call signaling
-// WebSocket. Type carries the semantic (CALL_INVITE, CALL_ACCEPT ...),
-// payload is the message body routed to one or both peers.
 type WSMessage struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload"`
 }
 
-// Client is a single WebSocket connection.
 type Client struct {
 	conn   *websocket.Conn
 	mu     sync.Mutex
@@ -30,9 +26,6 @@ func (c *Client) writeJSON(v interface{}) error {
 	return c.conn.WriteJSON(v)
 }
 
-// Hub tracks connected clients by user id. One connection per user
-// (last-wins). Messages are relayed to a target user (and optionally a
-// call room shared by two users).
 type Hub struct {
 	clients   map[uint]*Client
 	clientsMu sync.RWMutex
@@ -42,7 +35,6 @@ func New() *Hub {
 	return &Hub{clients: make(map[uint]*Client)}
 }
 
-// Register adds a connection, closing any previous one for the user.
 func (h *Hub) Register(userID uint, conn *websocket.Conn) {
 	h.clientsMu.Lock()
 	if prev, ok := h.clients[userID]; ok {
@@ -52,7 +44,6 @@ func (h *Hub) Register(userID uint, conn *websocket.Conn) {
 	h.clientsMu.Unlock()
 }
 
-// Unregister removes the connection if it is still current.
 func (h *Hub) Unregister(userID uint, conn *websocket.Conn) {
 	h.clientsMu.Lock()
 	if c, ok := h.clients[userID]; ok && c.conn == conn {
@@ -61,7 +52,6 @@ func (h *Hub) Unregister(userID uint, conn *websocket.Conn) {
 	h.clientsMu.Unlock()
 }
 
-// IsOnline reports whether the user has a live signaling connection.
 func (h *Hub) IsOnline(userID uint) bool {
 	h.clientsMu.RLock()
 	defer h.clientsMu.RUnlock()
@@ -69,7 +59,6 @@ func (h *Hub) IsOnline(userID uint) bool {
 	return ok
 }
 
-// SendToUser delivers a message to a single connected user.
 func (h *Hub) SendToUser(userID uint, msg WSMessage) {
 	h.clientsMu.RLock()
 	c, ok := h.clients[userID]
@@ -81,7 +70,6 @@ func (h *Hub) SendToUser(userID uint, msg WSMessage) {
 	}
 }
 
-// SendToUsers delivers a message to a set of users concurrently.
 func (h *Hub) SendToUsers(userIDs []uint, msg WSMessage) {
 	for _, id := range userIDs {
 		id := id

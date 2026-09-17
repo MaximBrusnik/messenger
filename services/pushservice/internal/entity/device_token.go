@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// DeviceToken stores a push notification token per user/platform.
 type DeviceToken struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`

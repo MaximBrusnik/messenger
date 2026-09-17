@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// User holds authentication-related fields owned by the auth service.
 type User struct {
 	ID                uint           `gorm:"primarykey" json:"id"`
 	CreatedAt         time.Time      `json:"created_at"`

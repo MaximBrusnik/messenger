@@ -1,5 +1,3 @@
-// Package nats provides a JetStream-backed event bus with the same
-// producer/consumer API previously used for Kafka.
 package nats
 
 import (
@@ -47,8 +45,6 @@ var AllTopics = []string{
 	TopicAITrigger,
 }
 
-// connect establishes a NATS connection with retries and ensures the
-// JetStream stream that captures all event subjects exists.
 func connect(url string) (*nats.Conn, nats.JetStreamContext) {
 	var nc *nats.Conn
 	var err error
@@ -111,7 +107,6 @@ func ensureStream(js nats.JetStreamContext) error {
 	return err
 }
 
-// Producer is a thin wrapper around a NATS JetStream publisher.
 type Producer struct {
 	mu  sync.Mutex
 	url string
@@ -119,7 +114,6 @@ type Producer struct {
 	js  nats.JetStreamContext
 }
 
-// NewProducer creates a NATS producer for the given server URL.
 func NewProducer(url string) *Producer {
 	p := &Producer{url: url}
 	p.connect()
@@ -133,7 +127,6 @@ func (p *Producer) connect() {
 	p.mu.Unlock()
 }
 
-// Publish marshals a JSON-safe event struct to a subject.
 func (p *Producer) Publish(topic string, key string, value interface{}) {
 	p.mu.Lock()
 	js := p.js
@@ -157,7 +150,6 @@ func (p *Producer) Publish(topic string, key string, value interface{}) {
 	}
 }
 
-// Close closes the underlying connection.
 func (p *Producer) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -167,15 +159,12 @@ func (p *Producer) Close() error {
 	return nil
 }
 
-// Consumer is a JetStream durable queue consumer with an event handler.
 type Consumer struct {
 	nc     *nats.Conn
 	subs   []*nats.Subscription
 	handle func(topic string, key string, value []byte)
 }
 
-// NewConsumer creates a durable JetStream consumer for a queue group
-// reading the given subjects. Callers must call Run to keep it alive.
 func NewConsumer(url string, groupID string, topics []string, handle func(topic, key string, value []byte)) *Consumer {
 	c := &Consumer{handle: handle}
 	nc, js := connect(url)
@@ -205,7 +194,6 @@ func NewConsumer(url string, groupID string, topics []string, handle func(topic,
 	return c
 }
 
-// Run blocks until the context is cancelled, then cleans up.
 func (c *Consumer) Run(ctx context.Context) {
 	<-ctx.Done()
 	for _, s := range c.subs {

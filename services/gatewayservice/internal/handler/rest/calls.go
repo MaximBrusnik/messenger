@@ -11,7 +11,7 @@ import (
 // GetCallHistory returns the paginated call history for the authenticated user.
 func (g *Gateway) GetCallHistory(c *gin.Context) {
 	if g.calls == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "СЃРµСЂРІРёСЃ Р·РІРѕРЅРєРѕРІ РЅРµРґРѕСЃС‚СѓРїРµРЅ"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": ""})
 		return
 	}
 	uid := userID(c)
@@ -45,12 +45,12 @@ func (g *Gateway) GetCallHistory(c *gin.Context) {
 // GetCall returns the details of a single call.
 func (g *Gateway) GetCall(c *gin.Context) {
 	if g.calls == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "СЃРµСЂРІРёСЃ Р·РІРѕРЅРєРѕРІ РЅРµРґРѕСЃС‚СѓРїРµРЅ"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": ""})
 		return
 	}
 	id, err := parseID(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Р№ ID Р·РІРѕРЅРєР°"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	// FindActiveCall does not support single-call lookup; return the session
@@ -59,11 +59,11 @@ func (g *Gateway) GetCall(c *gin.Context) {
 	uid := userID(c)
 	resp, err := g.calls.GetActiveCall(c.Request.Context(), &pbcalls.GetActiveCallRequest{UserId: uid})
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Р·РІРѕРЅРѕРє РЅРµ РЅР°Р№РґРµРЅ"})
+		c.JSON(http.StatusNotFound, gin.H{"error": ""})
 		return
 	}
 	if resp.Id != id {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Р·РІРѕРЅРѕРє РЅРµ РЅР°Р№РґРµРЅ"})
+		c.JSON(http.StatusNotFound, gin.H{"error": ""})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{
@@ -83,7 +83,7 @@ func (g *Gateway) GetCall(c *gin.Context) {
 // GetActiveCall returns the currently active call for the authenticated user, if any.
 func (g *Gateway) GetActiveCall(c *gin.Context) {
 	if g.calls == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "СЃРµСЂРІРёСЃ Р·РІРѕРЅРєРѕРІ РЅРµРґРѕСЃС‚СѓРїРµРЅ"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": ""})
 		return
 	}
 	resp, err := g.calls.GetActiveCall(c.Request.Context(), &pbcalls.GetActiveCallRequest{UserId: userID(c)})

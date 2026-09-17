@@ -47,7 +47,6 @@ func (r *messageRepository) FindByChatID(chatID uint, limit, offset int) ([]enti
 		Order("created_at DESC").
 		Limit(limit).Offset(offset).
 		Find(&messages).Error
-	// reverse to chronological order (oldest first) for display
 	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
 		messages[i], messages[j] = messages[j], messages[i]
 	}

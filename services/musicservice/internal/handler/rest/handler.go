@@ -14,7 +14,6 @@ import (
 	"messengermax/musicservice/internal/repo"
 )
 
-// Handler exposes the file-facing music endpoints: upload, stream, download.
 type Handler struct {
 	musicRepo repo.MusicRepository
 	store     *filestore.Store
@@ -29,7 +28,6 @@ var allowedExt = map[string]bool{
 	".flac": true, ".aac": true, ".wma": true,
 }
 
-// Upload accepts a single multipart audio file, stores it and creates a record.
 func (h *Handler) Upload(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	isAdmin := c.GetBool("is_admin")
@@ -90,7 +88,6 @@ func (h *Handler) Upload(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"id": m.ID, "title": m.Title, "artist": m.Artist, "status": m.Status})
 }
 
-// Stream serves the track for playback.
 func (h *Handler) Stream(c *gin.Context) {
 	m, ok := lookup(c, h.musicRepo)
 	if !ok {
@@ -99,7 +96,6 @@ func (h *Handler) Stream(c *gin.Context) {
 	c.File(h.store.Path(m.Filename))
 }
 
-// Download streams the track with a download disposition.
 func (h *Handler) Download(c *gin.Context) {
 	m, ok := lookup(c, h.musicRepo)
 	if !ok {

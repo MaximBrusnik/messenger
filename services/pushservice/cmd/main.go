@@ -32,8 +32,7 @@ func main() {
 	if err := db.AutoMigrate(&entity.DeviceToken{}); err != nil {
 		log.Fatal("push: migrate: ", err)
 	}
-	// Replace the full unique index on device_tokens.token with a partial one
-	// that only covers rows where deleted_at IS NULL.
+
 	if err := db.Exec(`DROP INDEX IF EXISTS idx_device_tokens_token`).Error; err != nil {
 		log.Fatal("push: migrate: drop index: ", err)
 	}
@@ -70,7 +69,6 @@ func handleMessageEvent(ctx context.Context, redisClient *sharedredis.Client, se
 		if err := json.Unmarshal(value, &e); err != nil {
 			return
 		}
-		// do not push for system messages or bot replies
 		if e.Message.SystemType != "" {
 			return
 		}
