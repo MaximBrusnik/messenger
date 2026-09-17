@@ -27,8 +27,6 @@ func (s *Server) GetProfile(ctx context.Context, userID uint) (ProfileView, erro
 		if !errors.Is(err, repo.ErrNotFound) {
 			return ProfileView{}, errInternal("profile not found")
 		}
-		// Fallback: profile was not mirrored during registration. Create an
-		// empty profile on first read so it is always present.
 		p = &entity.Profile{
 			ID:       userID,
 			Username: fmt.Sprintf("user_%d", userID),
@@ -119,7 +117,6 @@ func (s *Server) UpdateProfile(ctx context.Context, userID uint, u ProfileUpdate
 			p.DateOfBirth = &t
 		}
 	}
-	// Admin/bot flags are mirrored from the auth service (internal sync only).
 	if u.IsAdmin != nil {
 		p.IsAdmin = *u.IsAdmin
 	}

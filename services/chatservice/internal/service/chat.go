@@ -68,7 +68,6 @@ func (s *Server) GetUserChats(ctx context.Context, userID uint) ([]ChatResponse,
 	}
 	var res []ChatResponse
 	for _, c := range chats {
-		// skip AI bot private chats in the main list
 		ids, err := s.chatRepo.GetParticipantIDs(c.ID)
 		if err != nil {
 			continue

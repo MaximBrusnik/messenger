@@ -68,7 +68,7 @@ func (r *chatRepository) FindByUserID(userID uint) ([]entity.Chat, error) {
 	var chats []entity.Chat
 	err := r.db.
 		Joins("JOIN chat_users ON chat_users.chat_id = chats.id AND chat_users.user_id = ?", userID).
-		Where("chats.deleted_at IS NULL").
+		Where("chats.deleted_at IS NULL AND chat_users.is_archived = ?", false).
 		Order("chats.updated_at DESC").
 		Find(&chats).Error
 	return chats, err
