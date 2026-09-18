@@ -1493,7 +1493,8 @@ select {
 
 /* ── profile tabs ── */
 .profile-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   border-bottom: 1px solid var(--border);
   padding: 14px 24px 0;
@@ -1501,12 +1502,18 @@ select {
 }
 
 .profile-tab {
-  padding: 8px 14px;
+  padding: 8px 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
   border-radius: var(--r-md) var(--r-md) 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  white-space: nowrap;
   transition: color var(--transition), background var(--transition);
 }
 
@@ -2651,6 +2658,7 @@ select {
 
   .profile-tabs {
     padding: 0 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .chat-item {
