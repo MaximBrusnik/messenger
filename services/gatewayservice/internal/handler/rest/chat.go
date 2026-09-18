@@ -80,7 +80,7 @@ func (g *Gateway) GetMessages(c *gin.Context) {
 	}
 	out := make([]gin.H, 0, len(resp.Messages))
 	for _, m := range resp.Messages {
-		out = append(out, g.messageJSON(ctx(), m))
+		out = append(out, g.messageJSON(ctx(), userID(c), m))
 	}
 	c.JSON(http.StatusOK, gin.H{"data": out})
 }
@@ -119,7 +119,7 @@ func (g *Gateway) SendMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), resp)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), userID(c), resp)})
 }
 
 func (g *Gateway) EditMessage(c *gin.Context) {
@@ -147,7 +147,7 @@ func (g *Gateway) EditMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), resp)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), userID(c), resp)})
 }
 
 func (g *Gateway) DeleteMessage(c *gin.Context) {
@@ -250,7 +250,7 @@ func (g *Gateway) ForwardMessage(c *gin.Context) {
 		HTTPError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), resp)})
+	c.JSON(http.StatusOK, gin.H{"message": "", "data": g.messageJSON(ctx(), userID(c), resp)})
 }
 
 func (g *Gateway) GetOrCreateAIChat(c *gin.Context) {
@@ -328,7 +328,7 @@ func (g *Gateway) GetReactions(c *gin.Context) {
 	for _, r := range resp.Reactions {
 		ids = append(ids, r.UserId)
 	}
-	profiles := g.profilesByID(ctx(), ids)
+	profiles := g.profilesByID(ctx(), userID(c), ids)
 	out := make([]gin.H, 0, len(resp.Reactions))
 	for _, r := range resp.Reactions {
 		out = append(out, reactionJSON(r, profiles))

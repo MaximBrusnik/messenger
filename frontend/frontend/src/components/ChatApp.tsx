@@ -26,6 +26,7 @@ export default function ChatApp() {
   const [activeTab, setActiveTab] = useState<"chats" | "music" | "archived">("chats");
   const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
   const [chatAppearance, setChatAppearance] = useState<Record<number, ChatAppearance>>(loadChatAppearance);
+  const [userStatuses, setUserStatuses] = useState<Record<number, string>>({});
 
   const isMobile = window.innerWidth <= 768;
   const [mobileChat, setMobileChat] = useState(false);
@@ -61,15 +62,29 @@ export default function ChatApp() {
     return () => { void listener.then((l) => l.remove()); };
   }, [callPhase, rejectCall, endCall]);
 
+  const collectStatuses = useCallback((list: Chat[]) => {
+    const statuses: Record<number, string> = {};
+    for (const c of list) {
+      for (const p of c.participants ?? []) {
+        if (p.status) statuses[p.id] = p.status;
+      }
+    }
+    return statuses;
+  }, []);
+
   const loadChats = useCallback(async () => {
     const res = await apiRequest<{ data: Chat[] }>("/chats");
-    setChats(res?.data || []);
-  }, []);
+    const data = res?.data || [];
+    setChats(data);
+    setUserStatuses((prev) => ({ ...prev, ...collectStatuses(data) }));
+  }, [collectStatuses]);
 
   const loadArchivedChats = useCallback(async () => {
     const res = await getArchivedChats();
-    setArchivedChats(res?.data || []);
-  }, []);
+    const data = res?.data || [];
+    setArchivedChats(data);
+    setUserStatuses((prev) => ({ ...prev, ...collectStatuses(data) }));
+  }, [collectStatuses]);
 
   useEffect(() => {
     loadChats();
@@ -96,6 +111,7 @@ export default function ChatApp() {
     }
     setActiveChat(chat);
     if (isMobile) setMobileChat(true);
+    setUserStatuses((prev) => ({ ...prev, ...collectStatuses([chat]) }));
   }
 
   function handleBack() {
@@ -195,6 +211,7 @@ export default function ChatApp() {
   }
 
   const handleUserStatus = useCallback((userId: number, status: string) => {
+    setUserStatuses((prev) => ({ ...prev, [userId]: status }));
     if (userId === user?.id && user) {
       setUser({ ...user, status });
     }
@@ -270,7 +287,7 @@ export default function ChatApp() {
             onBack={isMobile ? handleMusicBack : undefined}
           />
         ) : activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} onArchiveChat={handleArchiveChat} onUnarchiveChat={handleUnarchiveChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
+          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} onArchiveChat={handleArchiveChat} onUnarchiveChat={handleUnarchiveChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} userStatuses={userStatuses} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon"><MessagesSquare size={30} /></div>

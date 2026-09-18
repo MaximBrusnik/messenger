@@ -21,7 +21,7 @@ func NewServer(profileRepo repo.ProfileRepository, redis *sharedredis.Client) *S
 	return &Server{profileRepo: profileRepo, redis: redis}
 }
 
-func (s *Server) GetProfile(ctx context.Context, userID uint) (ProfileView, error) {
+func (s *Server) GetProfile(ctx context.Context, userID, viewerID uint) (ProfileView, error) {
 	p, err := s.profileRepo.FindByID(userID)
 	if err != nil {
 		if !errors.Is(err, repo.ErrNotFound) {
@@ -35,18 +35,21 @@ func (s *Server) GetProfile(ctx context.Context, userID uint) (ProfileView, erro
 		if err := s.profileRepo.Create(p); err != nil {
 			return ProfileView{}, errInternal("не удалось создать профиль")
 		}
+		s.hideAvatar(p, viewerID)
 		return ProfileView{Profile: *p, Online: false}, nil
 	}
+	s.hideAvatar(p, viewerID)
 	return ProfileView{Profile: *p, Online: s.isOnline(ctx, p.ID)}, nil
 }
 
-func (s *Server) GetProfilesBulk(ctx context.Context, ids []uint) ([]ProfileView, error) {
+func (s *Server) GetProfilesBulk(ctx context.Context, ids []uint, viewerID uint) ([]ProfileView, error) {
 	out := make([]ProfileView, 0, len(ids))
 	for _, id := range ids {
 		p, err := s.profileRepo.FindByID(id)
 		if err != nil {
 			continue
 		}
+		s.hideAvatar(p, viewerID)
 		out = append(out, ProfileView{Profile: *p, Online: s.isOnline(ctx, p.ID)})
 	}
 	return out, nil
@@ -57,6 +60,9 @@ func (s *Server) GetAllUsers(ctx context.Context, excludeID uint) ([]entity.Prof
 	if err != nil {
 		return nil, errInternal("failed to list users")
 	}
+	for i := range list {
+		s.hideAvatar(&list[i], excludeID)
+	}
 	return list, nil
 }
 
@@ -64,6 +70,9 @@ func (s *Server) SearchUsers(ctx context.Context, query string, excludeID uint) 
 	list, err := s.profileRepo.Search(query, excludeID)
 	if err != nil {
 		return nil, errInternal("search failed")
+	}
+	for i := range list {
+		s.hideAvatar(&list[i], excludeID)
 	}
 	return list, nil
 }
@@ -134,6 +143,9 @@ func (s *Server) GetContacts(ctx context.Context, userID uint) ([]entity.Profile
 	if err != nil {
 		return nil, errInternal("contacts failed")
 	}
+	for i := range list {
+		s.hideAvatar(&list[i], userID)
+	}
 	return list, nil
 }
 
@@ -179,6 +191,25 @@ func (s *Server) ResolveUserByName(ctx context.Context, username string) (uint, 
 		return 0, false, err
 	}
 	return p.ID, true, nil
+}
+
+func (s *Server) hideAvatar(p *entity.Profile, viewerID uint) {
+	if p == nil || viewerID == 0 || p.Avatar == "" {
+		return
+	}
+	switch p.AvatarPrivacy {
+	case "nobody":
+		if p.ID != viewerID {
+			p.Avatar = ""
+		}
+	case "contacts":
+		if p.ID != viewerID {
+			ok, err := s.profileRepo.IsContact(p.ID, viewerID)
+			if err != nil || !ok {
+				p.Avatar = ""
+			}
+		}
+	}
 }
 
 func (s *Server) isOnline(ctx context.Context, userID uint) bool {

@@ -24,7 +24,11 @@ func NewServer(svc *service.Server) *Server {
 }
 
 func (s *Server) GetProfile(ctx context.Context, req *pb.GetProfileRequest) (*pb.UserProfile, error) {
-	v, err := s.svc.GetProfile(ctx, uint(req.UserId))
+	viewer := uint(req.ViewerId)
+	if viewer == 0 {
+		viewer = uint(req.UserId)
+	}
+	v, err := s.svc.GetProfile(ctx, uint(req.UserId), viewer)
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -39,7 +43,7 @@ func (s *Server) GetProfilesBulk(ctx context.Context, req *pb.GetProfilesBulkReq
 	for i, id := range req.UserIds {
 		ids[i] = uint(id)
 	}
-	views, err := s.svc.GetProfilesBulk(ctx, ids)
+	views, err := s.svc.GetProfilesBulk(ctx, ids, uint(req.ViewerId))
 	if err != nil {
 		return nil, toGRPCError(err)
 	}

@@ -86,7 +86,7 @@ func (g *Gateway) GetUser(c *gin.Context) {
 		return
 	}
 	me := userID(c)
-	resp, err := g.usr.GetProfile(ctx(), &pb.GetProfileRequest{UserId: id})
+	resp, err := g.usr.GetProfile(ctx(), &pb.GetProfileRequest{UserId: id, ViewerId: me})
 	if err != nil {
 		HTTPError(c, err)
 		return

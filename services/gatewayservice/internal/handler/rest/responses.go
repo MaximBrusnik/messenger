@@ -44,7 +44,7 @@ func userJSON(p *pbuser.UserProfile, self bool) gin.H {
 	return h
 }
 
-func (g *Gateway) profilesByID(ctx context.Context, ids []uint64) map[uint64]*pbuser.UserProfile {
+func (g *Gateway) profilesByID(ctx context.Context, viewer uint64, ids []uint64) map[uint64]*pbuser.UserProfile {
 	seen := make(map[uint64]bool)
 	var uniq []uint64
 	for _, id := range ids {
@@ -58,7 +58,7 @@ func (g *Gateway) profilesByID(ctx context.Context, ids []uint64) map[uint64]*pb
 	if len(uniq) == 0 {
 		return out
 	}
-	resp, err := g.usr.GetProfilesBulk(ctx, &pbuser.GetProfilesBulkRequest{UserIds: uniq})
+	resp, err := g.usr.GetProfilesBulk(ctx, &pbuser.GetProfilesBulkRequest{UserIds: uniq, ViewerId: viewer})
 	if err != nil {
 		return out
 	}
@@ -87,15 +87,15 @@ func reactionJSON(r *pbchat.Reaction, profiles map[uint64]*pbuser.UserProfile) g
 	return h
 }
 
-func (g *Gateway) messageJSON(ctx context.Context, m *pbchat.Message) gin.H {
+func (g *Gateway) messageJSON(ctx context.Context, viewer uint64, m *pbchat.Message) gin.H {
 	profileIDs := []uint64{m.SenderId}
 	if m.IsForwarded && m.ForwardedFromSenderId > 0 {
 		profileIDs = append(profileIDs, m.ForwardedFromSenderId)
 	}
-	profiles := g.profilesByID(ctx, profileIDs)
+	profiles := g.profilesByID(ctx, viewer, profileIDs)
 	sender := gin.H{}
 	if p, ok := profiles[m.SenderId]; ok {
-		sender = userJSON(p, p.Id == m.SenderId)
+		sender = userJSON(p, p.Id == viewer)
 	}
 
 	reactions := make([]gin.H, 0, len(m.Reactions))
@@ -155,7 +155,7 @@ func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) g
 	for _, p := range c.Participants {
 		pids = append(pids, p.UserId)
 	}
-	profiles := g.profilesByID(ctx, pids)
+	profiles := g.profilesByID(ctx, viewer, pids)
 
 	participants := make([]gin.H, 0, len(c.Participants))
 	for _, p := range c.Participants {
@@ -204,7 +204,7 @@ func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) g
 		h["last_message"] = lastMessageJSON(c.LastMessage)
 	}
 	if c.PinnedMessage != nil {
-		h["pinned_message"] = g.messageJSON(ctx, c.PinnedMessage)
+		h["pinned_message"] = g.messageJSON(ctx, viewer, c.PinnedMessage)
 	}
 	return h
 }

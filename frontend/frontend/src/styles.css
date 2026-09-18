@@ -695,6 +695,22 @@ select {
   color: var(--text-faint);
 }
 
+.chat-header-status-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--success);
+}
+
+.chat-header-status-online::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
 .chat-header-actions {
   display: flex;
   align-items: center;

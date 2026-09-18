@@ -50,6 +50,7 @@ interface Props {
   onUnarchiveChat?: (chatId: number) => void;
   appearance?: ChatAppearance;
   onAppearanceChange?: (patch: ChatAppearance) => void;
+  userStatuses?: Record<number, string>;
   registerLiveHandlers?: (chatId: number, handlers: ChatLiveHandlers) => void;
   unregisterLiveHandlers?: (chatId: number) => void;
 }
@@ -90,7 +91,7 @@ function formatSize(bytes?: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, onDeleteChat, onArchiveChat, onUnarchiveChat, appearance, onAppearanceChange, registerLiveHandlers, unregisterLiveHandlers }: Props) {
+export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, onDeleteChat, onArchiveChat, onUnarchiveChat, appearance, onAppearanceChange, userStatuses, registerLiveHandlers, unregisterLiveHandlers }: Props) {
   const { user } = useAuth();
   const { startCall } = useCall();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -371,6 +372,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   }
 
   const partner = chat.participants?.find((p) => p.id !== user?.id);
+  const partnerStatus = partner && userStatuses ? userStatuses[partner.id] : undefined;
   const ctxMessage = ctxMsgId !== null ? messages.find((m) => m.id === ctxMsgId) : null;
   const activeBg = appearance?.bg ?? "default";
 
@@ -396,7 +398,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
         </div>
         <div className="chat-header-info" style={{ cursor: partner && !partner.is_bot ? "pointer" : "default" }} onClick={() => partner && !partner.is_bot && onOpenUserProfile?.(partner.id)}>
           <div className="chat-header-name">{chat.is_favorites ? "Избранное" : partner?.username ?? chat.name}</div>
-          <div className="chat-header-status">{chat.is_favorites ? "Сохранённые сообщения" : partner?.is_bot ? "AI-ассистент" : lastSeenLabel(partner?.last_login)}</div>
+          <div className="chat-header-status">{chat.is_favorites ? "Сохранённые сообщения" : partner?.is_bot ? "AI-ассистент" : partnerStatus === "online" ? <span className="chat-header-status-online">в сети</span> : partnerStatus === "offline" ? "не в сети" : lastSeenLabel(partner?.last_login)}</div>
         </div>
         <div className="chat-header-actions">
           {partner && !partner.is_bot && (

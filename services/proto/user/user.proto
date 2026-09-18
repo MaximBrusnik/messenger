@@ -31,10 +31,14 @@ message ResolveUserByNameResponse {
 
 message GetProfileRequest {
   uint64 user_id = 1;
+  // Requester id: used to apply privacy rules (avatar, etc.) for the viewer.
+  uint64 viewer_id = 2;
 }
 
 message GetProfilesBulkRequest {
   repeated uint64 user_ids = 1;
+  // Requester id: used to apply privacy rules (avatar, etc.) for the viewer.
+  uint64 viewer_id = 2;
 }
 
 message GetProfilesBulkResponse {
