@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	"messengermax/chatservice/internal/entity"
@@ -20,6 +22,8 @@ type Server struct {
 	reactionRepo repo.ReactionRepository
 	producer     *nats.Producer
 	botID        uint
+	mu           sync.Mutex
+	resolveBot   func(ctx context.Context) (uint, error)
 }
 
 func NewServer(
@@ -28,6 +32,7 @@ func NewServer(
 	reactionRepo repo.ReactionRepository,
 	producer *nats.Producer,
 	botID uint,
+	resolveBot func(ctx context.Context) (uint, error),
 ) *Server {
 	return &Server{
 		chatRepo:     chatRepo,
@@ -35,7 +40,28 @@ func NewServer(
 		reactionRepo: reactionRepo,
 		producer:     producer,
 		botID:        botID,
+		resolveBot:   resolveBot,
 	}
+}
+
+func (s *Server) ensureBot(ctx context.Context) {
+	if s.botID != 0 || s.resolveBot == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.botID != 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	id, err := s.resolveBot(ctx)
+	if err != nil || id == 0 {
+		log.Printf("chat: lazy AI assistant resolve failed: %v", err)
+		return
+	}
+	s.botID = id
+	log.Printf("chat: AI assistant resolved lazily, id=%d", id)
 }
 
 func (s *Server) CreateChat(ctx context.Context, creatorID uint, chatType, name string, participantIDs []uint) (*ChatResponse, error) {
@@ -255,6 +281,7 @@ func (s *Server) DeleteChat(ctx context.Context, chatID, userID uint) error {
 }
 
 func (s *Server) GetOrCreateAIChat(ctx context.Context, userID uint) (*ChatResponse, error) {
+	s.ensureBot(ctx)
 	if s.botID == 0 {
 		return nil, errUnavailable("AI не настроен")
 	}

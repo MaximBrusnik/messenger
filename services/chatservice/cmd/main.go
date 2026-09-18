@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -37,7 +40,9 @@ func main() {
 	defer producer.Close()
 
 	botID := resolveBotID(cfg)
-	server := service.NewServer(chatRepo, messageRepo, reactionRepo, producer, botID)
+	server := service.NewServer(chatRepo, messageRepo, reactionRepo, producer, botID, func(ctx context.Context) (uint, error) {
+		return resolveBotIDOnce(ctx, cfg)
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -55,20 +60,45 @@ func main() {
 }
 
 func resolveBotID(cfg *config.Config) uint {
+	id, err := resolveBotIDWithRetry(cfg, 60*time.Second, 2*time.Second)
+	if err != nil {
+		log.Printf("chat: AI disabled: %v", err)
+		return 0
+	}
+	log.Printf("chat: AI assistant id=%d", id)
+	return id
+}
+
+func resolveBotIDOnce(ctx context.Context, cfg *config.Config) (uint, error) {
 	conn, err := grpcsrv.Dial(cfg.Services.UserAddr)
 	if err != nil {
-		log.Printf("chat: userservice unreachable, AI disabled: %v", err)
-		return 0
+		return 0, fmt.Errorf("userservice unreachable at %s: %w", cfg.Services.UserAddr, err)
 	}
 	defer conn.Close()
 	client := pbuser.NewUserServiceClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 3_000_000_000)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	resp, err := client.ResolveUserByName(ctx, &pbuser.ResolveUserByNameRequest{Username: service.BotUsername})
-	if err != nil || resp.GetFound() == false {
-		log.Printf("chat: AI assistant not found, AI disabled")
-		return 0
+	if err != nil {
+		return 0, err
 	}
-	log.Printf("chat: AI assistant id=%d", resp.GetUserId())
-	return uint(resp.GetUserId())
+	if !resp.GetFound() {
+		return 0, errors.New("AI assistant not found")
+	}
+	return uint(resp.GetUserId()), nil
+}
+
+func resolveBotIDWithRetry(cfg *config.Config, timeout, interval time.Duration) (uint, error) {
+	deadline := time.Now().Add(timeout)
+	for {
+		id, err := resolveBotIDOnce(context.Background(), cfg)
+		if err == nil {
+			return id, nil
+		}
+		if time.Now().Add(interval).After(deadline) {
+			return 0, err
+		}
+		log.Printf("chat: assistant resolve failed: %v; retrying in %s", err, interval)
+		time.Sleep(interval)
+	}
 }

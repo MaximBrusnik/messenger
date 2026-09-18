@@ -173,7 +173,10 @@ func (s *Server) UpdateSettings(ctx context.Context, userID uint, showOnline boo
 func (s *Server) ResolveUserByName(ctx context.Context, username string) (uint, bool, error) {
 	p, err := s.profileRepo.FindByUsername(username)
 	if err != nil {
-		return 0, false, nil
+		if errors.Is(err, repo.ErrNotFound) {
+			return 0, false, nil
+		}
+		return 0, false, err
 	}
 	return p.ID, true, nil
 }
