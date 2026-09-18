@@ -164,7 +164,7 @@ func (s *Server) GetSettings(ctx context.Context, userID uint) (*entity.Profile,
 	return p, nil
 }
 
-func (s *Server) UpdateSettings(ctx context.Context, userID uint, showOnline bool, lastSeenPrivacy, avatarPrivacy string) (*entity.Profile, error) {
+func (s *Server) UpdateSettings(ctx context.Context, userID uint, showOnline bool, lastSeenPrivacy, avatarPrivacy string, soundEnabled *bool) (*entity.Profile, error) {
 	p, err := s.profileRepo.FindByID(userID)
 	if err != nil {
 		return nil, errInternal("profile not found")
@@ -175,6 +175,9 @@ func (s *Server) UpdateSettings(ctx context.Context, userID uint, showOnline boo
 	}
 	if avatarPrivacy != "" {
 		p.AvatarPrivacy = avatarPrivacy
+	}
+	if soundEnabled != nil {
+		p.SoundEnabled = *soundEnabled
 	}
 	if err := s.profileRepo.Update(p); err != nil {
 		return nil, errInternal("update failed")

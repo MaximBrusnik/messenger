@@ -53,6 +53,7 @@ func main() {
 			protected.POST("/auth/resend-verification", gw.ResendVerification)
 			protected.GET("/auth/settings", gw.GetSettings)
 			protected.PUT("/auth/settings", gw.UpdateSettings)
+			protected.GET("/auth/devices", gw.GetDevices)
 
 			protected.GET("/chats", gw.GetChats)
 			protected.POST("/chats", gw.CreateChat)

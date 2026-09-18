@@ -13,12 +13,17 @@ service AuthService {
   rpc ResendVerification(ResendVerificationRequest) returns (Empty);
   rpc Logout(LogoutRequest) returns (Empty);
   rpc ChangePassword(ChangePasswordRequest) returns (Empty);
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
 }
 
 message RegisterRequest {
   string username = 1;
   string email = 2;
   string password = 3;
+  string device_name = 4;
+  string platform = 5;
+  string device_fingerprint = 6;
+  string ip = 7;
 }
 
 // email — основной идентификатор для входа.
@@ -26,10 +31,18 @@ message RegisterRequest {
 message LoginRequest {
   string email = 1;
   string password = 2;
+  string device_name = 3;
+  string platform = 4;
+  string device_fingerprint = 5;
+  string ip = 6;
 }
 
 message VerifyEmailRequest {
   string token = 1;
+  string device_name = 2;
+  string platform = 3;
+  string device_fingerprint = 4;
+  string ip = 5;
 }
 
 message ResendVerificationRequest {
@@ -63,6 +76,25 @@ message ChangePasswordRequest {
   uint64 user_id = 1;
   string old_password = 2;
   string new_password = 3;
+}
+
+message ListSessionsRequest {
+  uint64 user_id = 1;
+  string current_jti = 2;
+}
+
+message ListSessionsResponse {
+  repeated Device devices = 1;
+}
+
+message Device {
+  string name = 1;
+  string platform = 2;
+  string ip = 3;
+  google.protobuf.Timestamp first_login = 4;
+  google.protobuf.Timestamp last_login = 5;
+  uint32 login_count = 6;
+  bool is_current = 7;
 }
 
 message Empty {}

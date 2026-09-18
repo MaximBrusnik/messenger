@@ -1,19 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { CircleCheck, CircleX, KeyRound, LogOut, Palette, Shield, User as UserIcon, X } from "lucide-react";
-import { apiRequest, uploadFile } from "../api/client";
-import type { User, UserSettings } from "../types";
+import {
+  Bell,
+  CircleCheck,
+  CircleX,
+  KeyRound,
+  LogOut,
+  MonitorSmartphone,
+  Palette,
+  Shield,
+  User as UserIcon,
+  X,
+} from "lucide-react";
+import { apiRequest, getDevices, uploadFile } from "../api/client";
+import type { Device, User, UserSettings } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useSettings } from "../context/SettingsContext";
 
 interface Props {
   onClose: () => void;
 }
 
-type Tab = "profile" | "privacy" | "password" | "theme";
+type Tab = "profile" | "privacy" | "password" | "theme" | "notifications" | "devices";
 
 export default function ProfileModal({ onClose }: Props) {
   const { user, setUser } = useAuth();
   const { theme, toggle } = useTheme();
+  const { settings, setSoundEnabled } = useSettings();
   const [tab, setTab] = useState<Tab>("profile");
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -22,6 +35,10 @@ export default function ProfileModal({ onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Devices
+  const [devices, setDevices] = useState<Device[] | null>(null);
+  const [devicesErr, setDevicesErr] = useState<string | null>(null);
 
   // Privacy
   const [showOnline, setShowOnline] = useState(true);
@@ -43,6 +60,26 @@ export default function ProfileModal({ onClose }: Props) {
       setAvatarPrivacy(res.data.avatar_privacy);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (tab !== "devices") return;
+    let active = true;
+    getDevices().then((res) => {
+      if (!active) return;
+      setDevicesErr(null);
+      setDevices(res.data);
+    }).catch(() => {
+      if (active) setDevicesErr("Не удалось загрузить список устройств");
+    });
+    return () => { active = false; };
+  }, [tab]);
+
+  function formatDeviceDate(iso?: string): string {
+    if (!iso) return "—";
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return "—";
+    return date.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
 
   async function saveProfile() {
     setSaving(true);
@@ -152,6 +189,8 @@ export default function ProfileModal({ onClose }: Props) {
         <div className="profile-tabs">
           <div className={`profile-tab${tab === "profile" ? " active" : ""}`} onClick={() => setTab("profile")}><UserIcon size={15} /> Профиль</div>
           <div className={`profile-tab${tab === "privacy" ? " active" : ""}`} onClick={() => setTab("privacy")}><Shield size={15} /> Приватность</div>
+          <div className={`profile-tab${tab === "notifications" ? " active" : ""}`} onClick={() => setTab("notifications")}><Bell size={15} /> Уведомления</div>
+          <div className={`profile-tab${tab === "devices" ? " active" : ""}`} onClick={() => setTab("devices")}><MonitorSmartphone size={15} /> Устройства</div>
           <div className={`profile-tab${tab === "password" ? " active" : ""}`} onClick={() => setTab("password")}><KeyRound size={15} /> Пароль</div>
           <div className={`profile-tab${tab === "theme" ? " active" : ""}`} onClick={() => setTab("theme")}><Palette size={15} /> Тема</div>
         </div>
@@ -260,6 +299,75 @@ export default function ProfileModal({ onClose }: Props) {
               <button className="btn-primary" onClick={saveSettings} disabled={saving}>
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
+
+              <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+              <button className="btn-danger" onClick={handleLogout}>
+                <LogOut size={16} /> Выйти из аккаунта
+              </button>
+            </>
+          )}
+
+          {tab === "notifications" && (
+            <>
+              <div className="form-row theme-row">
+                <div>
+                  <label>Звук новых сообщений</label>
+                  <div className="form-hint">Проигрывать звук при получении нового сообщения</div>
+                </div>
+                <label className="theme-switch">
+                  <input
+                    type="checkbox"
+                    checked={settings?.sound_enabled !== false}
+                    onChange={(e) => setSoundEnabled(e.target.checked)}
+                  />
+                  <span className="theme-switch-track">
+                    <span className="theme-switch-thumb" />
+                  </span>
+                </label>
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+              <button className="btn-danger" onClick={handleLogout}>
+                <LogOut size={16} /> Выйти из аккаунта
+              </button>
+            </>
+          )}
+
+          {tab === "devices" && (
+            <>
+              {devicesErr && <div style={{ color: "#e53935", fontSize: 14, textAlign: "center" }}>{devicesErr}</div>}
+              {!devices && !devicesErr && (
+                <div className="form-hint" style={{ textAlign: "center", padding: 16 }}>Загрузка...</div>
+              )}
+              {devices && devices.length === 0 && (
+                <div className="form-hint" style={{ textAlign: "center", padding: 16 }}>Устройств нет</div>
+              )}
+              {devices && devices.length > 0 && (
+                <div className="devices-list">
+                  {devices.map((d, idx) => (
+                    <div key={idx} className={`device-row${d.is_current ? " current" : ""}`}>
+                      <div className="device-icon">
+                        <MonitorSmartphone size={20} />
+                      </div>
+                      <div className="device-info">
+                        <div className="device-name">
+                          {d.name}
+                          {d.is_current && <span className="device-current">Это устройство</span>}
+                        </div>
+                        <div className="device-sub">
+                          {d.platform}
+                          {d.ip && d.ip !== "" && <span> · {d.ip}</span>}
+                        </div>
+                        <div className="device-sub">
+                          {d.login_count > 1 ? `Входов: ${d.login_count}` : "Первый вход"} · последний — {formatDeviceDate(d.last_login)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "12px 0" }} />
 

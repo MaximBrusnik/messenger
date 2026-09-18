@@ -23,7 +23,9 @@ func NewServer(svc *service.Server) *Server {
 }
 
 func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.AuthResponse, error) {
-	res, err := s.svc.Register(ctx, req.Username, req.Email, req.Password)
+	res, err := s.svc.Register(ctx, req.Username, req.Email, req.Password, service.DeviceInfo{
+		Name: req.DeviceName, Platform: req.Platform, Fingerprint: req.DeviceFingerprint, IP: req.Ip,
+	})
 	if err != nil {
 		return nil, status.Error(apperr.CodeOf(err), apperr.MsgOf(err))
 	}
@@ -31,7 +33,9 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Aut
 }
 
 func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
-	res, err := s.svc.Login(ctx, req.Email, req.Password)
+	res, err := s.svc.Login(ctx, req.Email, req.Password, service.DeviceInfo{
+		Name: req.DeviceName, Platform: req.Platform, Fingerprint: req.DeviceFingerprint, IP: req.Ip,
+	})
 	if err != nil {
 		return nil, status.Error(apperr.CodeOf(err), apperr.MsgOf(err))
 	}
@@ -39,7 +43,9 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthRespo
 }
 
 func (s *Server) VerifyEmail(ctx context.Context, req *pb.VerifyEmailRequest) (*pb.AuthResponse, error) {
-	res, err := s.svc.VerifyEmail(ctx, req.Token)
+	res, err := s.svc.VerifyEmail(ctx, req.Token, service.DeviceInfo{
+		Name: req.DeviceName, Platform: req.Platform, Fingerprint: req.DeviceFingerprint, IP: req.Ip,
+	})
 	if err != nil {
 		return nil, status.Error(apperr.CodeOf(err), apperr.MsgOf(err))
 	}
@@ -65,6 +71,26 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Error(apperr.CodeOf(err), apperr.MsgOf(err))
 	}
 	return &pb.Empty{}, nil
+}
+
+func (s *Server) ListSessions(ctx context.Context, req *pb.ListSessionsRequest) (*pb.ListSessionsResponse, error) {
+	devices, err := s.svc.ListDevices(ctx, uint(req.UserId), req.CurrentJti)
+	if err != nil {
+		return nil, status.Error(apperr.CodeOf(err), apperr.MsgOf(err))
+	}
+	resp := &pb.ListSessionsResponse{Devices: make([]*pb.Device, 0, len(devices))}
+	for _, d := range devices {
+		resp.Devices = append(resp.Devices, &pb.Device{
+			Name:       d.Name,
+			Platform:   d.Platform,
+			Ip:         d.IP,
+			FirstLogin: timestamppb.New(d.FirstLogin),
+			LastLogin:  timestamppb.New(d.LastLogin),
+			LoginCount: uint32(d.LoginCount),
+			IsCurrent:  d.IsCurrent,
+		})
+	}
+	return resp, nil
 }
 
 func toAuthResponse(res *service.AuthResult) *pb.AuthResponse {

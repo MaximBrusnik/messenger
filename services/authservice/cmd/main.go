@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal("auth: ", err)
 	}
-	if err := db.AutoMigrate(&entity.User{}); err != nil {
+	if err := db.AutoMigrate(&entity.User{}, &entity.Session{}); err != nil {
 		log.Fatal("auth: migrate: ", err)
 	}
 

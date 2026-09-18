@@ -1,4 +1,4 @@
-import type { Chat, MusicTrack, User } from "../types";
+import type { Chat, Device, MusicTrack, User } from "../types";
 import type { CallSession, IceConfig } from "../types/call";
 
 const API_URL = "/api/v1";
@@ -139,4 +139,8 @@ export async function getActiveCall() {
 
 export async function getCallHistory() {
   return apiRequest<{ data: CallSession[] }>("/calls/history");
+}
+
+export async function getDevices() {
+  return apiRequest<{ data: Device[] }>("/auth/devices");
 }

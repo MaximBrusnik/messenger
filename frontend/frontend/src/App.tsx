@@ -4,6 +4,7 @@ import type { User } from "./types";
 import { AuthProvider } from "./context/AuthContext";
 import { CallProvider } from "./context/CallContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { SettingsProvider } from "./context/SettingsContext";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import AuthPage from "./components/AuthPage";
 import ChatApp from "./components/ChatApp";
@@ -36,7 +37,9 @@ export default function App() {
       <AuthProvider value={{ user, setUser }}>
         {user ? (
           <CallProvider>
-            <ChatApp />
+            <SettingsProvider>
+              <ChatApp />
+            </SettingsProvider>
           </CallProvider>
         ) : (
           <AuthPage />

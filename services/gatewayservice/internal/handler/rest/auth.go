@@ -35,8 +35,10 @@ func (g *Gateway) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
+	dn, dp, dfp, ip := metaFromRequest(c)
 	resp, err := g.auth.Register(ctx(), &pbauth.RegisterRequest{
 		Username: req.Username, Email: req.Email, Password: req.Password,
+		DeviceName: dn, Platform: dp, DeviceFingerprint: dfp, Ip: ip,
 	})
 	if err != nil {
 		HTTPError(c, err)
@@ -65,8 +67,10 @@ func (g *Gateway) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
 		return
 	}
+	dn, dp, dfp, ip := metaFromRequest(c)
 	resp, err := g.auth.Login(ctx(), &pbauth.LoginRequest{
 		Email: req.Email, Password: req.Password,
+		DeviceName: dn, Platform: dp, DeviceFingerprint: dfp, Ip: ip,
 	})
 	if err != nil {
 		HTTPError(c, err)
@@ -86,7 +90,11 @@ func (g *Gateway) VerifyEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
-	resp, err := g.auth.VerifyEmail(ctx(), &pbauth.VerifyEmailRequest{Token: token})
+	dn, dp, dfp, ip := metaFromRequest(c)
+	resp, err := g.auth.VerifyEmail(ctx(), &pbauth.VerifyEmailRequest{
+		Token:      token,
+		DeviceName: dn, Platform: dp, DeviceFingerprint: dfp, Ip: ip,
+	})
 	if err != nil {
 		HTTPError(c, err)
 		return
@@ -110,6 +118,31 @@ func (g *Gateway) Logout(c *gin.Context) {
 	_, _ = g.auth.Logout(ctx(), &pbauth.LogoutRequest{UserId: userID(c)})
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"message": ""})
+}
+
+func (g *Gateway) GetDevices(c *gin.Context) {
+	currentJTI, _ := c.Get("token_id")
+	jti, _ := currentJTI.(string)
+	resp, err := g.auth.ListSessions(ctx(), &pbauth.ListSessionsRequest{
+		UserId: userID(c), CurrentJti: jti,
+	})
+	if err != nil {
+		HTTPError(c, err)
+		return
+	}
+	out := make([]gin.H, 0, len(resp.Devices))
+	for _, d := range resp.Devices {
+		out = append(out, gin.H{
+			"name":        d.Name,
+			"platform":    d.Platform,
+			"ip":          d.Ip,
+			"first_login": ts(d.FirstLogin),
+			"last_login":  ts(d.LastLogin),
+			"login_count": d.LoginCount,
+			"is_current":  d.IsCurrent,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"data": out})
 }
 
 func (g *Gateway) ResendVerification(c *gin.Context) {

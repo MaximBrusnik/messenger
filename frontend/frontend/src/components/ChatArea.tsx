@@ -28,6 +28,7 @@ import type { Chat, Message, Reaction } from "../types";
 import type { ChatAppearance } from "../utils/chatTheme";
 import { CHAT_COLORS, CHAT_WALLPAPERS } from "../utils/chatTheme";
 import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
 import ForwardPicker from "./ForwardPicker";
 import ImageModal from "./ImageModal";
 import MessageInput from "./MessageInput";
@@ -94,6 +95,7 @@ function formatSize(bytes?: number): string {
 
 export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, onDeleteChat, onArchiveChat, onUnarchiveChat, appearance, onAppearanceChange, userStatuses, registerLiveHandlers, unregisterLiveHandlers }: Props) {
   const { user } = useAuth();
+  const { settings } = useSettings();
   const { startCall } = useCall();
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -156,7 +158,9 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
       return [...prev, msg];
     });
     if (msg.sender_id !== user?.id) {
-      playNotificationSound();
+      if (settings?.sound_enabled !== false) {
+        playNotificationSound();
+      }
       if (document.hidden && "Notification" in window && Notification.permission === "granted") {
         new Notification("MessangerMax", {
           body: `${msg.sender?.username ?? "Пользователь"}: ${msg.text.slice(0, 80)}`,
@@ -165,7 +169,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
       }
       markRead();
     }
-  }, [user?.id, markRead]);
+  }, [user?.id, markRead, settings?.sound_enabled]);
 
   const onMessageEdited = useCallback((msg: Message) => {
     setMessages((prev) =>

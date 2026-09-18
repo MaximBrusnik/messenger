@@ -78,6 +78,17 @@ export interface UserSettings {
   show_online_status: boolean;
   last_seen_privacy: "everyone" | "contacts" | "nobody";
   avatar_privacy: "everyone" | "contacts" | "nobody";
+  sound_enabled: boolean;
+}
+
+export interface Device {
+  name: string;
+  platform: string;
+  ip: string;
+  first_login?: string;
+  last_login?: string;
+  login_count: number;
+  is_current: boolean;
 }
 
 export interface MusicTrack {

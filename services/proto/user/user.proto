@@ -72,6 +72,7 @@ message UpdateSettingsRequest {
   bool show_online_status = 2;
   string last_seen_privacy = 3;
   string avatar_privacy = 4;
+  optional bool sound_enabled = 5;
 }
 
 message UpdateProfileRequest {
@@ -118,6 +119,7 @@ message Settings {
   bool show_online_status = 1;
   string last_seen_privacy = 2;
   string avatar_privacy = 3;
+  bool sound_enabled = 4;
 }
 
 message Empty {}

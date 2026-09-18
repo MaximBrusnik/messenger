@@ -23,6 +23,7 @@ type Profile struct {
 	ShowOnlineStatus bool           `gorm:"default:true" json:"show_online_status"`
 	LastSeenPrivacy  string         `gorm:"size:20;default:'everyone'" json:"last_seen_privacy"`
 	AvatarPrivacy    string         `gorm:"size:20;default:'everyone'" json:"avatar_privacy"`
+	SoundEnabled     bool           `gorm:"default:true" json:"sound_enabled"`
 	LastLogin        time.Time      `json:"last_login,omitempty"`
 }
 

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -19,6 +20,9 @@ type UserRepository interface {
 	Update(user *entity.User) error
 	UpdateLastLogin(userID uint, t interface{}) error
 	UpdatePassword(userID uint, hashed string) error
+	CreateSession(s *entity.Session) error
+	TouchSession(jti string) error
+	ListSessions(userID uint) ([]entity.Session, error)
 }
 
 type userRepository struct {
@@ -79,4 +83,20 @@ func (r *userRepository) UpdateLastLogin(userID uint, t interface{}) error {
 
 func (r *userRepository) UpdatePassword(userID uint, hashed string) error {
 	return r.db.Model(&entity.User{}).Where("id = ?", userID).Update("password", hashed).Error
+}
+
+func (r *userRepository) CreateSession(s *entity.Session) error {
+	return r.db.Create(s).Error
+}
+
+func (r *userRepository) TouchSession(jti string) error {
+	return r.db.Model(&entity.Session{}).Where("id = ?", jti).
+		Update("last_login_at", time.Now()).Error
+}
+
+func (r *userRepository) ListSessions(userID uint) ([]entity.Session, error) {
+	var sessions []entity.Session
+	err := r.db.Where("user_id = ?", userID).
+		Order("created_at DESC").Find(&sessions).Error
+	return sessions, err
 }

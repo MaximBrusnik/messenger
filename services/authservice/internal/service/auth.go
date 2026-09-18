@@ -30,7 +30,7 @@ func NewServer(userRepo repo.UserRepository, jwtManager *jwt.Manager, emailSvc *
 	}
 }
 
-func (s *Server) Register(ctx context.Context, username, emailAddr, password string) (*AuthResult, error) {
+func (s *Server) Register(ctx context.Context, username, emailAddr, password string, dev DeviceInfo) (*AuthResult, error) {
 	if username == "" || emailAddr == "" || password == "" {
 		return nil, errInvalid("все поля обязательны")
 	}
@@ -53,10 +53,10 @@ func (s *Server) Register(ctx context.Context, username, emailAddr, password str
 	s.emailSvc.SendVerificationEmail(user.Email, user.VerificationToken)
 
 	s.syncProfile(user)
-	return s.buildAuthResult(ctx, user)
+	return s.buildAuthResult(ctx, user, dev)
 }
 
-func (s *Server) Login(ctx context.Context, email, password string) (*AuthResult, error) {
+func (s *Server) Login(ctx context.Context, email, password string, dev DeviceInfo) (*AuthResult, error) {
 	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		// legacy: администратор входит по username
@@ -77,10 +77,10 @@ func (s *Server) Login(ctx context.Context, email, password string) (*AuthResult
 	if err := s.userRepo.UpdateLastLogin(user.ID, time.Now()); err != nil {
 		return nil, errInternal("не удалось обновить время входа")
 	}
-	return s.buildAuthResult(ctx, user)
+	return s.buildAuthResult(ctx, user, dev)
 }
 
-func (s *Server) VerifyEmail(ctx context.Context, token string) (*AuthResult, error) {
+func (s *Server) VerifyEmail(ctx context.Context, token string, dev DeviceInfo) (*AuthResult, error) {
 	user, err := s.userRepo.FindByVerificationToken(token)
 	if err != nil {
 		return nil, errInvalid("неверный или истёкший токен")
@@ -90,7 +90,7 @@ func (s *Server) VerifyEmail(ctx context.Context, token string) (*AuthResult, er
 	if err := s.userRepo.Update(user); err != nil {
 		return nil, errInternal("не удалось подтвердить почту")
 	}
-	return s.buildAuthResult(ctx, user)
+	return s.buildAuthResult(ctx, user, dev)
 }
 
 func (s *Server) ResendVerification(ctx context.Context, userID uint) error {
@@ -143,21 +143,90 @@ func (s *Server) adminByUsername(username string) (*entity.User, error) {
 	return user, nil
 }
 
-func (s *Server) buildAuthResult(ctx context.Context, user *entity.User) (*AuthResult, error) {
+func (s *Server) buildAuthResult(ctx context.Context, user *entity.User, dev DeviceInfo) (*AuthResult, error) {
 	if s.requireEmailVerification && !user.EmailVerified {
 		return &AuthResult{
 			EmailVerificationRequired: true,
 			User:                      user,
 		}, nil
 	}
-	token, err := s.jwtManager.GenerateToken(user.ID)
+	token, jti, err := s.jwtManager.GenerateToken(user.ID)
 	if err != nil {
 		return nil, errInternal("не удалось выдать токен")
+	}
+	if err := s.userRepo.CreateSession(&entity.Session{
+		ID:                jti,
+		UserID:            user.ID,
+		DeviceName:        dev.Name,
+		Platform:          dev.Platform,
+		DeviceFingerprint: dev.Fingerprint,
+		IP:                dev.IP,
+		TokenExpiresAt:    time.Now().Add(24 * time.Hour),
+		LastLoginAt:       time.Now(),
+	}); err != nil {
+		log.Printf("auth: record session for %d failed: %v", user.ID, err)
 	}
 	return &AuthResult{
 		Token: token,
 		User:  user,
 	}, nil
+}
+
+func (s *Server) ListDevices(ctx context.Context, userID uint, currentJTI string) ([]DeviceSummary, error) {
+	sessions, err := s.userRepo.ListSessions(userID)
+	if err != nil {
+		return nil, errInternal("не удалось получить список устройств")
+	}
+	if currentJTI != "" {
+		_ = s.userRepo.TouchSession(currentJTI)
+	}
+	currentFP := ""
+	for _, sess := range sessions {
+		if sess.ID == currentJTI {
+			currentFP = sess.DeviceFingerprint
+			break
+		}
+	}
+	groups := make(map[string]*DeviceSummary, len(sessions))
+	order := make([]string, 0, len(sessions))
+	for _, sess := range sessions {
+		fp := sess.DeviceFingerprint
+		if fp == "" {
+			fp = "unknown"
+		}
+		g, ok := groups[fp]
+		if !ok {
+			g = &DeviceSummary{
+				Name:       sess.DeviceName,
+				Platform:   sess.Platform,
+				FirstLogin: sess.CreatedAt,
+				LastLogin:  sess.LastLoginAt,
+			}
+			if g.LastLogin.IsZero() {
+				g.LastLogin = sess.CreatedAt
+			}
+			groups[fp] = g
+			order = append(order, fp)
+		}
+		g.LoginCount++
+		if sess.CreatedAt.Before(g.FirstLogin) {
+			g.FirstLogin = sess.CreatedAt
+		}
+		if sess.LastLoginAt.After(g.LastLogin) {
+			g.LastLogin = sess.LastLoginAt
+		}
+		if g.IP == "" {
+			g.IP = sess.IP
+		}
+		if fp == currentFP {
+			g.IsCurrent = true
+		}
+	}
+	out := make([]DeviceSummary, 0, len(order))
+	for _, fp := range order {
+		out = append(out, *groups[fp])
+	}
+	return out, nil
 }
 
 func (s *Server) syncProfile(user *entity.User) {

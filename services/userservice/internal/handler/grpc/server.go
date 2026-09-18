@@ -121,7 +121,7 @@ func (s *Server) GetSettings(ctx context.Context, req *pb.GetSettingsRequest) (*
 }
 
 func (s *Server) UpdateSettings(ctx context.Context, req *pb.UpdateSettingsRequest) (*pb.Settings, error) {
-	p, err := s.svc.UpdateSettings(ctx, uint(req.UserId), req.ShowOnlineStatus, req.LastSeenPrivacy, req.AvatarPrivacy)
+	p, err := s.svc.UpdateSettings(ctx, uint(req.UserId), req.ShowOnlineStatus, req.LastSeenPrivacy, req.AvatarPrivacy, req.SoundEnabled)
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -174,6 +174,7 @@ func toSettings(p *entity.Profile) *pb.Settings {
 		ShowOnlineStatus: p.ShowOnlineStatus,
 		LastSeenPrivacy:  p.LastSeenPrivacy,
 		AvatarPrivacy:    p.AvatarPrivacy,
+		SoundEnabled:     p.SoundEnabled,
 	}
 }
 

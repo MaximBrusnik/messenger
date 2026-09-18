@@ -28,12 +28,13 @@ func (a *Auth) Required(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Токен не предоставлен"})
 		return
 	}
-	userID, err := a.jwt.ValidateToken(token)
+	userID, jti, err := a.jwt.ParseToken(token)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Неверный токен"})
 		return
 	}
 	c.Set("user_id", userID)
+	c.Set("token_id", jti)
 	c.Set("token", token)
 	c.Next()
 }

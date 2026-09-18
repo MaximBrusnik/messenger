@@ -18,6 +18,7 @@ func (g *Gateway) GetSettings(c *gin.Context) {
 		"show_online_status": resp.ShowOnlineStatus,
 		"last_seen_privacy":  resp.LastSeenPrivacy,
 		"avatar_privacy":     resp.AvatarPrivacy,
+		"sound_enabled":      resp.SoundEnabled,
 	}})
 }
 
@@ -26,6 +27,7 @@ func (g *Gateway) UpdateSettings(c *gin.Context) {
 		ShowOnlineStatus *bool   `json:"show_online_status"`
 		LastSeenPrivacy  *string `json:"last_seen_privacy"`
 		AvatarPrivacy    *string `json:"avatar_privacy"`
+		SoundEnabled     *bool   `json:"sound_enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ", "details": err.Error()})
@@ -40,6 +42,9 @@ func (g *Gateway) UpdateSettings(c *gin.Context) {
 	}
 	if req.AvatarPrivacy != nil {
 		r.AvatarPrivacy = *req.AvatarPrivacy
+	}
+	if req.SoundEnabled != nil {
+		r.SoundEnabled = req.SoundEnabled
 	}
 	if _, err := g.usr.UpdateSettings(ctx(), r); err != nil {
 		HTTPError(c, err)
