@@ -158,10 +158,22 @@ func (s *Server) GetMessages(ctx context.Context, chatID, userID uint, limit, of
 	if err != nil {
 		return nil, errInternal("не удалось получить сообщения")
 	}
+	ids := make([]uint, 0, len(messages))
+	for i := range messages {
+		ids = append(ids, messages[i].ID)
+	}
+	reactionsByMsg := make(map[uint][]entity.MessageReaction, len(messages))
+	if len(ids) > 0 {
+		all, err := s.reactionRepo.FindByMessageIDs(ids)
+		if err == nil {
+			for _, r := range all {
+				reactionsByMsg[r.MessageID] = append(reactionsByMsg[r.MessageID], r)
+			}
+		}
+	}
 	res := make([]MessageWithReactions, 0, len(messages))
 	for i := range messages {
-		reactions, _ := s.reactionRepo.FindByMessageID(messages[i].ID)
-		res = append(res, MessageWithReactions{Msg: &messages[i], Reactions: reactions})
+		res = append(res, MessageWithReactions{Msg: &messages[i], Reactions: reactionsByMsg[messages[i].ID]})
 	}
 	return res, nil
 }

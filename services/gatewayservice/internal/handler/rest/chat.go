@@ -16,8 +16,9 @@ func (g *Gateway) GetChats(c *gin.Context) {
 		return
 	}
 	out := make([]gin.H, 0, len(resp.Chats))
+	profiles := g.profilesByID(ctx(), userID(c), chatProfileIDs(resp.Chats))
 	for _, ch := range resp.Chats {
-		out = append(out, g.chatJSON(ctx(), userID(c), ch))
+		out = append(out, g.chatJSONWithProfiles(ctx(), userID(c), ch, profiles))
 	}
 	c.JSON(http.StatusOK, gin.H{"data": out})
 }
@@ -79,8 +80,9 @@ func (g *Gateway) GetMessages(c *gin.Context) {
 		return
 	}
 	out := make([]gin.H, 0, len(resp.Messages))
+	profiles := g.profilesByID(ctx(), userID(c), messageProfileIDs(resp.Messages))
 	for _, m := range resp.Messages {
-		out = append(out, g.messageJSON(ctx(), userID(c), m))
+		out = append(out, g.messageJSONWithProfiles(ctx(), userID(c), m, profiles))
 	}
 	c.JSON(http.StatusOK, gin.H{"data": out})
 }
@@ -306,8 +308,9 @@ func (g *Gateway) GetArchivedChats(c *gin.Context) {
 		return
 	}
 	out := make([]gin.H, 0, len(resp.Chats))
+	profiles := g.profilesByID(ctx(), userID(c), chatProfileIDs(resp.Chats))
 	for _, ch := range resp.Chats {
-		out = append(out, g.chatJSON(ctx(), userID(c), ch))
+		out = append(out, g.chatJSONWithProfiles(ctx(), userID(c), ch, profiles))
 	}
 	c.JSON(http.StatusOK, gin.H{"data": out})
 }
@@ -324,11 +327,7 @@ func (g *Gateway) GetReactions(c *gin.Context) {
 		return
 	}
 	sortReactions(resp.Reactions)
-	var ids []uint64
-	for _, r := range resp.Reactions {
-		ids = append(ids, r.UserId)
-	}
-	profiles := g.profilesByID(ctx(), userID(c), ids)
+	profiles := g.profilesByID(ctx(), userID(c), reactionProfileIDs(resp.Reactions))
 	out := make([]gin.H, 0, len(resp.Reactions))
 	for _, r := range resp.Reactions {
 		out = append(out, reactionJSON(r, profiles))

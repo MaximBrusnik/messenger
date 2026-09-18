@@ -11,6 +11,7 @@ type ReactionRepository interface {
 	Add(reaction *entity.MessageReaction) error
 	Remove(messageID, userID uint, reaction string) error
 	FindByMessageID(messageID uint) ([]entity.MessageReaction, error)
+	FindByMessageIDs(messageIDs []uint) ([]entity.MessageReaction, error)
 }
 
 type reactionRepository struct {
@@ -34,5 +35,14 @@ func (r *reactionRepository) Remove(messageID, userID uint, reaction string) err
 func (r *reactionRepository) FindByMessageID(messageID uint) ([]entity.MessageReaction, error) {
 	var list []entity.MessageReaction
 	err := r.db.Where("message_id = ?", messageID).Find(&list).Error
+	return list, err
+}
+
+func (r *reactionRepository) FindByMessageIDs(messageIDs []uint) ([]entity.MessageReaction, error) {
+	var list []entity.MessageReaction
+	if len(messageIDs) == 0 {
+		return list, nil
+	}
+	err := r.db.Where("message_id IN ?", messageIDs).Find(&list).Error
 	return list, err
 }

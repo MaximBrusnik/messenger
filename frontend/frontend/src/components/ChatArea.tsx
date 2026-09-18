@@ -105,7 +105,6 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -212,22 +211,29 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   }, [loadMessages, chat.id]);
 
   useLayoutEffect(() => {
-    if (scrollPosRef.current && messagesRef.current) {
-      const el = messagesRef.current;
+    const el = messagesRef.current;
+    if (!el) return;
+    if (scrollPosRef.current) {
       el.scrollTop = scrollPosRef.current.scrollTop + (el.scrollHeight - scrollPosRef.current.scrollHeight);
       scrollPosRef.current = null;
+      return;
     }
-  }, [messages]);
-
-  useEffect(() => {
     if (loadMorePendingRef.current) {
       loadMorePendingRef.current = false;
       return;
     }
     if (messages.length > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages]);
+
+  const pinIfAtBottom = useCallback(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
 
   useEffect(() => {
     if (editingId && editRef.current) {
@@ -577,6 +583,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
                           src={m.attachment_url}
                           alt={m.attachment_name}
                           style={{ cursor: "pointer" }}
+                          onLoad={pinIfAtBottom}
                           onClick={() => setSelectedImage({ url: m.attachment_url!, name: m.attachment_name })}
                         />
                       ) : m.attachment_name?.toLowerCase().endsWith(".pdf") ? (
@@ -632,7 +639,6 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       {ctxMsgId !== null && ctxMessage && (

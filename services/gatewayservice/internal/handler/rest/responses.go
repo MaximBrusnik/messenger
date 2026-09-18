@@ -88,11 +88,10 @@ func reactionJSON(r *pbchat.Reaction, profiles map[uint64]*pbuser.UserProfile) g
 }
 
 func (g *Gateway) messageJSON(ctx context.Context, viewer uint64, m *pbchat.Message) gin.H {
-	profileIDs := []uint64{m.SenderId}
-	if m.IsForwarded && m.ForwardedFromSenderId > 0 {
-		profileIDs = append(profileIDs, m.ForwardedFromSenderId)
-	}
-	profiles := g.profilesByID(ctx, viewer, profileIDs)
+	return g.messageJSONWithProfiles(ctx, viewer, m, g.profilesByID(ctx, viewer, messageProfileIDs([]*pbchat.Message{m})))
+}
+
+func (g *Gateway) messageJSONWithProfiles(ctx context.Context, viewer uint64, m *pbchat.Message, profiles map[uint64]*pbuser.UserProfile) gin.H {
 	sender := gin.H{}
 	if p, ok := profiles[m.SenderId]; ok {
 		sender = userJSON(p, p.Id == viewer)
@@ -151,12 +150,10 @@ func (g *Gateway) messageJSON(ctx context.Context, viewer uint64, m *pbchat.Mess
 }
 
 func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) gin.H {
-	pids := make([]uint64, 0, len(c.Participants))
-	for _, p := range c.Participants {
-		pids = append(pids, p.UserId)
-	}
-	profiles := g.profilesByID(ctx, viewer, pids)
+	return g.chatJSONWithProfiles(ctx, viewer, c, g.profilesByID(ctx, viewer, chatProfileIDs([]*pbchat.Chat{c})))
+}
 
+func (g *Gateway) chatJSONWithProfiles(ctx context.Context, viewer uint64, c *pbchat.Chat, profiles map[uint64]*pbuser.UserProfile) gin.H {
 	participants := make([]gin.H, 0, len(c.Participants))
 	for _, p := range c.Participants {
 		if prof, ok := profiles[p.UserId]; ok {
@@ -204,7 +201,7 @@ func (g *Gateway) chatJSON(ctx context.Context, viewer uint64, c *pbchat.Chat) g
 		h["last_message"] = lastMessageJSON(c.LastMessage)
 	}
 	if c.PinnedMessage != nil {
-		h["pinned_message"] = g.messageJSON(ctx, viewer, c.PinnedMessage)
+		h["pinned_message"] = g.messageJSONWithProfiles(ctx, viewer, c.PinnedMessage, profiles)
 	}
 	return h
 }
@@ -235,4 +232,57 @@ func sortReactions(list []*pbchat.Reaction) {
 		}
 		return strings.Compare(list[i].Reaction, list[j].Reaction) < 0
 	})
+}
+
+func messageProfileIDs(msgs []*pbchat.Message) []uint64 {
+	seen := make(map[uint64]bool)
+	var ids []uint64
+	add := func(id uint64) {
+		if id == 0 || seen[id] {
+			return
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	for _, m := range msgs {
+		if m == nil {
+			continue
+		}
+		add(m.SenderId)
+		if m.IsForwarded && m.ForwardedFromSenderId > 0 {
+			add(m.ForwardedFromSenderId)
+		}
+	}
+	return ids
+}
+
+func chatProfileIDs(chats []*pbchat.Chat) []uint64 {
+	seen := make(map[uint64]bool)
+	var ids []uint64
+	for _, c := range chats {
+		if c == nil {
+			continue
+		}
+		for _, p := range c.Participants {
+			if p == nil || p.UserId == 0 || seen[p.UserId] {
+				continue
+			}
+			seen[p.UserId] = true
+			ids = append(ids, p.UserId)
+		}
+	}
+	return ids
+}
+
+func reactionProfileIDs(rs []*pbchat.Reaction) []uint64 {
+	seen := make(map[uint64]bool)
+	var ids []uint64
+	for _, r := range rs {
+		if r == nil || r.UserId == 0 || seen[r.UserId] {
+			continue
+		}
+		seen[r.UserId] = true
+		ids = append(ids, r.UserId)
+	}
+	return ids
 }

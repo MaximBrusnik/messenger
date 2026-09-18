@@ -287,7 +287,7 @@ export default function ChatApp() {
             onBack={isMobile ? handleMusicBack : undefined}
           />
         ) : activeChat ? (
-          <ChatArea chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} onArchiveChat={handleArchiveChat} onUnarchiveChat={handleUnarchiveChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} userStatuses={userStatuses} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
+          <ChatArea key={activeChat.id} chat={activeChat} onBack={isMobile ? handleBack : undefined} onMessage={loadChats} onOpenUserProfile={handleOpenUserProfile} onDeleteChat={handleDeleteChat} onArchiveChat={handleArchiveChat} onUnarchiveChat={handleUnarchiveChat} appearance={chatAppearance[activeChat.id]} onAppearanceChange={(patch) => handleAppearanceChange(activeChat.id, patch)} userStatuses={userStatuses} registerLiveHandlers={registerLiveHandlers} unregisterLiveHandlers={unregisterLiveHandlers} />
         ) : (
           <div className="empty-state">
             <div className="empty-icon"><MessagesSquare size={30} /></div>

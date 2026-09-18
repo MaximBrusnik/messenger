@@ -28,10 +28,10 @@ type ChatUser struct {
 
 type Message struct {
 	ID                     uint           `gorm:"primarykey" json:"id"`
-	CreatedAt              time.Time      `json:"created_at"`
+	ChatID                 uint           `gorm:"index:idx_msg_chat_created,priority:1;not null" json:"chat_id"`
+	CreatedAt              time.Time      `gorm:"index:idx_msg_chat_created,priority:2" json:"created_at"`
 	UpdatedAt              time.Time      `json:"updated_at"`
 	DeletedAt              gorm.DeletedAt `gorm:"index" json:"-"`
-	ChatID                 uint           `gorm:"index;not null" json:"chat_id"`
 	SenderID               uint           `gorm:"index;not null" json:"sender_id"`
 	Text                   string         `gorm:"type:text;not null" json:"text"`
 	IsRead                 bool           `gorm:"default:false" json:"is_read"`

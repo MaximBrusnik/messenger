@@ -43,14 +43,14 @@ func (s *Server) GetProfile(ctx context.Context, userID, viewerID uint) (Profile
 }
 
 func (s *Server) GetProfilesBulk(ctx context.Context, ids []uint, viewerID uint) ([]ProfileView, error) {
-	out := make([]ProfileView, 0, len(ids))
-	for _, id := range ids {
-		p, err := s.profileRepo.FindByID(id)
-		if err != nil {
-			continue
-		}
-		s.hideAvatar(p, viewerID)
-		out = append(out, ProfileView{Profile: *p, Online: s.isOnline(ctx, p.ID)})
+	profiles, err := s.profileRepo.FindByIDs(ids)
+	if err != nil {
+		return nil, errInternal("profiles failed")
+	}
+	out := make([]ProfileView, 0, len(profiles))
+	for i := range profiles {
+		s.hideAvatar(&profiles[i], viewerID)
+		out = append(out, ProfileView{Profile: profiles[i], Online: s.isOnline(ctx, profiles[i].ID)})
 	}
 	return out, nil
 }

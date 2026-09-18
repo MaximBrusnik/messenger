@@ -13,6 +13,7 @@ var ErrNotFound = errors.New("record not found")
 type ProfileRepository interface {
 	Create(p *entity.Profile) error
 	FindByID(id uint) (*entity.Profile, error)
+	FindByIDs(ids []uint) ([]entity.Profile, error)
 	FindByUsername(username string) (*entity.Profile, error)
 	FindAll(excludeID uint) ([]entity.Profile, error)
 	Search(query string, excludeID uint) ([]entity.Profile, error)
@@ -51,6 +52,15 @@ func (r *profileRepository) FindByUsername(username string) (*entity.Profile, er
 		return nil, ErrNotFound
 	}
 	return &p, err
+}
+
+func (r *profileRepository) FindByIDs(ids []uint) ([]entity.Profile, error) {
+	var list []entity.Profile
+	if len(ids) == 0 {
+		return list, nil
+	}
+	err := r.db.Where("id IN ?", ids).Find(&list).Error
+	return list, err
 }
 
 func (r *profileRepository) FindAll(excludeID uint) ([]entity.Profile, error) {
