@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
@@ -57,22 +56,20 @@ func (s *Server) Register(ctx context.Context, username, emailAddr, password str
 	return s.buildAuthResult(ctx, user)
 }
 
-func (s *Server) Login(ctx context.Context, username, password string) (*AuthResult, error) {
-	user, err := s.userRepo.FindByUsername(username)
+func (s *Server) Login(ctx context.Context, email, password string) (*AuthResult, error) {
+	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
-			// fell back to email lookup
-			user, err = s.userRepo.FindByEmail(username)
-		}
+		// legacy: администратор входит по username
+		user, err = s.adminByUsername(email)
 	}
 	if err != nil || user == nil {
-		return nil, errUnauthenticated("неверное имя пользователя или пароль")
+		return nil, errUnauthenticated("неверная почта или пароль")
 	}
 	if !user.IsActive {
 		return nil, errUnauthenticated("аккаунт заблокирован")
 	}
 	if err := user.CheckPassword(password); err != nil {
-		return nil, errUnauthenticated("неверное имя пользователя или пароль")
+		return nil, errUnauthenticated("неверная почта или пароль")
 	}
 	if s.requireEmailVerification && !user.EmailVerified {
 		return nil, errPermissionDenied("подтвердите почту")
@@ -133,6 +130,17 @@ func (s *Server) ChangePassword(ctx context.Context, userID uint, oldPassword, n
 		return errInternal("не удалось сохранить пароль")
 	}
 	return nil
+}
+
+func (s *Server) adminByUsername(username string) (*entity.User, error) {
+	user, err := s.userRepo.FindByUsername(username)
+	if err != nil {
+		return nil, err
+	}
+	if !user.IsAdmin {
+		return nil, repo.ErrNotFound
+	}
+	return user, nil
 }
 
 func (s *Server) buildAuthResult(ctx context.Context, user *entity.User) (*AuthResult, error) {

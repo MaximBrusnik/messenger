@@ -21,8 +21,10 @@ message RegisterRequest {
   string password = 3;
 }
 
+// email — основной идентификатор для входа.
+// Администратор по-прежнему может войти по username (legacy).
 message LoginRequest {
-  string username = 1;
+  string email = 1;
   string password = 2;
 }
 

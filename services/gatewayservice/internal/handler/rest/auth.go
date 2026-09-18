@@ -58,7 +58,7 @@ func (g *Gateway) Register(c *gin.Context) {
 
 func (g *Gateway) Login(c *gin.Context) {
 	var req struct {
-		Username string `json:"username" binding:"required"`
+		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -66,7 +66,7 @@ func (g *Gateway) Login(c *gin.Context) {
 		return
 	}
 	resp, err := g.auth.Login(ctx(), &pbauth.LoginRequest{
-		Username: req.Username, Password: req.Password,
+		Email: req.Email, Password: req.Password,
 	})
 	if err != nil {
 		HTTPError(c, err)

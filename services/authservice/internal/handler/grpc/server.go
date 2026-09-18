@@ -31,7 +31,7 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Aut
 }
 
 func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
-	res, err := s.svc.Login(ctx, req.Username, req.Password)
+	res, err := s.svc.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		return nil, status.Error(apperr.CodeOf(err), apperr.MsgOf(err))
 	}

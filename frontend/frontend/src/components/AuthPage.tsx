@@ -24,7 +24,7 @@ export default function AuthPage() {
 
       const payload =
         mode === "login"
-          ? { username, password }
+          ? { email, password }
           : { username, password, email };
 
       const data = await apiRequest<{ token?: string; requires_email_verification?: boolean }>(
@@ -64,22 +64,22 @@ export default function AuthPage() {
         </div>
         <h2>{mode === "login" ? "Вход" : "Регистрация"}</h2>
 
-        <input
-          placeholder="Имя пользователя"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-        />
-
         {mode === "register" && (
           <input
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Имя пользователя"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
         )}
+
+        <input
+          placeholder="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
 
         <input
           placeholder="Пароль"
