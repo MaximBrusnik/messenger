@@ -99,6 +99,7 @@ func (g *Gateway) SendMessage(c *gin.Context) {
 		AttachmentURL  string `json:"attachment_url"`
 		AttachmentName string `json:"attachment_name"`
 		AttachmentSize *int64 `json:"attachment_size"`
+		ReplyToID      uint64 `json:"reply_to_message_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "", "details": err.Error()})
@@ -116,6 +117,7 @@ func (g *Gateway) SendMessage(c *gin.Context) {
 		UserId: userID(c), ChatId: id, Content: req.Content,
 		AttachmentType: req.AttachmentType, AttachmentUrl: req.AttachmentURL,
 		AttachmentName: req.AttachmentName, AttachmentSize: size,
+		ReplyToMessageId: req.ReplyToID,
 	})
 	if err != nil {
 		HTTPError(c, err)

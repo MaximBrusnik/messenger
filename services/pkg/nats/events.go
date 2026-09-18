@@ -84,6 +84,12 @@ type MessageDTO struct {
 	IsForwarded           bool          `json:"is_forwarded,omitempty"`
 	ForwardedFromSenderID int64         `json:"forwarded_from_sender_id,omitempty"`
 	ForwardedFromChatID   int64         `json:"forwarded_from_chat_id,omitempty"`
+	ReplyToMessageID      int64         `json:"reply_to_message_id,omitempty"`
+	ReplyToSenderID       int64         `json:"reply_to_sender_id,omitempty"`
+	ReplyToText           string        `json:"reply_to_text,omitempty"`
+	ReplyToAttachmentType string        `json:"reply_to_attachment_type,omitempty"`
+	ReplyToAttachmentName string        `json:"reply_to_attachment_name,omitempty"`
+	ReplyToSystemType     string        `json:"reply_to_system_type,omitempty"`
 	Reactions             []ReactionDTO `json:"reactions,omitempty"`
 }
 

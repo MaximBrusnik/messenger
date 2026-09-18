@@ -118,33 +118,50 @@ func (s *Server) GetChat(ctx context.Context, chatID, viewerID uint) (*ChatRespo
 	return s.loadChatResponse(ctx, chatID, viewerID)
 }
 
-func (s *Server) SendMessage(ctx context.Context, chatID, senderID uint, content, attachmentURL, attachmentType, attachmentName string, attachmentSize int64) (*entity.Message, error) {
+func (s *Server) SendMessage(ctx context.Context, chatID, senderID uint, content, attachmentURL, attachmentType, attachmentName string, attachmentSize int64, replyToMessageID uint) (*entity.Message, *entity.Message, error) {
 	if err := s.requireParticipant(chatID, senderID); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if content == "" && attachmentURL == "" {
-		return nil, errInvalid("сообщение пустое")
+		return nil, nil, errInvalid("сообщение пустое")
 	}
 	var size *int
 	if attachmentSize > 0 {
 		n := int(attachmentSize)
 		size = &n
 	}
+	var replyTo *entity.Message
+	if replyToMessageID > 0 {
+		target, err := s.messageRepo.FindByID(replyToMessageID)
+		if err != nil {
+			return nil, nil, errNotFound("сообщение для ответа не найдено")
+		}
+		if target.ChatID != chatID {
+			return nil, nil, errInvalid("нельзя ответить на сообщение из другого чата")
+		}
+		replyTo = target
+	}
+	var replyToID *uint
+	if replyTo != nil {
+		id := replyTo.ID
+		replyToID = &id
+	}
 	msg := &entity.Message{
-		ChatID:         chatID,
-		SenderID:       senderID,
-		Text:           content,
-		AttachmentType: attachmentType,
-		AttachmentURL:  attachmentURL,
-		AttachmentName: attachmentName,
-		AttachmentSize: size,
+		ChatID:           chatID,
+		SenderID:         senderID,
+		Text:             content,
+		AttachmentType:   attachmentType,
+		AttachmentURL:    attachmentURL,
+		AttachmentName:   attachmentName,
+		AttachmentSize:   size,
+		ReplyToMessageID: replyToID,
 	}
 	if err := s.messageRepo.Create(msg); err != nil {
-		return nil, errInternal("не удалось сохранить сообщение")
+		return nil, nil, errInternal("не удалось сохранить сообщение")
 	}
 
-	s.publishCreated(chatID, msg, nil)
-	return msg, nil
+	s.publishCreated(chatID, msg, nil, replyTo)
+	return msg, replyTo, nil
 }
 
 func (s *Server) GetMessages(ctx context.Context, chatID, userID uint, limit, offset int) ([]MessageWithReactions, error) {
@@ -159,8 +176,12 @@ func (s *Server) GetMessages(ctx context.Context, chatID, userID uint, limit, of
 		return nil, errInternal("не удалось получить сообщения")
 	}
 	ids := make([]uint, 0, len(messages))
+	replyIDs := make([]uint, 0, len(messages))
 	for i := range messages {
 		ids = append(ids, messages[i].ID)
+		if messages[i].ReplyToMessageID != nil && *messages[i].ReplyToMessageID > 0 {
+			replyIDs = append(replyIDs, *messages[i].ReplyToMessageID)
+		}
 	}
 	reactionsByMsg := make(map[uint][]entity.MessageReaction, len(messages))
 	if len(ids) > 0 {
@@ -171,11 +192,52 @@ func (s *Server) GetMessages(ctx context.Context, chatID, userID uint, limit, of
 			}
 		}
 	}
+	repliesByID := s.loadMessagesByID(replyIDs)
 	res := make([]MessageWithReactions, 0, len(messages))
 	for i := range messages {
-		res = append(res, MessageWithReactions{Msg: &messages[i], Reactions: reactionsByMsg[messages[i].ID]})
+		item := MessageWithReactions{Msg: &messages[i], Reactions: reactionsByMsg[messages[i].ID]}
+		if messages[i].ReplyToMessageID != nil {
+			item.ReplyTo = repliesByID[*messages[i].ReplyToMessageID]
+		}
+		res = append(res, item)
 	}
 	return res, nil
+}
+
+func (s *Server) loadMessagesByID(ids []uint) map[uint]*entity.Message {
+	out := make(map[uint]*entity.Message)
+	if len(ids) == 0 {
+		return out
+	}
+	uniq := make([]uint, 0, len(ids))
+	seen := make(map[uint]bool, len(ids))
+	for _, id := range ids {
+		if id == 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		uniq = append(uniq, id)
+	}
+	list, err := s.messageRepo.FindByIDs(uniq)
+	if err != nil {
+		return out
+	}
+	for i := range list {
+		out[list[i].ID] = &list[i]
+	}
+	return out
+}
+
+func (s *Server) replyOf(m *entity.Message) *entity.Message {
+	if m == nil || m.ReplyToMessageID == nil || *m.ReplyToMessageID == 0 {
+		return nil
+	}
+	reply, _ := s.messageRepo.FindByID(*m.ReplyToMessageID)
+	return reply
+}
+
+func (s *Server) ReplyToMessage(m *entity.Message) *entity.Message {
+	return s.replyOf(m)
 }
 
 func (s *Server) EditMessage(ctx context.Context, senderID, messageID uint, content string) (*entity.Message, error) {
@@ -193,9 +255,13 @@ func (s *Server) EditMessage(ctx context.Context, senderID, messageID uint, cont
 	if err != nil {
 		return nil, errInternal("не удалось загрузить сообщение")
 	}
+	var replyTo *entity.Message
+	if fresh.ReplyToMessageID != nil && *fresh.ReplyToMessageID > 0 {
+		replyTo, _ = s.messageRepo.FindByID(*fresh.ReplyToMessageID)
+	}
 	s.producer.Publish(nats.TopicMessageEdited, itoa(uint64(msg.ChatID)), nats.EventMessageEdited{
 		ChatID:  int64(fresh.ChatID),
-		Message: toMessageDTO(fresh, nil),
+		Message: toMessageDTO(fresh, nil, replyTo),
 	})
 	return fresh, nil
 }
@@ -255,9 +321,13 @@ func (s *Server) PinMessage(ctx context.Context, chatID, userID, messageID uint)
 	system := &entity.Message{ChatID: msg.ChatID, SenderID: userID, Text: "", SystemType: "pin"}
 	_ = s.messageRepo.Create(system)
 	reactions, _ := s.reactionRepo.FindByMessageID(msg.ID)
+	var replyTo *entity.Message
+	if msg.ReplyToMessageID != nil && *msg.ReplyToMessageID > 0 {
+		replyTo, _ = s.messageRepo.FindByID(*msg.ReplyToMessageID)
+	}
 	s.producer.Publish(nats.TopicMessagePinned, itoa(uint64(chatID)), nats.EventMessagePinned{
 		ChatID:  int64(chatID),
-		Message: toMessageDTO(msg, reactions),
+		Message: toMessageDTO(msg, reactions, replyTo),
 	})
 	return msg, reactions, nil
 }
@@ -431,7 +501,7 @@ func (s *Server) ForwardMessage(ctx context.Context, chatID, senderID, sourceMes
 	if err := s.messageRepo.Create(msg); err != nil {
 		return nil, errInternal("не удалось сохранить сообщение")
 	}
-	s.publishCreated(chatID, msg, nil)
+	s.publishCreated(chatID, msg, nil, nil)
 	return msg, nil
 }
 
@@ -494,17 +564,17 @@ func (s *Server) loadChatResponse(ctx context.Context, chatID, viewerID uint) (*
 	}
 	if last != nil {
 		reactions, _ := s.reactionRepo.FindByMessageID(last.ID)
-		res.LastMessage = &MessageWithReactions{Msg: last, Reactions: reactions}
+		res.LastMessage = &MessageWithReactions{Msg: last, Reactions: reactions, ReplyTo: s.replyOf(last)}
 	}
 	if chat.PinnedMessageID != nil {
 		if pm, err := s.messageRepo.FindByID(*chat.PinnedMessageID); err == nil {
-			res.PinnedMessage = &MessageWithReactions{Msg: pm}
+			res.PinnedMessage = &MessageWithReactions{Msg: pm, ReplyTo: s.replyOf(pm)}
 		}
 	}
 	return res, nil
 }
 
-func (s *Server) publishCreated(chatID uint, m *entity.Message, reactions []entity.MessageReaction) {
+func (s *Server) publishCreated(chatID uint, m *entity.Message, reactions []entity.MessageReaction, replyTo *entity.Message) {
 	participants, _ := s.chatRepo.GetParticipantIDs(chatID)
 	ids := make([]int64, 0, len(participants))
 	hasBot := false
@@ -514,7 +584,7 @@ func (s *Server) publishCreated(chatID uint, m *entity.Message, reactions []enti
 			hasBot = true
 		}
 	}
-	dto := toMessageDTO(m, reactions)
+	dto := toMessageDTO(m, reactions, replyTo)
 	s.producer.Publish(nats.TopicMessageCreated, itoa(uint64(chatID)), nats.EventMessageCreated{
 		ChatID:       int64(chatID),
 		Message:      dto,
@@ -551,7 +621,7 @@ func (s *Server) HandleCallEnded(value []byte) {
 	if err := s.messageRepo.Create(msg); err != nil {
 		return
 	}
-	s.publishCreated(uint(e.ChatID), msg, nil)
+	s.publishCreated(uint(e.ChatID), msg, nil, nil)
 }
 
 // callEndedSystemText builds the human-readable system message and picks a
@@ -612,7 +682,7 @@ func isSelfChat(ids []uint, userID uint) bool {
 	return true
 }
 
-func toMessageDTO(m *entity.Message, reactions []entity.MessageReaction) nats.MessageDTO {
+func toMessageDTO(m *entity.Message, reactions []entity.MessageReaction, replyTo *entity.Message) nats.MessageDTO {
 	d := nats.MessageDTO{
 		ID:                    int64(m.ID),
 		ChatID:                int64(m.ChatID),
@@ -631,6 +701,14 @@ func toMessageDTO(m *entity.Message, reactions []entity.MessageReaction) nats.Me
 		IsForwarded:           m.IsForwarded,
 		ForwardedFromSenderID: int64(m.ForwardedFromSenderID),
 		ForwardedFromChatID:   int64(m.ForwardedFromChatID),
+		ReplyToMessageID:      int64(ptrVal(m.ReplyToMessageID)),
+	}
+	if replyTo != nil {
+		d.ReplyToSenderID = int64(replyTo.SenderID)
+		d.ReplyToText = replyTo.Text
+		d.ReplyToAttachmentType = replyTo.AttachmentType
+		d.ReplyToAttachmentName = replyTo.AttachmentName
+		d.ReplyToSystemType = replyTo.SystemType
 	}
 	for i := range reactions {
 		d.Reactions = append(d.Reactions, nats.ReactionDTO{
@@ -641,6 +719,13 @@ func toMessageDTO(m *entity.Message, reactions []entity.MessageReaction) nats.Me
 		})
 	}
 	return d
+}
+
+func ptrVal(p *uint) uint {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 func attachmentSizeOrZero(p *int) int64 {

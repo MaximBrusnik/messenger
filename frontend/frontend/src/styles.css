@@ -1329,6 +1329,70 @@ select {
   transform: none;
 }
 
+/* ═══════════ REPLY PREVIEW (input) ═══════════ */
+.input-wrap {
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.reply-preview-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 16px 0 16px;
+}
+
+.reply-preview-accent {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--chat-accent, var(--accent));
+  flex-shrink: 0;
+}
+
+.reply-preview-content {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-subtle);
+  border-radius: var(--r-md);
+  padding: 6px 10px;
+}
+
+.reply-preview-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--chat-accent, var(--accent));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reply-preview-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reply-preview-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background var(--transition), color var(--transition);
+}
+
+.reply-preview-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 /* ── EMOJI PICKER ── */
 .emoji-picker-input {
   position: absolute;
@@ -2789,6 +2853,56 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── reply quote ── */
+.reply-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  border-left: 3px solid var(--chat-accent, var(--accent));
+  background: color-mix(in srgb, var(--chat-accent, var(--accent)) 12%, transparent);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.msg.mine .reply-quote {
+  background: color-mix(in srgb, var(--bubble-mine-text) 14%, transparent);
+  border-left-color: var(--bubble-mine-text);
+}
+
+.reply-quote-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--chat-accent, var(--accent));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg.mine .reply-quote-name {
+  color: var(--bubble-mine-text);
+}
+
+.reply-quote-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg.mine .reply-quote-text {
+  color: color-mix(in srgb, var(--bubble-mine-text) 85%, transparent);
+}
+
+/* ── highlighted jump target ── */
+.msg.msg-highlight {
+  box-shadow: 0 0 0 3px var(--chat-accent, var(--accent));
+  transition: box-shadow 0.4s ease;
 }
 
 /* ── image modal ── */

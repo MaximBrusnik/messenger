@@ -24,4 +24,5 @@ type ChatResponse struct {
 type MessageWithReactions struct {
 	Msg       *entity.Message
 	Reactions []entity.MessageReaction
+	ReplyTo   *entity.Message
 }

@@ -12,6 +12,7 @@ import (
 type MessageRepository interface {
 	Create(message *entity.Message) error
 	FindByID(id uint) (*entity.Message, error)
+	FindByIDs(ids []uint) ([]entity.Message, error)
 	FindByChatID(chatID uint, limit, offset int) ([]entity.Message, error)
 	MarkAsRead(messageID uint) error
 	MarkChatAsRead(chatID, userID uint) ([]uint, error)
@@ -39,6 +40,15 @@ func (r *messageRepository) FindByID(id uint) (*entity.Message, error) {
 		return nil, ErrNotFound
 	}
 	return &m, err
+}
+
+func (r *messageRepository) FindByIDs(ids []uint) ([]entity.Message, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var messages []entity.Message
+	err := r.db.Where("id IN ?", ids).Find(&messages).Error
+	return messages, err
 }
 
 func (r *messageRepository) FindByChatID(chatID uint, limit, offset int) ([]entity.Message, error) {

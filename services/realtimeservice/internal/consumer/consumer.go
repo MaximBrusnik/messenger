@@ -142,6 +142,27 @@ func (c *Consumer) messageJSON(dto nats.MessageDTO) gin.H {
 		}
 		h["forwarded_from"] = ff
 	}
+	if dto.ReplyToMessageID > 0 {
+		rt := gin.H{"id": dto.ReplyToMessageID}
+		if dto.ReplyToSenderID > 0 {
+			rt["sender_id"] = dto.ReplyToSenderID
+		}
+		if p, ok := profiles[uint64(dto.ReplyToSenderID)]; ok {
+			rt["username"] = p.Username
+			rt["avatar"] = p.Avatar
+		}
+		if dto.ReplyToText != "" {
+			rt["text"] = dto.ReplyToText
+		}
+		if dto.ReplyToSystemType != "" {
+			rt["system_type"] = dto.ReplyToSystemType
+		}
+		if dto.ReplyToAttachmentType != "" {
+			rt["attachment_type"] = dto.ReplyToAttachmentType
+			rt["attachment_name"] = dto.ReplyToAttachmentName
+		}
+		h["reply_to"] = rt
+	}
 	if dto.AttachmentType != "" {
 		h["attachment_type"] = dto.AttachmentType
 		h["attachment_url"] = dto.AttachmentURL
@@ -194,6 +215,9 @@ func (c *Consumer) messageUserIDs(dto nats.MessageDTO) []uint64 {
 	add(dto.SenderID)
 	if dto.IsForwarded {
 		add(dto.ForwardedFromSenderID)
+	}
+	if dto.ReplyToMessageID > 0 {
+		add(dto.ReplyToSenderID)
 	}
 	for _, r := range dto.Reactions {
 		add(r.UserID)

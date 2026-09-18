@@ -47,6 +47,7 @@ type Message struct {
 	ForwardedFromSenderID  uint           `json:"forwarded_from_sender_id,omitempty"`
 	ForwardedFromChatID    uint           `json:"forwarded_from_chat_id,omitempty"`
 	ForwardedFromMessageID uint           `json:"forwarded_from_message_id,omitempty"`
+	ReplyToMessageID       *uint          `gorm:"index;default:null" json:"reply_to_message_id,omitempty"`
 }
 
 type MessageReaction struct {

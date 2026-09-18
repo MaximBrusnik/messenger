@@ -50,7 +50,6 @@ func main() {
 		userClient = pbuser.NewUserServiceClient(userConn)
 	}
 
-	// Kafka
 	cons := consumer.New(hubInstance, redisClient, userClient)
 	handle := func(topic, key string, value []byte) { cons.Handle(topic, key, value) }
 	ctx, cancel := context.WithCancel(context.Background())

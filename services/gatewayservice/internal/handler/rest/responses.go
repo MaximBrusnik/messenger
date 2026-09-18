@@ -136,6 +136,27 @@ func (g *Gateway) messageJSONWithProfiles(ctx context.Context, viewer uint64, m 
 	if m.SystemType != "" {
 		h["system_type"] = m.SystemType
 	}
+	if m.ReplyToMessageId > 0 {
+		rt := gin.H{"id": m.ReplyToMessageId}
+		if m.ReplyTo != nil {
+			rt["sender_id"] = m.ReplyTo.SenderId
+			rt["text"] = m.ReplyTo.Text
+			if p, ok := profiles[m.ReplyTo.SenderId]; ok {
+				rt["username"] = p.Username
+				rt["avatar"] = p.Avatar
+			}
+			if m.ReplyTo.SystemType != "" {
+				rt["system_type"] = m.ReplyTo.SystemType
+			}
+			if m.ReplyTo.AttachmentType != "" {
+				rt["attachment_type"] = m.ReplyTo.AttachmentType
+				rt["attachment_name"] = m.ReplyTo.AttachmentName
+			}
+		} else {
+			rt["deleted"] = true
+		}
+		h["reply_to"] = rt
+	}
 	if m.AttachmentType != "" {
 		h["attachment_type"] = m.AttachmentType
 		h["attachment_url"] = m.AttachmentUrl
@@ -251,6 +272,9 @@ func messageProfileIDs(msgs []*pbchat.Message) []uint64 {
 		add(m.SenderId)
 		if m.IsForwarded && m.ForwardedFromSenderId > 0 {
 			add(m.ForwardedFromSenderId)
+		}
+		if m.ReplyTo != nil && m.ReplyTo.SenderId > 0 {
+			add(m.ReplyTo.SenderId)
 		}
 	}
 	return ids

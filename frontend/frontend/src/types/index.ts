@@ -52,6 +52,18 @@ export interface Message {
     username?: string;
     avatar?: string;
   };
+  reply_to_message_id?: number;
+  reply_to?: {
+    id: number;
+    sender_id?: number;
+    text?: string;
+    username?: string;
+    avatar?: string;
+    attachment_type?: string;
+    attachment_name?: string;
+    system_type?: string;
+    deleted?: boolean;
+  };
 }
 
 export interface Reaction {

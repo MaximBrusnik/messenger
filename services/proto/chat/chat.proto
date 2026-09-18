@@ -53,6 +53,7 @@ message SendMessageRequest {
   string attachment_url = 5;
   string attachment_name = 6;
   int64 attachment_size = 7;
+  uint64 reply_to_message_id = 8;
 }
 
 message GetMessagesRequest {
@@ -190,6 +191,8 @@ message Message {
   uint64 forwarded_from_sender_id = 17;
   uint64 forwarded_from_chat_id = 18;
   uint64 forwarded_from_message_id = 19;
+  uint64 reply_to_message_id = 20;
+  Message reply_to = 21;
 }
 
 message Reaction {

@@ -58,11 +58,11 @@ func (s *Server) GetChatByID(ctx context.Context, req *pb.GetChatRequest) (*pb.C
 }
 
 func (s *Server) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.Message, error) {
-	msg, err := s.svc.SendMessage(ctx, uint(req.ChatId), uint(req.UserId), req.Content, req.AttachmentUrl, req.AttachmentType, req.AttachmentName, req.AttachmentSize)
+	msg, replyTo, err := s.svc.SendMessage(ctx, uint(req.ChatId), uint(req.UserId), req.Content, req.AttachmentUrl, req.AttachmentType, req.AttachmentName, req.AttachmentSize, uint(req.ReplyToMessageId))
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return toMessageProto(msg, nil), nil
+	return toMessageProto(msg, nil, replyTo), nil
 }
 
 func (s *Server) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.MessagesResponse, error) {
@@ -72,7 +72,7 @@ func (s *Server) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*
 	}
 	res := &pb.MessagesResponse{Messages: make([]*pb.Message, 0, len(messages))}
 	for _, m := range messages {
-		res.Messages = append(res.Messages, toMessageProto(m.Msg, m.Reactions))
+		res.Messages = append(res.Messages, toMessageProto(m.Msg, m.Reactions, m.ReplyTo))
 	}
 	return res, nil
 }
@@ -82,7 +82,7 @@ func (s *Server) EditMessage(ctx context.Context, req *pb.EditMessageRequest) (*
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return toMessageProto(msg, nil), nil
+	return toMessageProto(msg, nil, s.svc.ReplyToMessage(msg)), nil
 }
 
 func (s *Server) DeleteMessage(ctx context.Context, req *pb.DeleteMessageRequest) (*pb.Empty, error) {
@@ -104,7 +104,7 @@ func (s *Server) PinMessage(ctx context.Context, req *pb.PinMessageRequest) (*pb
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return toMessageProto(msg, reactions), nil
+	return toMessageProto(msg, reactions, s.svc.ReplyToMessage(msg)), nil
 }
 
 func (s *Server) UnpinMessage(ctx context.Context, req *pb.UnpinMessageRequest) (*pb.Empty, error) {
@@ -183,7 +183,7 @@ func (s *Server) ForwardMessage(ctx context.Context, req *pb.ForwardMessageReque
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return toMessageProto(msg, nil), nil
+	return toMessageProto(msg, nil, s.svc.ReplyToMessage(msg)), nil
 }
 
 func (s *Server) GetReactions(ctx context.Context, req *pb.GetReactionsRequest) (*pb.ReactionsResponse, error) {
@@ -215,15 +215,15 @@ func toPbChat(resp *service.ChatResponse) *pb.Chat {
 		ch.Participants = append(ch.Participants, &pb.ChatUser{UserId: uint64(p)})
 	}
 	if resp.LastMessage != nil {
-		ch.LastMessage = toMessageProto(resp.LastMessage.Msg, resp.LastMessage.Reactions)
+		ch.LastMessage = toMessageProto(resp.LastMessage.Msg, resp.LastMessage.Reactions, resp.LastMessage.ReplyTo)
 	}
 	if resp.PinnedMessage != nil {
-		ch.PinnedMessage = toMessageProto(resp.PinnedMessage.Msg, resp.PinnedMessage.Reactions)
+		ch.PinnedMessage = toMessageProto(resp.PinnedMessage.Msg, resp.PinnedMessage.Reactions, resp.PinnedMessage.ReplyTo)
 	}
 	return ch
 }
 
-func toMessageProto(m *entity.Message, reactions []entity.MessageReaction) *pb.Message {
+func toMessageProto(m *entity.Message, reactions []entity.MessageReaction, replyTo *entity.Message) *pb.Message {
 	res := &pb.Message{
 		Id:             uint64(m.ID),
 		ChatId:         uint64(m.ChatID),
@@ -246,6 +246,12 @@ func toMessageProto(m *entity.Message, reactions []entity.MessageReaction) *pb.M
 	}
 	if m.ForwardedFromMessageID > 0 {
 		res.ForwardedFromMessageId = uint64(m.ForwardedFromMessageID)
+	}
+	if m.ReplyToMessageID != nil && *m.ReplyToMessageID > 0 {
+		res.ReplyToMessageId = uint64(*m.ReplyToMessageID)
+	}
+	if replyTo != nil {
+		res.ReplyTo = toMessageProto(replyTo, nil, nil)
 	}
 	if m.ReadAt != nil {
 		res.ReadAt = timestamppb.New(*m.ReadAt)

@@ -18,6 +18,7 @@ import {
   Phone,
   PhoneCall,
   Pin,
+  Reply,
   Trash2,
   Video,
   X,
@@ -104,6 +105,8 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   const [ctxMsgId, setCtxMsgId] = useState<number | null>(null);
   const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
@@ -112,6 +115,10 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   const offsetRef = useRef(0);
   const scrollPosRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
   const loadMorePendingRef = useRef(false);
+  const pendingJumpRef = useRef<number | null>(null);
+  const jumpInProgressRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(true);
 
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -121,10 +128,12 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
       setError(null);
       offsetRef.current = 0;
       setHasMore(true);
+      hasMoreRef.current = true;
       const res = await apiRequest<{ data: Message[] }>(`/chats/${chat.id}/messages?limit=50&offset=0`);
       const data = res.data ?? [];
       setMessages(data);
       setHasMore(data.length >= 50);
+      hasMoreRef.current = data.length >= 50;
       offsetRef.current = data.length;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
@@ -256,7 +265,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [ctxMsgId, showMenu]);
 
-  async function handleSend(text: string, attachment?: { url: string; name: string; size: number; type: string }) {
+  async function handleSend(text: string, attachment?: { url: string; name: string; size: number; type: string }, replyToId?: number) {
     try {
       const body: Record<string, unknown> = { content: text };
       if (attachment) {
@@ -264,6 +273,9 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
         body.attachment_name = attachment.name;
         body.attachment_size = attachment.size;
         body.attachment_type = attachment.type;
+      }
+      if (replyToId) {
+        body.reply_to_message_id = replyToId;
       }
       const res = await apiRequest<{ data: Message }>(`/chats/${chat.id}/messages`, "POST", body);
       setMessages((prev) => prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data]);
@@ -317,6 +329,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
   async function loadMore() {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
+    loadingMoreRef.current = true;
     loadMorePendingRef.current = true;
 
     const el = messagesRef.current;
@@ -329,10 +342,68 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
       const newMsgs = res.data ?? [];
       offsetRef.current += newMsgs.length;
       setHasMore(newMsgs.length >= 50);
+      hasMoreRef.current = newMsgs.length >= 50;
       setMessages((prev) => [...newMsgs, ...prev]);
     } catch { /* ignore */ }
 
     setLoadingMore(false);
+    loadingMoreRef.current = false;
+  }
+
+  async function fetchMoreForJump(): Promise<boolean> {
+    if (loadingMoreRef.current || !hasMoreRef.current) return false;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const res = await apiRequest<{ data: Message[] }>(`/chats/${chat.id}/messages?limit=50&offset=${offsetRef.current}`);
+      const newMsgs = res.data ?? [];
+      offsetRef.current += newMsgs.length;
+      const more = newMsgs.length >= 50;
+      setHasMore(more);
+      hasMoreRef.current = more;
+      setMessages((prev) => [...newMsgs, ...prev]);
+      return newMsgs.length > 0;
+    } catch {
+      return false;
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }
+
+  function revealMessage(targetId: number, el: Element) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(targetId);
+    setTimeout(() => setHighlightId(null), 1600);
+    setCtxMsgId(null);
+  }
+
+  async function jumpToMessage(targetId: number) {
+    if (pendingJumpRef.current === targetId) return;
+    const el = document.querySelector(`[data-msg-id="${targetId}"]`);
+    if (el) {
+      revealMessage(targetId, el);
+      return;
+    }
+    pendingJumpRef.current = targetId;
+    if (jumpInProgressRef.current) return;
+    jumpInProgressRef.current = true;
+    try {
+      while (pendingJumpRef.current !== null && hasMoreRef.current) {
+        const got = await fetchMoreForJump();
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const found = document.querySelector(`[data-msg-id="${pendingJumpRef.current}"]`);
+        if (found) {
+          revealMessage(pendingJumpRef.current, found);
+          pendingJumpRef.current = null;
+          break;
+        }
+        if (!got) break;
+      }
+    } finally {
+      pendingJumpRef.current = null;
+      jumpInProgressRef.current = false;
+    }
   }
 
   function handleScroll() {
@@ -543,9 +614,9 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
           return (
             <div
               key={m.id}
-              className={`msg ${isMine ? "mine" : ""}`}
+              data-msg-id={m.id}
+              className={`msg ${isMine ? "mine" : ""}${m.id === highlightId ? " msg-highlight" : ""}`}
               onClick={(e) => handleOpenContextMenu(m.id, e)}
-
             >
               {!isMine && <div className="msg-sender">{m.sender?.username}</div>}
 
@@ -565,6 +636,25 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
                 </div>
               ) : (
                 <>
+                  {m.reply_to && (
+                    <div
+                      className="reply-quote"
+                      title="Перейти к сообщению"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        jumpToMessage(m.reply_to!.id);
+                      }}
+                    >
+                      <div className="reply-quote-name">{m.reply_to.username ?? "Пользователь"}</div>
+                      <div className="reply-quote-text">
+                        {m.reply_to.deleted
+                          ? "Сообщение удалено"
+                          : m.reply_to.system_type
+                            ? m.reply_to.system_type
+                            : m.reply_to.text || (m.reply_to.attachment_type === "image" ? "Фото" : m.reply_to.attachment_name || "Сообщение")}
+                      </div>
+                    </div>
+                  )}
                   {m.is_forwarded && m.forwarded_from && (
                     <div className="forward-header">
                       <Forward size={13} />
@@ -662,6 +752,9 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
           <button onClick={() => handleCopyText(ctxMessage.text)}>
             <Copy size={16} /> Копировать
           </button>
+          <button onClick={() => { setReplyTo(ctxMessage); setCtxMsgId(null); }}>
+            <Reply size={16} /> Ответить
+          </button>
           <button onClick={() => { setForwardMsg(ctxMessage); setCtxMsgId(null); }}>
             <Forward size={16} /> Переслать
           </button>
@@ -682,7 +775,7 @@ export default function ChatArea({ chat, onBack, onMessage, onOpenUserProfile, o
         </div>
       )}
 
-      <MessageInput onSend={handleSend} />
+      <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
 
       {forwardMsg && (
         <ForwardPicker
