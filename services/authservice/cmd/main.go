@@ -45,7 +45,7 @@ func main() {
 		userClient = pbuser.NewUserServiceClient(userConn)
 	}
 
-	server := service.NewServer(userRepo, jwtManager, emailSvc, cfg.App.RequireEmailVerification, userClient)
+	server := service.NewServer(userRepo, jwtManager, emailSvc, cfg.App.RequireEmailVerification, cfg.App.MaxUsersEnabled, cfg.App.MaxUsersLimit, userClient)
 
 	if err := seedDefaults(userRepo, userClient); err != nil {
 		log.Printf("auth: seed defaults: %v", err)

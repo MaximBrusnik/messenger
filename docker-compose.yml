@@ -59,6 +59,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: authservice
+      MAX_USERS_ENABLED: ${MAX_USERS_ENABLED:-true}
+      MAX_USERS_LIMIT: ${MAX_USERS_LIMIT:-200}
       SERVICE_USER_ADDR: userservice:9000
       SERVICE_CHAT_ADDR: chatservice:9000
       SERVICE_AUTH_ADDR: authservice:9000

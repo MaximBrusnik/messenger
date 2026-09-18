@@ -79,6 +79,8 @@ type SMTP struct {
 type App struct {
 	AppURL                   string
 	RequireEmailVerification bool
+	MaxUsersEnabled          bool
+	MaxUsersLimit            int
 }
 
 // AI Gemini API settings.
@@ -102,6 +104,15 @@ func getEnvBool(key string, fallback bool) bool {
 	if v, ok := os.LookupEnv(key); ok {
 		if b, err := strconv.ParseBool(v); err == nil {
 			return b
+		}
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	if v, ok := os.LookupEnv(key); ok {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
 		}
 	}
 	return fallback
@@ -139,6 +150,8 @@ func Load() *Config {
 		App: App{
 			AppURL:                   getEnv("APP_URL", "http://localhost:8080"),
 			RequireEmailVerification: getEnvBool("REQUIRE_EMAIL_VERIFICATION", false),
+			MaxUsersEnabled:          getEnvBool("MAX_USERS_ENABLED", true),
+			MaxUsersLimit:            getEnvInt("MAX_USERS_LIMIT", 200),
 		},
 		AIConfig: AI{
 			GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),

@@ -17,15 +17,19 @@ type Server struct {
 	jwtManager               *jwt.Manager
 	emailSvc                 *email.Service
 	requireEmailVerification bool
+	maxUsersEnabled          bool
+	maxUsersLimit            int
 	userClient               pbuser.UserServiceClient
 }
 
-func NewServer(userRepo repo.UserRepository, jwtManager *jwt.Manager, emailSvc *email.Service, requireEmailVerification bool, userClient pbuser.UserServiceClient) *Server {
+func NewServer(userRepo repo.UserRepository, jwtManager *jwt.Manager, emailSvc *email.Service, requireEmailVerification bool, maxUsersEnabled bool, maxUsersLimit int, userClient pbuser.UserServiceClient) *Server {
 	return &Server{
 		userRepo:                 userRepo,
 		jwtManager:               jwtManager,
 		emailSvc:                 emailSvc,
 		requireEmailVerification: requireEmailVerification,
+		maxUsersEnabled:          maxUsersEnabled,
+		maxUsersLimit:            maxUsersLimit,
 		userClient:               userClient,
 	}
 }
@@ -39,6 +43,16 @@ func (s *Server) Register(ctx context.Context, username, emailAddr, password str
 	}
 	if _, err := s.userRepo.FindByEmail(emailAddr); err == nil {
 		return nil, errAlreadyExists("почта уже зарегистрирована")
+	}
+
+	if s.maxUsersEnabled {
+		count, err := s.userRepo.CountUsers()
+		if err != nil {
+			return nil, errInternal("не удалось проверить количество пользователей")
+		}
+		if count >= int64(s.maxUsersLimit) {
+			return nil, errResourceExhausted("достигнут лимит пользователей")
+		}
 	}
 
 	user := &entity.User{Username: username, Email: emailAddr}

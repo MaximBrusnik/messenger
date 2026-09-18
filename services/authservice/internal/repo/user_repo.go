@@ -13,6 +13,7 @@ var ErrNotFound = errors.New("record not found")
 
 type UserRepository interface {
 	Create(user *entity.User) error
+	CountUsers() (int64, error)
 	FindByID(id uint) (*entity.User, error)
 	FindByUsername(username string) (*entity.User, error)
 	FindByEmail(email string) (*entity.User, error)
@@ -35,6 +36,12 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) Create(user *entity.User) error {
 	return r.db.Create(user).Error
+}
+
+func (r *userRepository) CountUsers() (int64, error) {
+	var n int64
+	err := r.db.Model(&entity.User{}).Where("is_bot = ?", false).Count(&n).Error
+	return n, err
 }
 
 func (r *userRepository) FindByID(id uint) (*entity.User, error) {
