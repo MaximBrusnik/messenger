@@ -34,26 +34,26 @@ func (h *Handler) Upload(c *gin.Context) {
 
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "С„Р°Р№Р» РЅРµ РЅР°Р№РґРµРЅ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 	defer file.Close()
 
 	ext := filepath.Ext(header.Filename)
 	if !allowedExt[ext] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "РЅРµРґРѕРїСѓСЃС‚РёРјС‹Р№ С„РѕСЂРјР°С‚"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ""})
 		return
 	}
 
 	total, _ := h.musicRepo.GetTotalSize()
 	if total+header.Size > maxStorage {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Р»РёРјРёС‚ С…СЂР°РЅРёР»РёС‰Р° РјСѓР·С‹РєРё РґРѕСЃС‚РёРіРЅСѓС‚"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": ""})
 		return
 	}
 
 	filename, size, err := h.store.Save(ext, file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ С„Р°Р№Р»"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": ""})
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *Handler) Upload(c *gin.Context) {
 
 	if err := h.musicRepo.Create(m); err != nil {
 		h.store.Remove(filename)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р·Р°РїРёСЃСЊ"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": ""})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"id": m.ID, "title": m.Title, "artist": m.Artist, "status": m.Status})
@@ -113,7 +113,7 @@ func lookup(c *gin.Context, r repo.MusicRepository) (*entity.Music, bool) {
 	}
 	m, err := r.FindByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "С‚СЂРµРє РЅРµ РЅР°Р№РґРµРЅ"})
+		c.JSON(http.StatusNotFound, gin.H{"error": ""})
 		return nil, false
 	}
 	return m, true

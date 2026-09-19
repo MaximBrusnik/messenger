@@ -2,14 +2,16 @@
 ------------
 Стек
 ---
+
+
 Слой	Технология
-Бэкенд	Go 1.22+, PostgreSQL, Nats, Redis, gRPC, Microservices, Gin, GORM,
+Бэкенд:	Go 1.22+, PostgreSQL, Nats, Redis, gRPC, Microservices, Gin, GORM
 
-Фронтенд	React (Vite 8 + Rolldown), TypeScript
+Фронтенд:	React (Vite 8 + Rolldown), TypeScript
 
-Android	Capacitor (WebView APK)
+Android version: Capacitor (WebView APK)
 
-AI	Gemini 2.5 Flash 
+ИИ бот: AI Gemini 2.5 Flash 
 
 возможности
 ---
@@ -22,7 +24,26 @@ AI	Gemini 2.5 Flash
 7) Общая для всех юзеров музыка (загрузка, плеер, стриминг, скачивание, лимит 1 ГБ)
 8) Модерация музыки администратором (одобрить/отклонить)
 9) Звук и браузерные уведомления о новых сообщениях
-10) Firebase Push уведомления для андроид приложения 
+10) Firebase Push уведомления для андроид приложения
+11) Email верификация
+12) Админ-панель со статистикой, ролями, блокировками
+13) Звонки и видеозвонки (сырая версия)
+
+Фото мессенджера
+
+![Скриншот программы](README_Images/снимок.png)
+
+![Скриншот программы](README_Images/снимок2.png)
+
+![Скриншот программы](README_Images/снимок3.png)
+
+![Скриншот программы](README_Images/снимок4.png)
+
+![Скриншот программы](README_Images/снимок5.png)
+
+----
+
+Потыкать руками: http://216.162.44.70:8080/
 
 
 
