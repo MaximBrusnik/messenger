@@ -21,7 +21,7 @@ func main() {
 		log.Fatal("gateway: dial services: ", err)
 	}
 
-	authMW := middleware.NewAuth(jwt.NewManager(cfg.JWTSecret))
+	authMW := middleware.NewAuth(jwt.NewManager(cfg.JWTSecret), gw)
 
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -106,6 +106,14 @@ func main() {
 				admin.GET("/music/pending", gw.MusicPending)
 				admin.PUT("/music/:id/approve", gw.MusicApprove)
 				admin.PUT("/music/:id/reject", gw.MusicReject)
+
+				admin.GET("/users", gw.AdminListUsers)
+				admin.GET("/users/stats", gw.AdminUserStats)
+				admin.GET("/users/:id/sessions", gw.AdminUserSessions)
+				admin.PUT("/users/:id/active", gw.AdminSetUserActive)
+				admin.PUT("/users/:id/role", gw.AdminSetRole)
+				admin.POST("/users/:id/revoke-sessions", gw.AdminRevokeSessions)
+				admin.DELETE("/users/:id", gw.AdminDeleteUser)
 			}
 
 			protected.GET("/calls/history", gw.GetCallHistory)

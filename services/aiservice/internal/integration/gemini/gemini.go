@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const geminiSystemInstruction = "Ты — умный ассистент в мессенджере. Отвечай кратко и по делу, на русском языке. Не используй markdown."
+
 type ChatMessage struct {
 	Text  string `json:"text"`
 	IsBot bool   `json:"is_bot"`
@@ -57,7 +59,6 @@ func (c *Client) GenerateResponse(history []ChatMessage) (string, error) {
 	if c == nil {
 		return "", fmt.Errorf("gemini client is not configured")
 	}
-	const systemInstruction = "Ты — умный ассистент в мессенджере. Отвечай кратко и по делу, на русском языке. Не используй markdown."
 
 	contents := []geminiContent{}
 	for _, m := range history {
@@ -69,9 +70,7 @@ func (c *Client) GenerateResponse(history []ChatMessage) (string, error) {
 	}
 
 	payload := geminiRequest{Contents: contents}
-	if systemInstruction != "" {
-		payload.SystemInstruction = &geminiContent{Role: "system", Parts: []geminiPart{{Text: systemInstruction}}}
-	}
+	payload.SystemInstruction = &geminiContent{Role: "system", Parts: []geminiPart{{Text: geminiSystemInstruction}}}
 
 	body, err := json.Marshal(payload)
 	if err != nil {

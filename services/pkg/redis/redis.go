@@ -27,6 +27,14 @@ func (c *Client) IsOnline(ctx context.Context, userID uint) bool {
 	return err == nil
 }
 
+func (c *Client) CountOnline(ctx context.Context) (int64, error) {
+	keys, err := c.Client.Keys(ctx, "mm:online:*").Result()
+	if err != nil {
+		return 0, err
+	}
+	return int64(len(keys)), nil
+}
+
 func (c *Client) SetOffline(ctx context.Context, userID uint) error {
 	return c.Client.Del(ctx, onlineKey(userID)).Err()
 }

@@ -1,4 +1,4 @@
-import type { Chat, Device, MusicTrack, User } from "../types";
+import type { AdminPage, AdminStats, Chat, Device, MusicTrack, User } from "../types";
 import type { CallSession, IceConfig } from "../types/call";
 
 const API_URL = "/api/v1";
@@ -143,4 +143,47 @@ export async function getCallHistory() {
 
 export async function getDevices() {
   return apiRequest<{ data: Device[] }>("/auth/devices");
+}
+
+export async function getAdminUsers(params: {
+  q?: string;
+  page?: number;
+  page_size?: number;
+  is_bot?: boolean;
+  is_admin?: boolean;
+  active?: boolean;
+}) {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.page_size) qs.set("page_size", String(params.page_size));
+  if (params.is_bot !== undefined) qs.set("is_bot", String(params.is_bot));
+  if (params.is_admin !== undefined) qs.set("is_admin", String(params.is_admin));
+  if (params.active !== undefined) qs.set("active", String(params.active));
+  const query = qs.toString();
+  return apiRequest<AdminPage>(`/admin/users${query ? `?${query}` : ""}`);
+}
+
+export async function getAdminStats() {
+  return apiRequest<{ data: AdminStats }>("/admin/users/stats");
+}
+
+export async function setUserActive(id: number, active: boolean) {
+  return apiRequest(`/admin/users/${id}/active`, "PUT", { active });
+}
+
+export async function setUserRole(id: number, is_admin: boolean) {
+  return apiRequest(`/admin/users/${id}/role`, "PUT", { is_admin });
+}
+
+export async function deleteUser(id: number) {
+  return apiRequest(`/admin/users/${id}`, "DELETE");
+}
+
+export async function getUserSessions(id: number) {
+  return apiRequest<{ data: Device[] }>(`/admin/users/${id}/sessions`);
+}
+
+export async function revokeUserSessions(id: number) {
+  return apiRequest(`/admin/users/${id}/revoke-sessions`, "POST");
 }

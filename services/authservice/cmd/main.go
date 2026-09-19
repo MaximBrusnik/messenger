@@ -33,6 +33,7 @@ func main() {
 	}
 
 	userRepo := repo.NewUserRepository(db)
+	adminRepo := repo.NewAdminRepository(db)
 	jwtManager := jwt.NewManager(cfg.JWTSecret)
 	emailSvc := email.NewService(cfg.SMTP.Host, cfg.SMTP.Port, cfg.SMTP.User, cfg.SMTP.Pass, cfg.SMTP.From, cfg.App.AppURL)
 
@@ -46,13 +47,14 @@ func main() {
 	}
 
 	server := service.NewServer(userRepo, jwtManager, emailSvc, cfg.App.RequireEmailVerification, cfg.App.MaxUsersEnabled, cfg.App.MaxUsersLimit, userClient)
+	adminSvc := service.NewAdmin(adminRepo, userClient)
 
 	if err := seedDefaults(userRepo, userClient); err != nil {
 		log.Printf("auth: seed defaults: %v", err)
 	}
 
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-		pbauth.RegisterAuthServiceServer(s, handlergrpc.NewServer(server))
+		pbauth.RegisterAuthServiceServer(s, handlergrpc.NewServer(server, adminSvc))
 	}); err != nil {
 		log.Fatal("auth: ", err)
 	}

@@ -18,6 +18,8 @@ service UserService {
   rpc GetSettings(GetSettingsRequest) returns (Settings);
   rpc UpdateSettings(UpdateSettingsRequest) returns (Settings);
   rpc ResolveUserByName(ResolveUserByNameRequest) returns (ResolveUserByNameResponse);
+  rpc AdminOnlineCount(Empty) returns (AdminOnlineCountResponse);
+  rpc AdminDeleteProfile(AdminDeleteProfileRequest) returns (Empty);
 }
 
 message ResolveUserByNameRequest {
@@ -123,3 +125,11 @@ message Settings {
 }
 
 message Empty {}
+
+message AdminOnlineCountResponse {
+  uint64 online_users = 1;
+}
+
+message AdminDeleteProfileRequest {
+  uint64 user_id = 1;
+}

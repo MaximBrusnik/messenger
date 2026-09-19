@@ -32,9 +32,10 @@ func main() {
 	profileRepo := repo.NewProfileRepository(db)
 	redisClient := sharedredis.New(cfg.Redis.Addr, cfg.Redis.Pass)
 	server := service.NewServer(profileRepo, redisClient)
+	adminSvc := service.NewAdmin(profileRepo, redisClient)
 
 	if err := grpcsrv.Run(cfg.GRPCPort, func(s *grpc.Server) {
-		pb.RegisterUserServiceServer(s, handlergrpc.NewServer(server))
+		pb.RegisterUserServiceServer(s, handlergrpc.NewServer(server, adminSvc))
 	}); err != nil {
 		log.Fatal("user: ", err)
 	}

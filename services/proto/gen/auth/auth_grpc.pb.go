@@ -19,13 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Register_FullMethodName           = "/messengermax.auth.v1.AuthService/Register"
-	AuthService_Login_FullMethodName              = "/messengermax.auth.v1.AuthService/Login"
-	AuthService_VerifyEmail_FullMethodName        = "/messengermax.auth.v1.AuthService/VerifyEmail"
-	AuthService_ResendVerification_FullMethodName = "/messengermax.auth.v1.AuthService/ResendVerification"
-	AuthService_Logout_FullMethodName             = "/messengermax.auth.v1.AuthService/Logout"
-	AuthService_ChangePassword_FullMethodName     = "/messengermax.auth.v1.AuthService/ChangePassword"
-	AuthService_ListSessions_FullMethodName       = "/messengermax.auth.v1.AuthService/ListSessions"
+	AuthService_Register_FullMethodName            = "/messengermax.auth.v1.AuthService/Register"
+	AuthService_Login_FullMethodName               = "/messengermax.auth.v1.AuthService/Login"
+	AuthService_VerifyEmail_FullMethodName         = "/messengermax.auth.v1.AuthService/VerifyEmail"
+	AuthService_ResendVerification_FullMethodName  = "/messengermax.auth.v1.AuthService/ResendVerification"
+	AuthService_Logout_FullMethodName              = "/messengermax.auth.v1.AuthService/Logout"
+	AuthService_ChangePassword_FullMethodName      = "/messengermax.auth.v1.AuthService/ChangePassword"
+	AuthService_ListSessions_FullMethodName        = "/messengermax.auth.v1.AuthService/ListSessions"
+	AuthService_AdminListUsers_FullMethodName      = "/messengermax.auth.v1.AuthService/AdminListUsers"
+	AuthService_AdminUserStats_FullMethodName      = "/messengermax.auth.v1.AuthService/AdminUserStats"
+	AuthService_AdminSetUserActive_FullMethodName  = "/messengermax.auth.v1.AuthService/AdminSetUserActive"
+	AuthService_AdminSetRole_FullMethodName        = "/messengermax.auth.v1.AuthService/AdminSetRole"
+	AuthService_AdminDeleteUser_FullMethodName     = "/messengermax.auth.v1.AuthService/AdminDeleteUser"
+	AuthService_AdminRevokeSessions_FullMethodName = "/messengermax.auth.v1.AuthService/AdminRevokeSessions"
+	AuthService_CheckUserActive_FullMethodName     = "/messengermax.auth.v1.AuthService/CheckUserActive"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -39,6 +46,13 @@ type AuthServiceClient interface {
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*Empty, error)
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*Empty, error)
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
+	AdminListUsers(ctx context.Context, in *AdminListUsersRequest, opts ...grpc.CallOption) (*AdminListUsersResponse, error)
+	AdminUserStats(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*AdminStats, error)
+	AdminSetUserActive(ctx context.Context, in *AdminSetUserActiveRequest, opts ...grpc.CallOption) (*Empty, error)
+	AdminSetRole(ctx context.Context, in *AdminSetRoleRequest, opts ...grpc.CallOption) (*Empty, error)
+	AdminDeleteUser(ctx context.Context, in *AdminDeleteUserRequest, opts ...grpc.CallOption) (*Empty, error)
+	AdminRevokeSessions(ctx context.Context, in *AdminRevokeSessionsRequest, opts ...grpc.CallOption) (*Empty, error)
+	CheckUserActive(ctx context.Context, in *CheckUserActiveRequest, opts ...grpc.CallOption) (*CheckUserActiveResponse, error)
 }
 
 type authServiceClient struct {
@@ -119,6 +133,76 @@ func (c *authServiceClient) ListSessions(ctx context.Context, in *ListSessionsRe
 	return out, nil
 }
 
+func (c *authServiceClient) AdminListUsers(ctx context.Context, in *AdminListUsersRequest, opts ...grpc.CallOption) (*AdminListUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminListUsersResponse)
+	err := c.cc.Invoke(ctx, AuthService_AdminListUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AdminUserStats(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*AdminStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminStats)
+	err := c.cc.Invoke(ctx, AuthService_AdminUserStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AdminSetUserActive(ctx context.Context, in *AdminSetUserActiveRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuthService_AdminSetUserActive_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AdminSetRole(ctx context.Context, in *AdminSetRoleRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuthService_AdminSetRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AdminDeleteUser(ctx context.Context, in *AdminDeleteUserRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuthService_AdminDeleteUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AdminRevokeSessions(ctx context.Context, in *AdminRevokeSessionsRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuthService_AdminRevokeSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) CheckUserActive(ctx context.Context, in *CheckUserActiveRequest, opts ...grpc.CallOption) (*CheckUserActiveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckUserActiveResponse)
+	err := c.cc.Invoke(ctx, AuthService_CheckUserActive_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -130,6 +214,13 @@ type AuthServiceServer interface {
 	Logout(context.Context, *LogoutRequest) (*Empty, error)
 	ChangePassword(context.Context, *ChangePasswordRequest) (*Empty, error)
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
+	AdminListUsers(context.Context, *AdminListUsersRequest) (*AdminListUsersResponse, error)
+	AdminUserStats(context.Context, *Empty) (*AdminStats, error)
+	AdminSetUserActive(context.Context, *AdminSetUserActiveRequest) (*Empty, error)
+	AdminSetRole(context.Context, *AdminSetRoleRequest) (*Empty, error)
+	AdminDeleteUser(context.Context, *AdminDeleteUserRequest) (*Empty, error)
+	AdminRevokeSessions(context.Context, *AdminRevokeSessionsRequest) (*Empty, error)
+	CheckUserActive(context.Context, *CheckUserActiveRequest) (*CheckUserActiveResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -160,6 +251,27 @@ func (UnimplementedAuthServiceServer) ChangePassword(context.Context, *ChangePas
 }
 func (UnimplementedAuthServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSessions not implemented")
+}
+func (UnimplementedAuthServiceServer) AdminListUsers(context.Context, *AdminListUsersRequest) (*AdminListUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminListUsers not implemented")
+}
+func (UnimplementedAuthServiceServer) AdminUserStats(context.Context, *Empty) (*AdminStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminUserStats not implemented")
+}
+func (UnimplementedAuthServiceServer) AdminSetUserActive(context.Context, *AdminSetUserActiveRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminSetUserActive not implemented")
+}
+func (UnimplementedAuthServiceServer) AdminSetRole(context.Context, *AdminSetRoleRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminSetRole not implemented")
+}
+func (UnimplementedAuthServiceServer) AdminDeleteUser(context.Context, *AdminDeleteUserRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminDeleteUser not implemented")
+}
+func (UnimplementedAuthServiceServer) AdminRevokeSessions(context.Context, *AdminRevokeSessionsRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminRevokeSessions not implemented")
+}
+func (UnimplementedAuthServiceServer) CheckUserActive(context.Context, *CheckUserActiveRequest) (*CheckUserActiveResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckUserActive not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -308,6 +420,132 @@ func _AuthService_ListSessions_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_AdminListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AdminListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AdminListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AdminListUsers(ctx, req.(*AdminListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AdminUserStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AdminUserStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AdminUserStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AdminUserStats(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AdminSetUserActive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminSetUserActiveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AdminSetUserActive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AdminSetUserActive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AdminSetUserActive(ctx, req.(*AdminSetUserActiveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AdminSetRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminSetRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AdminSetRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AdminSetRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AdminSetRole(ctx, req.(*AdminSetRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AdminDeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminDeleteUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AdminDeleteUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AdminDeleteUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AdminDeleteUser(ctx, req.(*AdminDeleteUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AdminRevokeSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminRevokeSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AdminRevokeSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AdminRevokeSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AdminRevokeSessions(ctx, req.(*AdminRevokeSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_CheckUserActive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckUserActiveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CheckUserActive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_CheckUserActive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CheckUserActive(ctx, req.(*CheckUserActiveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +580,34 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListSessions",
 			Handler:    _AuthService_ListSessions_Handler,
+		},
+		{
+			MethodName: "AdminListUsers",
+			Handler:    _AuthService_AdminListUsers_Handler,
+		},
+		{
+			MethodName: "AdminUserStats",
+			Handler:    _AuthService_AdminUserStats_Handler,
+		},
+		{
+			MethodName: "AdminSetUserActive",
+			Handler:    _AuthService_AdminSetUserActive_Handler,
+		},
+		{
+			MethodName: "AdminSetRole",
+			Handler:    _AuthService_AdminSetRole_Handler,
+		},
+		{
+			MethodName: "AdminDeleteUser",
+			Handler:    _AuthService_AdminDeleteUser_Handler,
+		},
+		{
+			MethodName: "AdminRevokeSessions",
+			Handler:    _AuthService_AdminRevokeSessions_Handler,
+		},
+		{
+			MethodName: "CheckUserActive",
+			Handler:    _AuthService_CheckUserActive_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

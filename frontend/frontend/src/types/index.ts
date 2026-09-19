@@ -103,6 +103,40 @@ export interface MusicTrack {
   created_at: string;
 }
 
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
+  email_verified: boolean;
+  is_bot: boolean;
+  is_admin: boolean;
+  is_active: boolean;
+  avatar?: string;
+  status?: string;
+  created_at: string;
+  last_login?: string;
+  bio?: string;
+  online?: boolean;
+}
+
+export interface AdminStats {
+  total_users: number;
+  active_users: number;
+  banned_users: number;
+  unverified_users: number;
+  bots: number;
+  admins: number;
+  online_users: number;
+  new_last_7days: number;
+}
+
+export interface AdminPage {
+  data: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export interface WSMessage {
   type: "NEW_MESSAGE" | "MESSAGE_EDITED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_STATUS" | "CONNECTED" | "MESSAGE_DELETED" | "CHAT_DELETED" | "MESSAGES_READ" | "MESSAGE_PINNED" | "MESSAGE_UNPINNED";
   payload: Record<string, unknown>;

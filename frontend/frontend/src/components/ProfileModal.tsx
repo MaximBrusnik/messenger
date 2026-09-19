@@ -19,11 +19,12 @@ import { useSettings } from "../context/SettingsContext";
 
 interface Props {
   onClose: () => void;
+  onOpenAdmin?: () => void;
 }
 
 type Tab = "profile" | "privacy" | "password" | "theme" | "notifications" | "devices";
 
-export default function ProfileModal({ onClose }: Props) {
+export default function ProfileModal({ onClose, onOpenAdmin }: Props) {
   const { user, setUser } = useAuth();
   const { theme, toggle } = useTheme();
   const { settings, setSoundEnabled } = useSettings();
@@ -183,7 +184,18 @@ export default function ProfileModal({ onClose }: Props) {
       <div className="modal-content">
         <div className="profile-modal-header">
           <h2>Настройки</h2>
-          <button className="close-btn" onClick={onClose}><X size={18} /></button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {user?.is_admin && onOpenAdmin && (
+              <button
+                className="admin-entry-btn"
+                onClick={onOpenAdmin}
+                title="Админ-панель"
+              >
+                <Shield size={18} />
+              </button>
+            )}
+            <button className="close-btn" onClick={onClose}><X size={18} /></button>
+          </div>
         </div>
 
         <div className="profile-tabs">

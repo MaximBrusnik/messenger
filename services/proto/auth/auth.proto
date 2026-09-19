@@ -14,6 +14,13 @@ service AuthService {
   rpc Logout(LogoutRequest) returns (Empty);
   rpc ChangePassword(ChangePasswordRequest) returns (Empty);
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  rpc AdminListUsers(AdminListUsersRequest) returns (AdminListUsersResponse);
+  rpc AdminUserStats(Empty) returns (AdminStats);
+  rpc AdminSetUserActive(AdminSetUserActiveRequest) returns (Empty);
+  rpc AdminSetRole(AdminSetRoleRequest) returns (Empty);
+  rpc AdminDeleteUser(AdminDeleteUserRequest) returns (Empty);
+  rpc AdminRevokeSessions(AdminRevokeSessionsRequest) returns (Empty);
+  rpc CheckUserActive(CheckUserActiveRequest) returns (CheckUserActiveResponse);
 }
 
 message RegisterRequest {
@@ -95,6 +102,71 @@ message Device {
   google.protobuf.Timestamp last_login = 5;
   uint32 login_count = 6;
   bool is_current = 7;
+}
+
+message AdminListUsersRequest {
+  string query = 1;
+  uint32 page = 2;
+  uint32 page_size = 3;
+  optional bool is_bot = 4;
+  optional bool is_admin = 5;
+  optional bool active = 6;
+}
+
+message AdminListUsersResponse {
+  repeated AdminUser users = 1;
+  uint64 total = 2;
+}
+
+message AdminUser {
+  uint64 id = 1;
+  string username = 2;
+  string email = 3;
+  bool email_verified = 4;
+  bool is_bot = 5;
+  bool is_admin = 6;
+  bool is_active = 7;
+  string status = 8;
+  string avatar = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp last_login = 11;
+}
+
+message AdminStats {
+  uint64 total_users = 1;
+  uint64 active_users = 2;
+  uint64 banned_users = 3;
+  uint64 unverified_users = 4;
+  uint64 bots = 5;
+  uint64 admins = 6;
+  uint64 new_last_7days = 7;
+}
+
+message AdminSetUserActiveRequest {
+  uint64 user_id = 1;
+  bool active = 2;
+}
+
+message AdminSetRoleRequest {
+  uint64 user_id = 1;
+  bool is_admin = 2;
+}
+
+message AdminDeleteUserRequest {
+  uint64 user_id = 1;
+}
+
+message AdminRevokeSessionsRequest {
+  uint64 user_id = 1;
+}
+
+message CheckUserActiveRequest {
+  uint64 user_id = 1;
+}
+
+message CheckUserActiveResponse {
+  bool active = 1;
+  bool found = 2;
 }
 
 message Empty {}

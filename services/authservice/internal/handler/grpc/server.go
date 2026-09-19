@@ -15,11 +15,12 @@ import (
 
 type Server struct {
 	pb.UnimplementedAuthServiceServer
-	svc *service.Server
+	svc   *service.Server
+	admin *service.Admin
 }
 
-func NewServer(svc *service.Server) *Server {
-	return &Server{svc: svc}
+func NewServer(svc *service.Server, admin *service.Admin) *Server {
+	return &Server{svc: svc, admin: admin}
 }
 
 func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.AuthResponse, error) {

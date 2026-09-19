@@ -13,6 +13,7 @@ import ChatArea from "./ChatArea";
 import MusicPlayer from "./MusicPlayer";
 import ProfileModal from "./ProfileModal";
 import UserProfileModal from "./UserProfileModal";
+import AdminPanel from "./AdminPanel";
 
 
 export default function ChatApp() {
@@ -22,6 +23,7 @@ export default function ChatApp() {
   const [archivedChats, setArchivedChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"chats" | "music" | "archived">("chats");
   const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
@@ -45,12 +47,13 @@ export default function ChatApp() {
   }, [isMobile]);
 
   // Handle the Android system back button inside the SPA instead of leaving the app.
-  const backState = useRef({ mobileChat, mobilePlayer, activeTab, showProfile, profileUserId, selectedTrack });
-  backState.current = { mobileChat, mobilePlayer, activeTab, showProfile, profileUserId, selectedTrack };
+  const backState = useRef({ mobileChat, mobilePlayer, activeTab, showProfile, showAdminPanel, profileUserId, selectedTrack });
+  backState.current = { mobileChat, mobilePlayer, activeTab, showProfile, showAdminPanel, profileUserId, selectedTrack };
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const listener = App.addListener("backButton", () => {
       const s = backState.current;
+      if (s.showAdminPanel) { setShowAdminPanel(false); return; }
       if (s.showProfile) { setShowProfile(false); return; }
       if (s.profileUserId !== null) { setProfileUserId(null); return; }
       if (s.mobilePlayer) { handleMusicBack(); return; }
@@ -296,7 +299,8 @@ export default function ChatApp() {
         )}
       </div>
 
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} onOpenAdmin={() => { setShowProfile(false); setShowAdminPanel(true); }} />}
+      {showAdminPanel && <AdminPanel selfId={user!.id} onClose={() => setShowAdminPanel(false)} />}
       {profileUserId !== null && (
         <UserProfileModal
           userId={profileUserId}

@@ -16,11 +16,12 @@ import (
 
 type Server struct {
 	pb.UnimplementedUserServiceServer
-	svc *service.Server
+	svc   *service.Server
+	admin *service.Admin
 }
 
-func NewServer(svc *service.Server) *Server {
-	return &Server{svc: svc}
+func NewServer(svc *service.Server, admin *service.Admin) *Server {
+	return &Server{svc: svc, admin: admin}
 }
 
 func (s *Server) GetProfile(ctx context.Context, req *pb.GetProfileRequest) (*pb.UserProfile, error) {

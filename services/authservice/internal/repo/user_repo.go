@@ -107,3 +107,85 @@ func (r *userRepository) ListSessions(userID uint) ([]entity.Session, error) {
 		Order("created_at DESC").Find(&sessions).Error
 	return sessions, err
 }
+
+func (r *userRepository) DeleteSessions(userID uint) error {
+	return r.db.Where("user_id = ?", userID).Delete(&entity.Session{}).Error
+}
+
+func (r *userRepository) Delete(userID uint) error {
+	return r.db.Delete(&entity.User{}, userID).Error
+}
+
+func (r *userRepository) ListAdmin(f AdminListFilter) ([]entity.User, int64, error) {
+	q := r.db.Model(&entity.User{})
+	if f.Query != "" {
+		like := "%" + f.Query + "%"
+		q = q.Where("username ILIKE ? OR email ILIKE ?", like, like)
+	}
+	if f.IsBot == nil {
+		q = q.Where("is_bot = ?", false)
+	} else {
+		q = q.Where("is_bot = ?", *f.IsBot)
+	}
+	if f.IsAdmin != nil {
+		q = q.Where("is_admin = ?", *f.IsAdmin)
+	}
+	if f.Active != nil {
+		q = q.Where("is_active = ?", *f.Active)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	page := f.Page
+	if page == 0 {
+		page = 1
+	}
+	pageSize := f.PageSize
+	if pageSize == 0 {
+		pageSize = 50
+	}
+	if pageSize > 200 {
+		pageSize = 200
+	}
+	var list []entity.User
+	err := q.Order("created_at DESC").
+		Offset(int((page - 1) * pageSize)).
+		Limit(int(pageSize)).
+		Find(&list).Error
+	return list, total, err
+}
+
+func (r *userRepository) CountStats(since time.Time) (UserCounts, error) {
+	var c UserCounts
+	err := r.db.Model(&entity.User{}).
+		Where("is_bot = ?", false).Count(&c.TotalUsers).Error
+	if err != nil {
+		return c, err
+	}
+	if err := r.db.Model(&entity.User{}).
+		Where("is_bot = ? AND is_active = ?", false, true).Count(&c.ActiveUsers).Error; err != nil {
+		return c, err
+	}
+	if err := r.db.Model(&entity.User{}).
+		Where("is_bot = ? AND is_active = ?", false, false).Count(&c.BannedUsers).Error; err != nil {
+		return c, err
+	}
+	if err := r.db.Model(&entity.User{}).
+		Where("is_bot = ? AND email_verified = ?", false, false).Count(&c.UnverifiedUsers).Error; err != nil {
+		return c, err
+	}
+	if err := r.db.Model(&entity.User{}).
+		Where("is_bot = ?", true).Count(&c.Bots).Error; err != nil {
+		return c, err
+	}
+	if err := r.db.Model(&entity.User{}).
+		Where("is_admin = ?", true).Count(&c.Admins).Error; err != nil {
+		return c, err
+	}
+	if err := r.db.Model(&entity.User{}).
+		Where("is_bot = ? AND created_at >= ?", false, since).Count(&c.NewLast7Days).Error; err != nil {
+		return c, err
+	}
+	return c, nil
+}

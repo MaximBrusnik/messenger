@@ -23,6 +23,7 @@ type ProfileRepository interface {
 	RemoveContact(ctx context.Context, userID, contactID uint) error
 	GetContacts(ctx context.Context, userID uint) ([]entity.Profile, error)
 	IsContact(ctx context.Context, userID, contactID uint) (bool, error)
+	Delete(ctx context.Context, id uint) error
 }
 
 type profileRepository struct {
@@ -104,4 +105,8 @@ func (r *profileRepository) IsContact(ctx context.Context, userID, contactID uin
 	var count int64
 	err := r.db.WithContext(ctx).Table("contacts").Where("user_id = ? AND contact_id = ?", userID, contactID).Count(&count).Error
 	return count > 0, err
+}
+
+func (r *profileRepository) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&entity.Profile{}, id).Error
 }
