@@ -20,7 +20,10 @@ func seedDefaults(userRepo repo.UserRepository, userClient pbuser.UserServiceCli
 }
 
 func seedIfMissing(userRepo repo.UserRepository, userClient pbuser.UserServiceClient, username, email, password string, isBot, isAdmin bool) error {
-	user, err := userRepo.FindByUsername(username)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	user, err := userRepo.FindByUsername(ctx, username)
 	if err != nil && !errors.Is(err, repo.ErrNotFound) {
 		return err
 	}
@@ -40,7 +43,7 @@ func seedIfMissing(userRepo repo.UserRepository, userClient pbuser.UserServiceCl
 		if err := user.HashPassword(pw); err != nil {
 			return err
 		}
-		if err := userRepo.Create(user); err != nil {
+		if err := userRepo.Create(ctx, user); err != nil {
 			return err
 		}
 		log.Printf("auth: seeded %q", username)
@@ -50,8 +53,6 @@ func seedIfMissing(userRepo repo.UserRepository, userClient pbuser.UserServiceCl
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 	adminFlag := user.IsAdmin
 	botFlag := user.IsBot
 	if _, err := userClient.UpdateProfile(ctx, &pbuser.UpdateProfileRequest{
