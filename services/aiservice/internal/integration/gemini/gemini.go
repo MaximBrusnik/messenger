@@ -77,7 +77,7 @@ func (c *Client) GenerateResponse(history []ChatMessage) (string, error) {
 		return "", fmt.Errorf("marshal request: %w", err)
 	}
 
-	endpoint := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + c.apiKey
+	endpoint := "https://googleapis.com" + c.apiKey
 	resp, err := c.httpCli.Post(endpoint, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("gemini request: %w", err)
