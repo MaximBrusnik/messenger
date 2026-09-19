@@ -48,7 +48,7 @@ func (r *profileRepository) FindByID(ctx context.Context, id uint) (*entity.Prof
 
 func (r *profileRepository) FindByUsername(ctx context.Context, username string) (*entity.Profile, error) {
 	var p entity.Profile
-	err := r.db.Where("username = ?", username).First(&p).Error
+	err := r.db.WithContext(ctx).Where("username = ?", username).First(&p).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
@@ -60,41 +60,41 @@ func (r *profileRepository) FindByIDs(ctx context.Context, ids []uint) ([]entity
 	if len(ids) == 0 {
 		return list, nil
 	}
-	err := r.db.Where("id IN ?", ids).Find(&list).Error
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&list).Error
 	return list, err
 }
 
 func (r *profileRepository) FindAll(ctx context.Context, excludeID uint) ([]entity.Profile, error) {
 	var list []entity.Profile
-	err := r.db.Where("id <> ?", excludeID).Find(&list).Error
+	err := r.db.WithContext(ctx).Where("id <> ?", excludeID).Find(&list).Error
 	return list, err
 }
 
 func (r *profileRepository) Search(ctx context.Context, query string, excludeID uint) ([]entity.Profile, error) {
 	var list []entity.Profile
 	like := "%" + query + "%"
-	err := r.db.Where("id <> ? AND (username ILIKE ? OR email ILIKE ?)", excludeID, like, like).Find(&list).Error
+	err := r.db.WithContext(ctx).Where("id <> ? AND (username ILIKE ? OR email ILIKE ?)", excludeID, like, like).Find(&list).Error
 	return list, err
 }
 
 func (r *profileRepository) Update(ctx context.Context, p *entity.Profile) error {
-	return r.db.Save(p).Error
+	return r.db.WithContext(ctx).Save(p).Error
 }
 
 func (r *profileRepository) AddContact(ctx context.Context, userID, contactID uint) error {
 	if userID == contactID {
 		return errors.New("cannot add yourself")
 	}
-	return r.db.Exec("INSERT INTO contacts (user_id, contact_id, created_at) VALUES (?, ?, NOW()) ON CONFLICT DO NOTHING", userID, contactID).Error
+	return r.db.WithContext(ctx).Exec("INSERT INTO contacts (user_id, contact_id, created_at) VALUES (?, ?, NOW()) ON CONFLICT DO NOTHING", userID, contactID).Error
 }
 
 func (r *profileRepository) RemoveContact(ctx context.Context, userID, contactID uint) error {
-	return r.db.Exec("DELETE FROM contacts WHERE user_id = ? AND contact_id = ?", userID, contactID).Error
+	return r.db.WithContext(ctx).Exec("DELETE FROM contacts WHERE user_id = ? AND contact_id = ?", userID, contactID).Error
 }
 
 func (r *profileRepository) GetContacts(ctx context.Context, userID uint) ([]entity.Profile, error) {
 	var list []entity.Profile
-	err := r.db.
+	err := r.db.WithContext(ctx).
 		Joins("JOIN contacts ON contacts.contact_id = profiles.id AND contacts.user_id = ?", userID).
 		Find(&list).Error
 	return list, err
@@ -102,6 +102,6 @@ func (r *profileRepository) GetContacts(ctx context.Context, userID uint) ([]ent
 
 func (r *profileRepository) IsContact(ctx context.Context, userID, contactID uint) (bool, error) {
 	var count int64
-	err := r.db.Table("contacts").Where("user_id = ? AND contact_id = ?", userID, contactID).Count(&count).Error
+	err := r.db.WithContext(ctx).Table("contacts").Where("user_id = ? AND contact_id = ?", userID, contactID).Count(&count).Error
 	return count > 0, err
 }
