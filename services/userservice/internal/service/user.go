@@ -22,7 +22,7 @@ func NewServer(profileRepo repo.ProfileRepository, redis *sharedredis.Client) *S
 }
 
 func (s *Server) GetProfile(ctx context.Context, userID, viewerID uint) (ProfileView, error) {
-	p, err := s.profileRepo.FindByID(userID)
+	p, err := s.profileRepo.FindByID(ctx, userID)
 	if err != nil {
 		if !errors.Is(err, repo.ErrNotFound) {
 			return ProfileView{}, errInternal("profile not found")
@@ -32,53 +32,53 @@ func (s *Server) GetProfile(ctx context.Context, userID, viewerID uint) (Profile
 			Username: fmt.Sprintf("user_%d", userID),
 			Email:    fmt.Sprintf("user_%d@placeholder.local", userID),
 		}
-		if err := s.profileRepo.Create(p); err != nil {
+		if err := s.profileRepo.Create(ctx, p); err != nil {
 			return ProfileView{}, errInternal("не удалось создать профиль")
 		}
-		s.hideAvatar(p, viewerID)
+		s.hideAvatar(ctx, p, viewerID)
 		return ProfileView{Profile: *p, Online: false}, nil
 	}
-	s.hideAvatar(p, viewerID)
+	s.hideAvatar(ctx, p, viewerID)
 	return ProfileView{Profile: *p, Online: s.isOnline(ctx, p.ID)}, nil
 }
 
 func (s *Server) GetProfilesBulk(ctx context.Context, ids []uint, viewerID uint) ([]ProfileView, error) {
-	profiles, err := s.profileRepo.FindByIDs(ids)
+	profiles, err := s.profileRepo.FindByIDs(ctx, ids)
 	if err != nil {
 		return nil, errInternal("profiles failed")
 	}
 	out := make([]ProfileView, 0, len(profiles))
 	for i := range profiles {
-		s.hideAvatar(&profiles[i], viewerID)
+		s.hideAvatar(ctx, &profiles[i], viewerID)
 		out = append(out, ProfileView{Profile: profiles[i], Online: s.isOnline(ctx, profiles[i].ID)})
 	}
 	return out, nil
 }
 
 func (s *Server) GetAllUsers(ctx context.Context, excludeID uint) ([]entity.Profile, error) {
-	list, err := s.profileRepo.FindAll(excludeID)
+	list, err := s.profileRepo.FindAll(ctx, excludeID)
 	if err != nil {
 		return nil, errInternal("failed to list users")
 	}
 	for i := range list {
-		s.hideAvatar(&list[i], excludeID)
+		s.hideAvatar(ctx, &list[i], excludeID)
 	}
 	return list, nil
 }
 
 func (s *Server) SearchUsers(ctx context.Context, query string, excludeID uint) ([]entity.Profile, error) {
-	list, err := s.profileRepo.Search(query, excludeID)
+	list, err := s.profileRepo.Search(ctx, query, excludeID)
 	if err != nil {
 		return nil, errInternal("search failed")
 	}
 	for i := range list {
-		s.hideAvatar(&list[i], excludeID)
+		s.hideAvatar(ctx, &list[i], excludeID)
 	}
 	return list, nil
 }
 
 func (s *Server) UpdateProfile(ctx context.Context, userID uint, u ProfileUpdate) (ProfileView, error) {
-	p, err := s.profileRepo.FindByID(userID)
+	p, err := s.profileRepo.FindByID(ctx, userID)
 	if err != nil {
 		p = &entity.Profile{
 			ID:       userID,
@@ -97,13 +97,13 @@ func (s *Server) UpdateProfile(ctx context.Context, userID uint, u ProfileUpdate
 		if p.Email == "" {
 			p.Email = fmt.Sprintf("user_%d@placeholder.local", userID)
 		}
-		if err := s.profileRepo.Create(p); err != nil {
+		if err := s.profileRepo.Create(ctx, p); err != nil {
 			return ProfileView{}, errInternal("не удалось создать профиль")
 		}
 		return ProfileView{Profile: *p, Online: false}, nil
 	}
 	if u.Username != "" {
-		other, err := s.profileRepo.FindByUsername(u.Username)
+		other, err := s.profileRepo.FindByUsername(ctx, u.Username)
 		if err == nil && other.ID != p.ID {
 			return ProfileView{}, errAlreadyExists("username taken")
 		}
@@ -132,32 +132,32 @@ func (s *Server) UpdateProfile(ctx context.Context, userID uint, u ProfileUpdate
 	if u.IsBot != nil {
 		p.IsBot = *u.IsBot
 	}
-	if err := s.profileRepo.Update(p); err != nil {
+	if err := s.profileRepo.Update(ctx, p); err != nil {
 		return ProfileView{}, errInternal("update failed")
 	}
 	return ProfileView{Profile: *p, Online: s.isOnline(ctx, p.ID)}, nil
 }
 
 func (s *Server) GetContacts(ctx context.Context, userID uint) ([]entity.Profile, error) {
-	list, err := s.profileRepo.GetContacts(userID)
+	list, err := s.profileRepo.GetContacts(ctx, userID)
 	if err != nil {
 		return nil, errInternal("contacts failed")
 	}
 	for i := range list {
-		s.hideAvatar(&list[i], userID)
+		s.hideAvatar(ctx, &list[i], userID)
 	}
 	return list, nil
 }
 
 func (s *Server) AddContact(ctx context.Context, userID, contactID uint) error {
-	if err := s.profileRepo.AddContact(userID, contactID); err != nil {
+	if err := s.profileRepo.AddContact(ctx, userID, contactID); err != nil {
 		return errInvalid(err.Error())
 	}
 	return nil
 }
 
 func (s *Server) GetSettings(ctx context.Context, userID uint) (*entity.Profile, error) {
-	p, err := s.profileRepo.FindByID(userID)
+	p, err := s.profileRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, errInternal("profile not found")
 	}
@@ -165,7 +165,7 @@ func (s *Server) GetSettings(ctx context.Context, userID uint) (*entity.Profile,
 }
 
 func (s *Server) UpdateSettings(ctx context.Context, userID uint, showOnline bool, lastSeenPrivacy, avatarPrivacy string, soundEnabled *bool) (*entity.Profile, error) {
-	p, err := s.profileRepo.FindByID(userID)
+	p, err := s.profileRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, errInternal("profile not found")
 	}
@@ -179,14 +179,14 @@ func (s *Server) UpdateSettings(ctx context.Context, userID uint, showOnline boo
 	if soundEnabled != nil {
 		p.SoundEnabled = *soundEnabled
 	}
-	if err := s.profileRepo.Update(p); err != nil {
+	if err := s.profileRepo.Update(ctx, p); err != nil {
 		return nil, errInternal("update failed")
 	}
 	return p, nil
 }
 
 func (s *Server) ResolveUserByName(ctx context.Context, username string) (uint, bool, error) {
-	p, err := s.profileRepo.FindByUsername(username)
+	p, err := s.profileRepo.FindByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			return 0, false, nil
@@ -196,7 +196,7 @@ func (s *Server) ResolveUserByName(ctx context.Context, username string) (uint, 
 	return p.ID, true, nil
 }
 
-func (s *Server) hideAvatar(p *entity.Profile, viewerID uint) {
+func (s *Server) hideAvatar(ctx context.Context, p *entity.Profile, viewerID uint) {
 	if p == nil || viewerID == 0 || p.Avatar == "" {
 		return
 	}
@@ -207,7 +207,7 @@ func (s *Server) hideAvatar(p *entity.Profile, viewerID uint) {
 		}
 	case "contacts":
 		if p.ID != viewerID {
-			ok, err := s.profileRepo.IsContact(p.ID, viewerID)
+			ok, err := s.profileRepo.IsContact(ctx, p.ID, viewerID)
 			if err != nil || !ok {
 				p.Avatar = ""
 			}

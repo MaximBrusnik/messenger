@@ -1,5 +1,6 @@
 package service
 
+//TODO вынести отсюда
 import (
 	"google.golang.org/grpc/codes"
 
