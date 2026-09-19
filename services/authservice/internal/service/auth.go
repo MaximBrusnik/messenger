@@ -38,15 +38,15 @@ func (s *Server) Register(ctx context.Context, username, emailAddr, password str
 	if username == "" || emailAddr == "" || password == "" {
 		return nil, errInvalid("все поля обязательны")
 	}
-	if _, err := s.userRepo.FindByUsername(username); err == nil {
+	if _, err := s.userRepo.FindByUsername(ctx, username); err == nil {
 		return nil, errAlreadyExists("имя пользователя занято")
 	}
-	if _, err := s.userRepo.FindByEmail(emailAddr); err == nil {
+	if _, err := s.userRepo.FindByEmail(ctx, emailAddr); err == nil {
 		return nil, errAlreadyExists("почта уже зарегистрирована")
 	}
 
 	if s.maxUsersEnabled {
-		count, err := s.userRepo.CountUsers()
+		count, err := s.userRepo.CountUsers(ctx)
 		if err != nil {
 			return nil, errInternal("не удалось проверить количество пользователей")
 		}
@@ -60,7 +60,7 @@ func (s *Server) Register(ctx context.Context, username, emailAddr, password str
 		return nil, errInternal("не удалось сохранить пароль")
 	}
 	user.VerificationToken = email.GenerateVerificationToken()
-	if err := s.userRepo.Create(user); err != nil {
+	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, errInternal("не удалось создать пользователя")
 	}
 
@@ -71,10 +71,10 @@ func (s *Server) Register(ctx context.Context, username, emailAddr, password str
 }
 
 func (s *Server) Login(ctx context.Context, email, password string, dev DeviceInfo) (*AuthResult, error) {
-	user, err := s.userRepo.FindByEmail(email)
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		// legacy: администратор входит по username
-		user, err = s.adminByUsername(email)
+		user, err = s.adminByUsername(ctx, email)
 	}
 	if err != nil || user == nil {
 		return nil, errUnauthenticated("неверная почта или пароль")
@@ -88,32 +88,32 @@ func (s *Server) Login(ctx context.Context, email, password string, dev DeviceIn
 	if s.requireEmailVerification && !user.EmailVerified {
 		return nil, errPermissionDenied("подтвердите почту")
 	}
-	if err := s.userRepo.UpdateLastLogin(user.ID, time.Now()); err != nil {
+	if err := s.userRepo.UpdateLastLogin(ctx, user.ID, time.Now()); err != nil {
 		return nil, errInternal("не удалось обновить время входа")
 	}
 	return s.buildAuthResult(ctx, user, dev)
 }
 
 func (s *Server) VerifyEmail(ctx context.Context, token string, dev DeviceInfo) (*AuthResult, error) {
-	user, err := s.userRepo.FindByVerificationToken(token)
+	user, err := s.userRepo.FindByVerificationToken(ctx, token)
 	if err != nil {
 		return nil, errInvalid("неверный или истёкший токен")
 	}
 	user.EmailVerified = true
 	user.VerificationToken = ""
-	if err := s.userRepo.Update(user); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, errInternal("не удалось подтвердить почту")
 	}
 	return s.buildAuthResult(ctx, user, dev)
 }
 
 func (s *Server) ResendVerification(ctx context.Context, userID uint) error {
-	user, err := s.userRepo.FindByID(userID)
+	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return errNotFound("пользователь не найден")
 	}
 	user.VerificationToken = email.GenerateVerificationToken()
-	if err := s.userRepo.Update(user); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		return errInternal("не удалось обновить токен")
 	}
 	s.emailSvc.SendVerificationEmail(user.Email, user.VerificationToken)
@@ -130,7 +130,7 @@ func (s *Server) ChangePassword(ctx context.Context, userID uint, oldPassword, n
 	if len(newPassword) < 6 {
 		return errInvalid("пароль слишком короткий")
 	}
-	user, err := s.userRepo.FindByID(userID)
+	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return errNotFound("пользователь не найден")
 	}
@@ -140,14 +140,14 @@ func (s *Server) ChangePassword(ctx context.Context, userID uint, oldPassword, n
 	if err := user.HashPassword(newPassword); err != nil {
 		return errInternal("не удалось сохранить пароль")
 	}
-	if err := s.userRepo.UpdatePassword(user.ID, user.Password); err != nil {
+	if err := s.userRepo.UpdatePassword(ctx, user.ID, user.Password); err != nil {
 		return errInternal("не удалось сохранить пароль")
 	}
 	return nil
 }
 
-func (s *Server) adminByUsername(username string) (*entity.User, error) {
-	user, err := s.userRepo.FindByUsername(username)
+func (s *Server) adminByUsername(ctx context.Context, username string) (*entity.User, error) {
+	user, err := s.userRepo.FindByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (s *Server) buildAuthResult(ctx context.Context, user *entity.User, dev Dev
 	if err != nil {
 		return nil, errInternal("не удалось выдать токен")
 	}
-	if err := s.userRepo.CreateSession(&entity.Session{
+	if err := s.userRepo.CreateSession(ctx, &entity.Session{
 		ID:                jti,
 		UserID:            user.ID,
 		DeviceName:        dev.Name,
@@ -187,12 +187,12 @@ func (s *Server) buildAuthResult(ctx context.Context, user *entity.User, dev Dev
 }
 
 func (s *Server) ListDevices(ctx context.Context, userID uint, currentJTI string) ([]DeviceSummary, error) {
-	sessions, err := s.userRepo.ListSessions(userID)
+	sessions, err := s.userRepo.ListSessions(ctx, userID)
 	if err != nil {
 		return nil, errInternal("не удалось получить список устройств")
 	}
 	if currentJTI != "" {
-		_ = s.userRepo.TouchSession(currentJTI)
+		_ = s.userRepo.TouchSession(ctx, currentJTI)
 	}
 	currentFP := ""
 	for _, sess := range sessions {

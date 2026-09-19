@@ -159,32 +159,32 @@ func (r *userRepository) ListAdmin(ctx context.Context, f AdminListFilter) ([]en
 
 func (r *userRepository) CountStats(ctx context.Context, since time.Time) (UserCounts, error) {
 	var c UserCounts
-	err := r.db.Model(&entity.User{}).
+	err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_bot = ?", false).Count(&c.TotalUsers).Error
 	if err != nil {
 		return c, err
 	}
-	if err := r.db.Model(&entity.User{}).
+	if err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_bot = ? AND is_active = ?", false, true).Count(&c.ActiveUsers).Error; err != nil {
 		return c, err
 	}
-	if err := r.db.Model(&entity.User{}).
+	if err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_bot = ? AND is_active = ?", false, false).Count(&c.BannedUsers).Error; err != nil {
 		return c, err
 	}
-	if err := r.db.Model(&entity.User{}).
+	if err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_bot = ? AND email_verified = ?", false, false).Count(&c.UnverifiedUsers).Error; err != nil {
 		return c, err
 	}
-	if err := r.db.Model(&entity.User{}).
+	if err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_bot = ?", true).Count(&c.Bots).Error; err != nil {
 		return c, err
 	}
-	if err := r.db.Model(&entity.User{}).
+	if err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_admin = ?", true).Count(&c.Admins).Error; err != nil {
 		return c, err
 	}
-	if err := r.db.Model(&entity.User{}).
+	if err := r.db.WithContext(ctx).Model(&entity.User{}).
 		Where("is_bot = ? AND created_at >= ?", false, since).Count(&c.NewLast7Days).Error; err != nil {
 		return c, err
 	}
