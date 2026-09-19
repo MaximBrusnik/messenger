@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"time"
 
 	"gorm.io/gorm"
@@ -28,12 +29,12 @@ type UserCounts struct {
 }
 
 type AdminRepository interface {
-	FindByID(id uint) (*entity.User, error)
-	Update(user *entity.User) error
-	DeleteSessions(userID uint) error
-	Delete(userID uint) error
-	ListAdmin(f AdminListFilter) ([]entity.User, int64, error)
-	CountStats(since time.Time) (UserCounts, error)
+	FindByID(ctx context.Context, id uint) (*entity.User, error)
+	Update(ctx context.Context, user *entity.User) error
+	DeleteSessions(ctx context.Context, userID uint) error
+	Delete(ctx context.Context, userID uint) error
+	ListAdmin(ctx context.Context, f AdminListFilter) ([]entity.User, int64, error)
+	CountStats(ctx context.Context, since time.Time) (UserCounts, error)
 }
 
 func NewAdminRepository(db *gorm.DB) AdminRepository {

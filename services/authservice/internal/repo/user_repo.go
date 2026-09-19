@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -12,18 +13,18 @@ import (
 var ErrNotFound = errors.New("record not found")
 
 type UserRepository interface {
-	Create(user *entity.User) error
-	CountUsers() (int64, error)
-	FindByID(id uint) (*entity.User, error)
-	FindByUsername(username string) (*entity.User, error)
-	FindByEmail(email string) (*entity.User, error)
-	FindByVerificationToken(token string) (*entity.User, error)
-	Update(user *entity.User) error
-	UpdateLastLogin(userID uint, t interface{}) error
-	UpdatePassword(userID uint, hashed string) error
-	CreateSession(s *entity.Session) error
-	TouchSession(jti string) error
-	ListSessions(userID uint) ([]entity.Session, error)
+	Create(ctx context.Context, user *entity.User) error
+	CountUsers(ctx context.Context) (int64, error)
+	FindByID(ctx context.Context, id uint) (*entity.User, error)
+	FindByUsername(ctx context.Context, username string) (*entity.User, error)
+	FindByEmail(ctx context.Context, email string) (*entity.User, error)
+	FindByVerificationToken(ctx context.Context, token string) (*entity.User, error)
+	Update(ctx context.Context, user *entity.User) error
+	UpdateLastLogin(ctx context.Context, userID uint, t interface{}) error
+	UpdatePassword(ctx context.Context, userID uint, hashed string) error
+	CreateSession(ctx context.Context, s *entity.Session) error
+	TouchSession(ctx context.Context, jti string) error
+	ListSessions(ctx context.Context, userID uint) ([]entity.Session, error)
 }
 
 type userRepository struct {
@@ -34,90 +35,90 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) Create(user *entity.User) error {
-	return r.db.Create(user).Error
+func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
 }
 
-func (r *userRepository) CountUsers() (int64, error) {
+func (r *userRepository) CountUsers(ctx context.Context) (int64, error) {
 	var n int64
-	err := r.db.Model(&entity.User{}).Where("is_bot = ?", false).Count(&n).Error
+	err := r.db.WithContext(ctx).Model(&entity.User{}).Where("is_bot = ?", false).Count(&n).Error
 	return n, err
 }
 
-func (r *userRepository) FindByID(id uint) (*entity.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, error) {
 	var u entity.User
-	err := r.db.First(&u, id).Error
+	err := r.db.WithContext(ctx).First(&u, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
 	return &u, err
 }
 
-func (r *userRepository) FindByUsername(username string) (*entity.User, error) {
+func (r *userRepository) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
 	var u entity.User
-	err := r.db.Where("username = ?", username).First(&u).Error
+	err := r.db.WithContext(ctx).Where("username = ?", username).First(&u).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
 	return &u, err
 }
 
-func (r *userRepository) FindByEmail(email string) (*entity.User, error) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var u entity.User
-	err := r.db.Where("email = ?", email).First(&u).Error
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
 	return &u, err
 }
 
-func (r *userRepository) FindByVerificationToken(token string) (*entity.User, error) {
+func (r *userRepository) FindByVerificationToken(ctx context.Context, token string) (*entity.User, error) {
 	var u entity.User
-	err := r.db.Where("verification_token = ?", token).First(&u).Error
+	err := r.db.WithContext(ctx).Where("verification_token = ?", token).First(&u).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
 	return &u, err
 }
 
-func (r *userRepository) Update(user *entity.User) error {
-	return r.db.Save(user).Error
+func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
 }
 
-func (r *userRepository) UpdateLastLogin(userID uint, t interface{}) error {
-	return r.db.Model(&entity.User{}).Where("id = ?", userID).Update("last_login", t).Error
+func (r *userRepository) UpdateLastLogin(ctx context.Context, userID uint, t interface{}) error {
+	return r.db.WithContext(ctx).Model(&entity.User{}).Where("id = ?", userID).Update("last_login", t).Error
 }
 
-func (r *userRepository) UpdatePassword(userID uint, hashed string) error {
-	return r.db.Model(&entity.User{}).Where("id = ?", userID).Update("password", hashed).Error
+func (r *userRepository) UpdatePassword(ctx context.Context, userID uint, hashed string) error {
+	return r.db.WithContext(ctx).Model(&entity.User{}).Where("id = ?", userID).Update("password", hashed).Error
 }
 
-func (r *userRepository) CreateSession(s *entity.Session) error {
-	return r.db.Create(s).Error
+func (r *userRepository) CreateSession(ctx context.Context, s *entity.Session) error {
+	return r.db.WithContext(ctx).Create(s).Error
 }
 
-func (r *userRepository) TouchSession(jti string) error {
-	return r.db.Model(&entity.Session{}).Where("id = ?", jti).
+func (r *userRepository) TouchSession(ctx context.Context, jti string) error {
+	return r.db.WithContext(ctx).Model(&entity.Session{}).Where("id = ?", jti).
 		Update("last_login_at", time.Now()).Error
 }
 
-func (r *userRepository) ListSessions(userID uint) ([]entity.Session, error) {
+func (r *userRepository) ListSessions(ctx context.Context, userID uint) ([]entity.Session, error) {
 	var sessions []entity.Session
-	err := r.db.Where("user_id = ?", userID).
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).
 		Order("created_at DESC").Find(&sessions).Error
 	return sessions, err
 }
 
-func (r *userRepository) DeleteSessions(userID uint) error {
-	return r.db.Where("user_id = ?", userID).Delete(&entity.Session{}).Error
+func (r *userRepository) DeleteSessions(ctx context.Context, userID uint) error {
+	return r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&entity.Session{}).Error
 }
 
-func (r *userRepository) Delete(userID uint) error {
-	return r.db.Delete(&entity.User{}, userID).Error
+func (r *userRepository) Delete(ctx context.Context, userID uint) error {
+	return r.db.WithContext(ctx).Delete(&entity.User{}, userID).Error
 }
 
-func (r *userRepository) ListAdmin(f AdminListFilter) ([]entity.User, int64, error) {
-	q := r.db.Model(&entity.User{})
+func (r *userRepository) ListAdmin(ctx context.Context, f AdminListFilter) ([]entity.User, int64, error) {
+	q := r.db.WithContext(ctx).Model(&entity.User{})
 	if f.Query != "" {
 		like := "%" + f.Query + "%"
 		q = q.Where("username ILIKE ? OR email ILIKE ?", like, like)
@@ -156,7 +157,7 @@ func (r *userRepository) ListAdmin(f AdminListFilter) ([]entity.User, int64, err
 	return list, total, err
 }
 
-func (r *userRepository) CountStats(since time.Time) (UserCounts, error) {
+func (r *userRepository) CountStats(ctx context.Context, since time.Time) (UserCounts, error) {
 	var c UserCounts
 	err := r.db.Model(&entity.User{}).
 		Where("is_bot = ?", false).Count(&c.TotalUsers).Error

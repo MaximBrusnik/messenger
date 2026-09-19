@@ -21,7 +21,7 @@ func NewAdmin(userRepo repo.AdminRepository, userClient pbuser.UserServiceClient
 }
 
 func (a *Admin) ListUsers(ctx context.Context, query string, page, pageSize uint, isBot, isAdmin, active *bool) ([]entity.User, int64, error) {
-	list, total, err := a.adminRepo.ListAdmin(repo.AdminListFilter{
+	list, total, err := a.adminRepo.ListAdmin(ctx, repo.AdminListFilter{
 		Query:    query,
 		Page:     page,
 		PageSize: pageSize,
@@ -36,32 +36,32 @@ func (a *Admin) ListUsers(ctx context.Context, query string, page, pageSize uint
 }
 
 func (a *Admin) UserStats(ctx context.Context) (repo.UserCounts, error) {
-	return a.adminRepo.CountStats(time.Now().Add(-7 * 24 * time.Hour))
+	return a.adminRepo.CountStats(ctx, time.Now().Add(-7*24*time.Hour))
 }
 
 func (a *Admin) SetUserActive(ctx context.Context, userID uint, active bool) error {
-	user, err := a.adminRepo.FindByID(userID)
+	user, err := a.adminRepo.FindByID(ctx, userID)
 	if err != nil {
 		return errNotFound("пользователь не найден")
 	}
 	user.IsActive = active
-	if err := a.adminRepo.Update(user); err != nil {
+	if err := a.adminRepo.Update(ctx, user); err != nil {
 		return errInternal("не удалось обновить статус пользователя")
 	}
 	if !active {
-		_ = a.adminRepo.DeleteSessions(userID)
+		_ = a.adminRepo.DeleteSessions(ctx, userID)
 	}
 	a.syncProfile(user)
 	return nil
 }
 
 func (a *Admin) SetRole(ctx context.Context, userID uint, isAdmin bool) error {
-	user, err := a.adminRepo.FindByID(userID)
+	user, err := a.adminRepo.FindByID(ctx, userID)
 	if err != nil {
 		return errNotFound("пользователь не найден")
 	}
 	user.IsAdmin = isAdmin
-	if err := a.adminRepo.Update(user); err != nil {
+	if err := a.adminRepo.Update(ctx, user); err != nil {
 		return errInternal("не удалось изменить роль")
 	}
 	a.syncProfile(user)
@@ -69,26 +69,26 @@ func (a *Admin) SetRole(ctx context.Context, userID uint, isAdmin bool) error {
 }
 
 func (a *Admin) DeleteUser(ctx context.Context, userID uint) error {
-	user, err := a.adminRepo.FindByID(userID)
+	user, err := a.adminRepo.FindByID(ctx, userID)
 	if err != nil {
 		return errNotFound("пользователь не найден")
 	}
-	_ = a.adminRepo.DeleteSessions(userID)
-	if err := a.adminRepo.Delete(user.ID); err != nil {
+	_ = a.adminRepo.DeleteSessions(ctx, userID)
+	if err := a.adminRepo.Delete(ctx, user.ID); err != nil {
 		return errInternal("не удалось удалить пользователя")
 	}
 	return nil
 }
 
 func (a *Admin) RevokeSessions(ctx context.Context, userID uint) error {
-	if err := a.adminRepo.DeleteSessions(userID); err != nil {
+	if err := a.adminRepo.DeleteSessions(ctx, userID); err != nil {
 		return errInternal("не удалось завершить сессии")
 	}
 	return nil
 }
 
 func (a *Admin) CheckUserActive(ctx context.Context, userID uint) (bool, bool, error) {
-	user, err := a.adminRepo.FindByID(userID)
+	user, err := a.adminRepo.FindByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			return false, false, nil
