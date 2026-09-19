@@ -31,15 +31,15 @@ Android version: Capacitor (WebView APK)
 
 Фото мессенджера
 
-![Скриншот программы](README_Images/screen1.png)
+![Скриншот программы](README_Images/screen1.PNG)
 
-![Скриншот программы](README_Images/screen2.png)
+![Скриншот программы](README_Images/screen2.PNG)
 
-![Скриншот программы](README_Images/screen3.png)
+![Скриншот программы](README_Images/screen3.PNG)
 
-![Скриншот программы](README_Images/screen4.png)
+![Скриншот программы](README_Images/screen4.PNG)
 
-![Скриншот программы](README_Images/screen5.png)
+![Скриншот программы](README_Images/screen5.PNG)
 
 ----
 
